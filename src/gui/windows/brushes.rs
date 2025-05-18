@@ -111,17 +111,17 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.horizontal(|ui| {
             let mut label_str = String::from("Tile selection loadable");
             let mut load_tiles_enabled = true;
-            if de.bg_drag_data.selection_width == 0 {
+            if de.bg_sel_data.selection_width == 0 {
                 label_str = String::from("Nothing selected");
                 load_tiles_enabled = false;
-            } else if de.bg_drag_data.selection_width > 16 {
+            } else if de.bg_sel_data.selection_width > 16 {
                 label_str = String::from("Selection too wide (16 tiles max)");
                 load_tiles_enabled = false;
-            } else if (de.bg_drag_data.selected_map_indexes.len() / de.bg_drag_data.selection_width as usize) > 16 {
+            } else if (de.bg_sel_data.selected_map_indexes.len() / de.bg_sel_data.selection_width as usize) > 16 {
                 // This can't divide by zero as it already checked if selection_width was 0
                 label_str = String::from("Selection too tall (16 tiles max)");
                 load_tiles_enabled = false;
-            } else if de.bg_drag_data.selected_map_indexes.len() == 0 {
+            } else if de.bg_sel_data.selected_map_indexes.len() == 0 {
                 label_str = String::from("No tiles selected");
                 load_tiles_enabled = false;
             }
@@ -129,24 +129,24 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 egui::Button::new("Load Selection"));
             ui.label(label_str);
             if load_tiles.clicked() {
-                if de.bg_drag_data.selection_width == 0 {
+                if de.bg_sel_data.selection_width == 0 {
                     log_write(format!("Cannot load selected tiles, selection width is 0"), LogLevel::WARN);
                     return;
                 }
-                if de.bg_drag_data.selected_map_indexes.is_empty() {
+                if de.bg_sel_data.selected_map_indexes.is_empty() {
                     log_write(format!("Cannot load selected tiles, nothing selected"), LogLevel::WARN);
                     return;
                 }
                 let maptiles = layer.get_mpbz().clone().expect("maptiles should be Some'd on a layer");
                 de.current_brush.tiles.clear();
-                if de.bg_drag_data.selection_width >= u8::MAX as u16 {
+                if de.bg_sel_data.selection_width >= u8::MAX as u16 {
                     log_write(format!("Selection width higher than u8 able"), LogLevel::ERROR);
                     return;
                 }
-                de.current_brush.width = de.bg_drag_data.selection_width as u8;
-                let height = de.bg_drag_data.selected_map_indexes.len() as f32 / de.current_brush.width as f32;
+                de.current_brush.width = de.bg_sel_data.selection_width as u8;
+                let height = de.bg_sel_data.selected_map_indexes.len() as f32 / de.current_brush.width as f32;
                 de.current_brush.height = height as u8;
-                for selected_index in &de.bg_drag_data.selected_map_indexes {
+                for selected_index in &de.bg_sel_data.selected_map_indexes {
                     let tile_data = &maptiles.tiles[*selected_index as usize];
                     de.current_brush.tiles.push(tile_data.to_short());
                 }

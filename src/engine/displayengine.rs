@@ -8,7 +8,7 @@ use egui::{Pos2, Rect};
 use serde_yml::Value;
 use uuid::Uuid;
 
-use crate::{data::{area::TriggerSettings, backgrounddata::BackgroundData, course_file::{CourseInfo, MapExit}, grad::GradientData, mapfile::MapData, path::{PathDatabase, PathSettings}, rarc::RenderArchive, sprites::{LevelSprite, SpriteMetadata}, types::{CurrentLayer, MapTileRecordData, Palette, TileCache}, TopLevelSegment}, gui::{gui::BgDragData, windows::{brushes::{Brush, BrushSettings}, course_win::CourseSettings}}, utils::{self, log_write, nitrofs_abs}};
+use crate::{data::{area::TriggerSettings, backgrounddata::BackgroundData, course_file::{CourseInfo, MapExit}, grad::GradientData, mapfile::MapData, path::{PathDatabase, PathSettings}, rarc::RenderArchive, sprites::{LevelSprite, SpriteMetadata}, types::{CurrentLayer, MapTileRecordData, Palette, TileCache}, TopLevelSegment}, gui::{gui::BgSelectData, windows::{brushes::{Brush, BrushSettings}, course_win::CourseSettings}}, utils::{self, log_write, nitrofs_abs}};
 
 use crate::utils::LogLevel;
 
@@ -214,7 +214,7 @@ pub struct DisplayEngine {
     pub latest_square_pos_level_space: Pos2,
     pub course_settings: CourseSettings,
     pub trigger_settings: TriggerSettings,
-    pub bg_drag_data: BgDragData
+    pub bg_sel_data: BgSelectData
 }
 
 impl Default for DisplayEngine {
@@ -253,7 +253,7 @@ impl Default for DisplayEngine {
             latest_square_pos_level_space: Pos2::new(0.0, 0.0),
             course_settings: CourseSettings::default(),
             trigger_settings: TriggerSettings::default(),
-            bg_drag_data: BgDragData::default()
+            bg_sel_data: BgSelectData::default()
         }
     }
 }

@@ -520,7 +520,7 @@ fn draw_background(
                     // This is the actual rectangle the tile will be rendered in
                     let true_rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_x_px, tile_y_px), TILE_RECT);
                     let mut selected: bool = false;
-                    if de.bg_drag_data.selecting_rect.intersects(true_rect) && is_selected_layer {
+                    if de.bg_sel_data.selecting_rect.intersects(true_rect) && is_selected_layer {
                         selected = true;
                         // Add to temporary index
                         if !temp_selected_indexes.contains(&map_index) {
@@ -528,7 +528,7 @@ fn draw_background(
                         }
                     }
                     // Check if its in the real selection
-                    if is_selected_layer && de.bg_drag_data.selected_map_indexes.contains(&map_index) {
+                    if is_selected_layer && de.bg_sel_data.selected_map_indexes.contains(&map_index) {
                         selected = true;
                     }
                     if let Some(tilecache) = &mut tc {
@@ -562,7 +562,7 @@ fn draw_background(
                     let bg_interaction = ui.interact(true_rect, interaction_id, egui::Sense::all());
                     if bg_interaction.drag_started() {
                         log_write(format!("Started dragging in BG render function"), LogLevel::DEBUG);
-                        de.bg_drag_data.dragging = true;
+                        de.bg_sel_data.dragging = true;
                         let cur_pos_res = ui.ctx().pointer_interact_pos();
                         if cur_pos_res.is_none() {
                             // This has failed before, somehow, so don't panic
@@ -570,8 +570,8 @@ fn draw_background(
                             return;
                         }
                         let cur_pos: Pos2 = cur_pos_res.unwrap();
-                        de.bg_drag_data.start_pos = cur_pos;
-                        de.bg_drag_data.end_pos = cur_pos; // Starts as empty square
+                        de.bg_sel_data.start_pos = cur_pos;
+                        de.bg_sel_data.end_pos = cur_pos; // Starts as empty square
                     }
                     if bg_interaction.dragged() {
                         let cur_pos_res = ui.ctx().pointer_interact_pos();
@@ -579,8 +579,8 @@ fn draw_background(
                             log_write(format!("Failed to get pointer_interact_pos in BG .dragged"), LogLevel::ERROR);
                             return;
                         }
-                        de.bg_drag_data.end_pos = cur_pos_res.unwrap();
-                        let drag_rect: Rect = Rect::from_two_pos(de.bg_drag_data.start_pos, de.bg_drag_data.end_pos);
+                        de.bg_sel_data.end_pos = cur_pos_res.unwrap();
+                        let drag_rect: Rect = Rect::from_two_pos(de.bg_sel_data.start_pos, de.bg_sel_data.end_pos);
                         // Selection rectangle should look different if Control is held
                         if ui.input(|i| i.modifiers.ctrl) {
                             painter.rect_filled(drag_rect, 0.0, BG_SELECTION_FILL_INVERT);
@@ -588,32 +588,32 @@ fn draw_background(
                             painter.rect_filled(drag_rect, 0.0, BG_SELECTION_FILL);
                         }
                         painter.rect_stroke(drag_rect, 0.0, Stroke::new(1.0, BG_SELECTION_STROKE), egui::StrokeKind::Outside);
-                        de.bg_drag_data.selecting_rect = drag_rect; // Pass the data on in
+                        de.bg_sel_data.selecting_rect = drag_rect; // Pass the data on in
                     }
                     if bg_interaction.drag_stopped() {
                         log_write(format!("Stopped dragging in draw_background"), LogLevel::DEBUG);
                         let shift_held = ui.input(|i| i.modifiers.shift);
                         let ctrl_held = ui.input(|i| i.modifiers.ctrl);
                         if shift_held { // Add
-                            de.bg_drag_data.selected_map_indexes.append(&mut temp_selected_indexes);
-                            de.bg_drag_data.selected_map_indexes.sort();
-                            de.bg_drag_data.selected_map_indexes.dedup();
+                            de.bg_sel_data.selected_map_indexes.append(&mut temp_selected_indexes);
+                            de.bg_sel_data.selected_map_indexes.sort();
+                            de.bg_sel_data.selected_map_indexes.dedup();
                         } else if ctrl_held { // Remove
                             for removing_index in &temp_selected_indexes {
-                                let found_pos = de.bg_drag_data.selected_map_indexes.iter().position(|&p| p == *removing_index);
+                                let found_pos = de.bg_sel_data.selected_map_indexes.iter().position(|&p| p == *removing_index);
                                 if let Some(pos_found) = found_pos {
-                                    de.bg_drag_data.selected_map_indexes.remove(pos_found);
+                                    de.bg_sel_data.selected_map_indexes.remove(pos_found);
                                 }
                             }
                         } else { // Replace
-                            de.bg_drag_data.selected_map_indexes = temp_selected_indexes.clone();
-                            de.bg_drag_data.selected_map_indexes.sort();
-                            de.bg_drag_data.selected_map_indexes.dedup();
+                            de.bg_sel_data.selected_map_indexes = temp_selected_indexes.clone();
+                            de.bg_sel_data.selected_map_indexes.sort();
+                            de.bg_sel_data.selected_map_indexes.dedup();
                         }
                         temp_selected_indexes.clear();
-                        de.bg_drag_data.dragging = false;
-                        de.bg_drag_data.selecting_rect = Rect::NOTHING;
-                        de.bg_drag_data.selection_width = de.bg_drag_data.get_selection_width(info.layer_width);
+                        de.bg_sel_data.dragging = false;
+                        de.bg_sel_data.selecting_rect = Rect::NOTHING;
+                        de.bg_sel_data.selection_width = de.bg_sel_data.get_selection_width(info.layer_width);
                     }
                     ////////////////////////
                     // MOUSE SINGLE CLICK //
@@ -621,9 +621,9 @@ fn draw_background(
                     if bg_interaction.clicked() {
                         // Deselect
                         //log_write(format!("Clearing BG selection"), LogLevel::DEBUG);
-                        de.bg_drag_data.dragging = false; // Just in case it doesn't detect end
-                        de.bg_drag_data.selected_map_indexes.clear();
-                        de.bg_drag_data.selection_width = 0;
+                        de.bg_sel_data.dragging = false; // Just in case it doesn't detect end
+                        de.bg_sel_data.selected_map_indexes.clear();
+                        de.bg_sel_data.selection_width = 0;
                     }
                     if bg_interaction.secondary_clicked() {
                         // Place tile //
