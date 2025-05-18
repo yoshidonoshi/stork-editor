@@ -1,0 +1,659 @@
+///
+/// Consider this the NDS' graphical memory and settings, plus helpers
+///
+
+use std::{collections::HashMap, fmt::{self, Display}, fs::{self, read_to_string}, io::Cursor, path::PathBuf};
+
+use egui::{Pos2, Rect};
+use serde_yml::Value;
+use uuid::Uuid;
+
+use crate::{data::{area::TriggerSettings, backgrounddata::BackgroundData, course_file::{CourseInfo, MapExit}, grad::GradientData, mapfile::MapData, path::{PathDatabase, PathSettings}, rarc::RenderArchive, sprites::{LevelSprite, SpriteMetadata}, types::{CurrentLayer, MapTileRecordData, Palette, TileCache}, TopLevelSegment}, gui::windows::{brushes::{Brush, BrushSettings}, course_win::CourseSettings}, utils::{self, log_write, nitrofs_abs}};
+
+use crate::utils::LogLevel;
+
+/// Global, not specifically tied to individual layer data
+pub struct DisplaySettings {
+    pub current_layer: CurrentLayer,
+    pub show_bg1: bool,
+    pub show_bg2: bool,
+    pub show_bg3: bool,
+    pub show_col: bool,
+    pub show_sprites: bool,
+    pub show_paths: bool,
+    pub show_entrances: bool,
+    pub show_exits: bool,
+    pub show_breakable_rock: bool,
+    pub show_triggers: bool
+}
+
+impl Default for DisplaySettings {
+    fn default() -> Self {
+        Self {
+            // Start on BG2
+            current_layer: CurrentLayer::BG2,
+            show_bg1: true,
+            show_bg2: true,
+            show_bg3: true,
+            show_col: true,
+            show_sprites: true,
+            show_paths: true,
+            show_entrances: true,
+            show_exits: true,
+            // Since it's just a copy overlay
+            show_breakable_rock: false,
+            show_triggers: true
+        }
+    }
+}
+
+#[derive(PartialEq,Clone,Copy,Debug)]
+pub enum GameVersion {
+    /// USA v1.0 AYWE
+    USA10,
+    /// Also AYWE, but v1.1
+    USA11,
+    /// AYWP
+    EUR11,
+    /// AYWJ
+    JAP,
+    /// What?
+    UNKNOWN
+}
+pub fn gameversion_prettyname(gv: &GameVersion) -> String {
+    match gv {
+        GameVersion::EUR11 => String::from("EUR 1.1"),
+        GameVersion::JAP => String::from("JPN"),
+        GameVersion::USA10 => String::from("USA 1.0"),
+        GameVersion::USA11 => String::from("USA 1.1 (rev1)"),
+        GameVersion::UNKNOWN => String::from("Unknown Game Version")
+    }
+}
+
+#[derive(Debug)]
+pub struct DisplayEngineError {
+    pub cause: String
+}
+impl DisplayEngineError {
+    pub fn new(cause: String) -> Self {
+        Self {
+            cause: cause.clone()
+        }
+    }
+}
+impl Display for DisplayEngineError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Error initializing Display Engine: '{}'", &self.cause)
+    }
+}
+
+pub struct SpriteDragStatus {
+    pub start_x: f32,
+    pub start_y: f32,
+    pub dragging_uuid: Uuid
+}
+impl Default for SpriteDragStatus {
+    fn default() -> Self {
+        Self {
+            start_x: 0.0, start_y: 0.0,
+            dragging_uuid: Uuid::nil()
+        }
+    }
+}
+
+pub struct ColDragStatus {
+    pub start_pos: Pos2,
+    pub end_pos: Pos2,
+    pub selecting_rect: Rect,
+    pub dragging: bool,
+    /// Once set to true, delete everything underneath selection, then set to false
+    pub delete_under: bool
+}
+impl Default for ColDragStatus {
+    fn default() -> Self {
+        Self {
+            start_pos: Pos2::new(0.0, 0.0),
+            end_pos: Pos2::new(0.0, 0.0),
+            selecting_rect: Rect::NOTHING,
+            dragging: false, delete_under: false
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct SpriteClipboard {
+    pub sprites: Vec<LevelSprite>,
+    pub top_left_pos: Pos2
+}
+impl Default for SpriteClipboard {
+    fn default() -> Self {
+        Self {
+            sprites: Vec::new(),
+            top_left_pos: Pos2::new(0.0, 0.0)
+        }
+    }
+}
+
+#[derive(Clone,Copy,Debug)]
+pub struct BgClipboardSelectedTile {
+    pub tile: MapTileRecordData,
+    pub x_offset: i32,
+    pub y_offset: i32
+}
+impl fmt::Display for BgClipboardSelectedTile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"BgClipboardSelectedTile [ Tile=0x{:X}, xOffset=0x{:X}, yOffset=0x{:X} ]",self.tile.to_short(),self.x_offset,self.y_offset)
+    }
+}
+
+#[derive(Clone,Debug)]
+pub struct BgClipboard {
+    pub tiles: Vec<BgClipboardSelectedTile>
+}
+impl Default for BgClipboard {
+    fn default() -> Self {
+        Self {
+            tiles: Vec::new()
+        }
+    }
+}
+impl BgClipboard {
+    pub fn clear(&mut self) {
+        self.tiles.clear();
+    }
+}
+
+pub struct Clipboard {
+    pub sprite_clip: SpriteClipboard,
+    pub bg_clip: BgClipboard
+}
+impl Default for Clipboard {
+    fn default() -> Self {
+        Self {
+            sprite_clip: Default::default(),
+            bg_clip: Default::default()
+        }
+    }
+}
+
+/// NDS Graphical data and memory, tailored for YIDS
+pub struct DisplayEngine {
+    pub loaded_map: MapData,
+    pub map_index: Option<usize>,
+    pub loaded_course: CourseInfo,
+    pub bg_palettes: [Palette;16],
+    pub bg_layer_1: Option<BackgroundData>,
+    pub bg_layer_2: Option<BackgroundData>,
+    pub bg_layer_3: Option<BackgroundData>,
+    pub tile_cache_bg1: TileCache,
+    pub tile_cache_bg2: TileCache,
+    pub tile_cache_bg3: TileCache,
+    pub level_sprites: Vec<LevelSprite>,
+    pub gradient_data: Option<GradientData>,
+    pub path_data: Option<PathDatabase>,
+    pub path_settings: PathSettings,
+    pub loaded_archives: HashMap<String,RenderArchive>,
+    pub loaded_arm9: Option<Vec<u8>>,
+    pub game_version: Option<GameVersion>,
+    pub display_settings: DisplaySettings,
+    pub selected_sprite_uuids: Vec<Uuid>,
+    pub col_tile_to_place: u8,
+    // This does not change, and therefore can be cloned at will
+    pub sprite_metadata_copy: HashMap<u16,SpriteMetadata>,
+    pub latest_sprite_settings: String,
+    pub sprite_search_query: String,
+    pub sprite_drag_status: SpriteDragStatus,
+    pub col_selector_status: ColDragStatus,
+    pub unsaved_changes: bool,
+    pub export_folder: PathBuf,
+    pub current_brush: Brush,
+    pub brush_settings: BrushSettings,
+    pub saved_brushes: Vec<Brush>,
+    pub graphics_update_needed: bool,
+    pub clipboard: Clipboard,
+    pub latest_square_pos_level_space: Pos2,
+    pub course_settings: CourseSettings,
+    pub trigger_settings: TriggerSettings
+}
+
+impl Default for DisplayEngine {
+    fn default() -> Self {
+        Self {
+            loaded_map: MapData::default(),
+            map_index: Option::None,
+            loaded_course: CourseInfo::default(),
+            bg_palettes: Default::default(),
+            bg_layer_1: Option::None, bg_layer_2: Option::None, bg_layer_3: Option::None,
+            loaded_arm9: Option::None,
+            game_version: Option::None,
+            tile_cache_bg1: vec![vec![Option::None;1024];16],
+            tile_cache_bg2: vec![vec![Option::None;1024];16],
+            tile_cache_bg3: vec![vec![Option::None;1024];16],
+            level_sprites: Vec::new(),
+            gradient_data: Option::None,
+            path_data: Option::None,
+            path_settings: PathSettings::default(),
+            display_settings: DisplaySettings::default(),
+            loaded_archives: HashMap::new(),
+            selected_sprite_uuids: Vec::new(),
+            col_tile_to_place: 0x1, // Basic square
+            sprite_metadata_copy: HashMap::new(),
+            latest_sprite_settings: String::from(""),
+            sprite_search_query: String::from(""),
+            sprite_drag_status: SpriteDragStatus::default(),
+            col_selector_status: ColDragStatus::default(),
+            unsaved_changes: false,
+            export_folder: PathBuf::new(),
+            current_brush: Brush::default(),
+            brush_settings: BrushSettings::default(),
+            saved_brushes: Vec::new(),
+            graphics_update_needed: false,
+            clipboard: Clipboard::default(),
+            latest_square_pos_level_space: Pos2::new(0.0, 0.0),
+            course_settings: CourseSettings::default(),
+            trigger_settings: TriggerSettings::default()
+        }
+    }
+}
+
+impl DisplayEngine {
+    pub fn new(extract_dir: PathBuf) -> Result<DisplayEngine, DisplayEngineError> {
+        let mut de = DisplayEngine::default(); // Everything is empty
+
+        // Check Header and game version //
+        let mut header_path: PathBuf = PathBuf::from(&extract_dir);
+        header_path.push("header.yaml");
+        let yaml_content = read_to_string(header_path);
+        if yaml_content.is_err() {
+            let yaml_err1 = format!("Failed to open header.yaml: {}",yaml_content.unwrap_err());
+            log_write(yaml_err1.clone(), LogLevel::ERROR);
+            return Err(DisplayEngineError::new(yaml_err1));
+        }
+        let yaml_content = yaml_content.unwrap();
+        let yaml: Value = serde_yml::from_str(&yaml_content).expect("Failed to parse header.yaml");
+        if let Some(game_code) = yaml["gamecode"].as_str() {
+            let game_ver = match game_code {
+                "AYWE"=> GameVersion::USA10,
+                "AYWP"=> GameVersion::EUR11,
+                "AYWJ"=> GameVersion::JAP,
+                _=> GameVersion::UNKNOWN
+            };
+            log_write(format!("Found game version: '{}'",game_code), LogLevel::LOG);
+            de.game_version = Some(game_ver);
+        }
+        if let Some(maker_code) = yaml["makercode"].as_str() {
+            if maker_code == "01" {
+                log_write("Game is unmodified".to_owned(), LogLevel::LOG);
+            } else if maker_code == "63" {
+                log_write("Game was edited with Stork".to_owned(), LogLevel::LOG);
+            } else {
+                log_write(format!("Unusual makercode: '{}'",maker_code), LogLevel::WARN);
+            }
+        }
+
+        // Open and check ARM9 Binary //
+        let mut arm9_path: PathBuf = PathBuf::from(&extract_dir);
+        arm9_path.push("arm9");
+        arm9_path.push("arm9.bin");
+        let existence_check = fs::exists(&arm9_path);
+        if existence_check.is_err() || !existence_check.unwrap() {
+            let arm9_inval_path = format!("ARM9 Path invalid: '{}'",&arm9_path.display());
+            log_write(arm9_inval_path.clone(), LogLevel::ERROR);
+            return Err(DisplayEngineError::new(arm9_inval_path));
+        }
+        let contents: Result<Vec<u8>, std::io::Error> = fs::read(&arm9_path);
+        match &contents {
+            Ok(_) => {
+                log_write(format!("Loaded ARM9 binary from '{}' successfully",&arm9_path.display()), LogLevel::LOG);
+            }
+            Err(e) => {
+                let arm9_io_err = format!("ARM9 IO error: {}", e);
+                log_write(arm9_io_err.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(arm9_io_err));
+            }
+        }
+        de.loaded_arm9 = Some(contents.unwrap());
+
+        // Literally just loaded
+        let got_contents = de.loaded_arm9.clone().expect("Unwrap ARM9 clone"); // got_contents will be released at end of scope
+        // Check if ARM9 works
+        let gamever_check = de.game_version.expect("Gameversion set");
+        match &gamever_check {
+            GameVersion::USA10 => {
+                let found_str = utils::read_fixed_string(&got_contents, 0xe1e6e, 6);
+                if !found_str.eq("1-1_D3") {
+                    let found_str2 = utils::read_fixed_string(&got_contents, 0x0e20ae, 6);
+                    if found_str2.eq("1-1_D3") {
+                        log_write(format!("USA version found: 1.1"), LogLevel::LOG);
+                        log_write(format!("Support for USA rev1 is weak, tread cautiously"), LogLevel::WARN);
+                        de.game_version = Some(GameVersion::USA11);
+                    } else {
+                        let unk_ver1 = format!("Unknown version when trying to find 1-1_D3");
+                        log_write(unk_ver1.clone(), LogLevel::ERROR);
+                        return Err(DisplayEngineError::new(unk_ver1));
+                    }
+                } else {
+                    log_write(format!("USA version found: 1.0"), LogLevel::LOG);
+                }
+            }
+            GameVersion::UNKNOWN => {
+                //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unknown game");
+                let unsupported_msg = "Game Version is unsupported, canceling load".to_owned();
+                log_write(unsupported_msg.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(unsupported_msg));
+            }
+            GameVersion::JAP => {
+                let jpn_msg = "JPN version not yet supported, will break".to_owned();
+                log_write(jpn_msg.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(jpn_msg))
+            }
+            GameVersion::EUR11 => {
+                log_write("EUR version not yet supported, will break".to_owned(), LogLevel::WARN);
+            }
+            _ => {
+                let unk_version_msg = "Unsupported Game Version, this is weird to be hit".to_owned();
+                //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unsupported game");
+                log_write(unk_version_msg.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(unk_version_msg));
+            }
+        }
+        Ok(de)
+    }
+
+    fn get_level_filename(&self, world_index: &u32, level_index: &u32) -> String {
+        if self.game_version.is_none() {
+            // Should be impossible
+            log_write(format!("Attempted to call get_level_filename before game opened"), LogLevel::FATAL);
+            return String::new();
+        }
+        let game_ver = self.game_version.expect("Game version can't not be loaded");
+        let filename_res = match game_ver {
+            GameVersion::USA10 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA10),
+            GameVersion::USA11 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA11),
+            //GameVersion::EUR => self.get_level_filename_eur_11(world_index, level_index),
+            _ => {
+                log_write(format!("Attempted to get level filename on unsupported version: '{:?}'",&self.game_version.unwrap()), LogLevel::FATAL);
+                return String::new();
+            },
+        };
+        match filename_res {
+            Ok(s) => {
+                s
+            }
+            Err(e) => {
+                log_write(format!("filename_res failed somehow: {}",e), LogLevel::FATAL);
+                "Error".to_owned()
+            }
+        }
+    }
+
+    /// This function found at 0x02050000 in USA 1.0. Modified as little as possible.
+    /// 
+    /// TODO: Make real errors
+    fn get_level_filename_usa(&self, world_index: &u32, level_index: &u32, game_version: GameVersion) -> Result<String,String> {
+        if world_index + 1 > 5 {
+            let world_fail = "World 5 is the highest World";
+            log_write(world_fail.to_owned(), LogLevel::ERROR);
+            return Err(world_fail.to_owned());
+        }
+
+        if level_index + 1 > 10 {
+            let level_fail = "There are only 10 levels per World";
+            log_write(level_fail.to_owned(), LogLevel::ERROR);
+            return Err(level_fail.to_owned());
+        }
+
+        // This +1 is due to 0-1 being at the base of the array
+        // That would mean 1-1 (indexes 0-0) leads to 0-1 not 1-1
+        // So the +1 makes it skip that
+        let level_id: u32 = world_index * 10 + level_index + 1;
+        if level_id < 0x7b || level_id > 0x7e {
+            // 02050024 (some function that takes in 0), does not break
+        }
+        if level_id == 0 {
+            return Ok(format!("0-1_D3"));
+        } else {
+            if level_id == 0x7a {
+                // FUN_020173c0(0xd,1);
+                // Enemy Check, aka Museum
+                return Ok("ene_check_".to_owned());
+            } else if level_id == 0x7b {
+                return Ok("koopa3".to_owned());
+            } else if level_id == 0x7c {
+                return Ok("koopa2".to_owned());
+            } else if level_id == 0x7d {
+                return Ok("kuppa".to_owned());
+            } else if level_id == 0x7e {
+                return Ok("lastback".to_owned());
+            } else if level_id == 0x7f {
+                return Err("0x7f unknown multi".to_owned());
+            }
+        }
+
+        if level_id > 99 {
+            return Err(">99 unknown multi".to_owned());
+        }
+        const LEVEL_ARRAY_ADDR_USA11: u32 = 0x000d9178; // 0x020d9178
+        const LEVEL_ARRAY_ADDR_USA10: u32 = 0x000d8f20; // 0x000d8e58;
+        let mut level_array_addr = LEVEL_ARRAY_ADDR_USA10;
+        if game_version == GameVersion::USA11 {
+            level_array_addr = LEVEL_ARRAY_ADDR_USA11;
+        }
+        let offset = level_id * 4; // u32 = 4 bytes
+        let array_internal_address = level_array_addr + offset;
+        // Make this the smarter way eventually
+        if let Some(arm9_binary) = &self.loaded_arm9 {
+            let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9_binary);
+            rdr.set_position(array_internal_address as u64);
+            let string_address: u32 = utils::read_address(&mut rdr); //rdr.read_u32::<LittleEndian>().unwrap();
+            rdr.set_position(string_address as u64);
+            let level_name = utils::read_c_string(&mut rdr);
+            Ok(level_name)
+        } else {
+            Err("NO BINARY".to_owned())
+        }
+    }
+
+    #[allow(dead_code)]
+    fn get_level_filename_eur_11(&self, world_index: &u32, level_index: &u32) -> String {
+        // 1-1 filename location: 0xe21ae
+        let level_id: u32 = world_index * 10 + level_index;// + 1 maybe not here?
+        if (level_id < 0x7b) || (0x7e < level_id) {
+            //func_02017e88(0);
+        }
+        // if ((int)param_1 < 1) {
+        //     if (param_1 == 0) {
+        //     return "0-1_D3";
+        //     }
+        // }
+        if level_id == 0 {
+            return "0-1_D3".to_owned();
+        } else {
+            if level_id == 0x7a {
+                // FUN_020173c0(0xd,1);
+                // Enemy Check, aka Museum
+                return "ene_check_".to_owned();
+            } else if level_id == 0x7b {
+                return "koopa3".to_owned();
+            } else if level_id == 0x7c {
+                return "koopa2".to_owned();
+            } else if level_id == 0x7d {
+                return "kuppa".to_owned();
+            } else if level_id == 0x7e {
+                return "lastback".to_owned();
+            } else if level_id == 0x7f {
+                return "0x7f unknown multi".to_owned();
+            }
+        }
+        if level_id > 100 {
+            return ">99 unknown multi".to_owned();
+        }
+        const LEVEL_ARRAY_ADDR: u32 = 0x0d8e58; //0x020d8e58
+        let offset = level_id * 4; // u32 = 4 bytes
+        let array_internal_address = LEVEL_ARRAY_ADDR + offset;
+        if let Some(arm9_binary) = &self.loaded_arm9 {
+            let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9_binary);
+            rdr.set_position(array_internal_address as u64);
+            let string_address: u32 = utils::read_address(&mut rdr); //rdr.read_u32::<LittleEndian>().unwrap();
+            rdr.set_position(string_address as u64);
+            let level_name = utils::read_c_string(&mut rdr);
+            level_name
+        } else {
+            "ERROR, NO BINARY".to_owned()
+        }
+    }
+    
+    pub fn load_level(&mut self, world_index: u32, level_index: u32, map_index: u32) {
+        log_write(format!("Loading World {} Level {} Map {}",&world_index+1,&level_index+1,&map_index+1), LogLevel::LOG);
+        self.map_index = Some(map_index as usize);
+        let mut initial_level_name = self.get_level_filename(&world_index, &level_index);
+        initial_level_name.push_str(".crsb");
+        let crsb_path = nitrofs_abs(&self.export_folder, &initial_level_name);
+        let crsb = CourseInfo::new(&crsb_path,&format!("Course {}-{}",world_index+1,level_index+1));
+        // TESTING
+        // let crsb_recompiled = crsb.wrap();
+        // let file_bytes = fs::read(&crsb_path).expect("CRSB path should exist");
+        // compare_vector_u8s(&file_bytes, &crsb_recompiled);
+        // END TESTING
+        log_write(format!("Loaded Course '{}' from '{}'",&crsb.label,&crsb.src_filename), LogLevel::LOG);
+        let mut map_name = crsb.level_map_data[map_index as usize].map_filename_noext.clone();
+        let noext_name = map_name.clone();
+        self.loaded_course = crsb;
+        map_name.push_str(".mpdz");
+        let map_path = nitrofs_abs(&self.export_folder, &map_name);
+        let loaded_map_res = MapData::new(&map_path,&self.export_folder);
+        if loaded_map_res.is_err() {
+            log_write(format!("Failed to load MapData"), LogLevel::ERROR);
+            return;
+        }
+        self.loaded_map = loaded_map_res.unwrap();
+        self.loaded_map.map_name = noext_name;
+
+        let seg_count = &self.loaded_map.segments.len();
+        let mapped: Vec<String> = self.loaded_map.segments.iter().map(|x| x.header()).collect();
+        let mapped: String = mapped.join(", ");
+        log_write(format!("Loaded Map '{}' with {} DataSegments: {}",&self.loaded_map.src_file,seg_count,mapped), LogLevel::LOG);
+        
+        // Do it manually the first time, don't wait for refresh
+        self.update_graphics_from_mapdata();
+    }
+
+    pub fn get_render_archive(&mut self, archive_name_local: &String) -> &RenderArchive {
+        if self.loaded_archives.contains_key(archive_name_local) {
+            let arc_opt = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get");
+            arc_opt
+        } else {
+            let archive_name_full = nitrofs_abs(&self.export_folder, archive_name_local).display().to_string();
+            let rarc = RenderArchive::new(archive_name_full, &self.export_folder);
+            self.loaded_archives.insert(archive_name_local.clone(), rarc);
+            let ret = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get post creation");
+            ret
+        }
+    }
+
+    /// Copies data from MapData to graphics engine
+    pub fn update_graphics_from_mapdata(&mut self) {
+        // Initialize palettes //
+        let mut pal_index: usize = 0;
+        const UNIPAL_ADDR: u64 = 0x000d6f40;
+        if let Some(arm9_binary) = &self.loaded_arm9 {
+            let mut cur = Cursor::new(arm9_binary);
+            cur.set_position(UNIPAL_ADDR);
+            let pal = Palette::from_cur(&mut cur,16);
+            self.bg_palettes[pal_index] = pal;
+        } else {
+            log_write("Could not load ARM9 to get universal palette".to_owned(), LogLevel::ERROR);
+        }
+        pal_index += 1;
+
+        // BG loop //
+        for which in 1..4 as u8 { // This is 1,2,3; 4 is excluded
+            let bg: Option<&mut BackgroundData> = self.loaded_map.get_background(which);
+            if let Some(bg_data) = bg {
+                // Palette
+                if let Some(palette) = bg_data.get_pltb_mut().cloned() {
+                    bg_data._pal_offset = pal_index as u8 - 1; // -1 to deal with universal palette
+                    for p in &palette.palettes {
+                        if pal_index < 16 {
+                            self.bg_palettes[pal_index] = p.clone();
+                        }
+                        // else { // For some reason, there's more. But not used?
+                        //     log_write(format!("Palette Overflow, discarding"), LogLevel::WARN);
+                        // }
+                        pal_index += 1;
+                    }
+                }
+                // Setting to specific graphic memory
+                // It is one way, copy it
+                if which == 1 {
+                    self.bg_layer_1 = Some(bg_data.clone());
+                } else if which == 2 {
+                    self.bg_layer_2 = Some(bg_data.clone());
+                } else if which == 3 {
+                    self.bg_layer_3 = Some(bg_data.clone());
+                } else {
+                    log_write(format!("Unusual which_bg in update_graphics_from_map: {}",which), LogLevel::ERROR);
+                }
+            } else {
+                //log_write(format!("Did not get BG from get_background in graphics update"), LogLevel::WARN);
+            }
+        }
+        // SETD (Sprites) //
+        self.level_sprites.clear();
+        if let Some(setd) = self.loaded_map.get_setd() {
+            for sprite in &setd.sprites {
+                // Copy data, it is one way
+                self.level_sprites.push(sprite.clone());
+            }
+        }
+
+        // GRAD (Background gradient) //
+        if let Some(grad) = self.loaded_map.get_grad() {
+            self.gradient_data = Some(grad.clone());
+        }
+
+        // PATH (Paths) //
+        if let Some(path) = self.loaded_map.get_path() {
+            self.path_data = Some(path.clone());
+        }
+    }
+
+    pub fn update_sprite_metadata(&mut self, meta: &HashMap<u16,SpriteMetadata>) {
+        self.sprite_metadata_copy = meta.clone();
+    }
+
+    pub fn get_loaded_sprite_by_uuid(&self, uuid: &Uuid) -> Option<&LevelSprite> {
+        for sprite in &self.level_sprites {
+            if sprite.uuid == *uuid {
+                return Some(sprite);
+            }
+        }
+        Option::None
+    }
+
+    pub fn get_selected_exit_mut(&mut self) -> Option<&mut MapExit> {
+        if self.course_settings.selected_exit.is_none() {
+            return Option::None;
+        }
+        let selected_exit_uuid = self.course_settings.selected_exit.unwrap();
+        if self.course_settings.selected_map.is_none() {
+            return Option::None;
+        }
+        let selected_map_index = self.course_settings.selected_map;
+        if selected_map_index.is_none() {
+            return Option::None;
+        }
+        let selected_map_index = selected_map_index.unwrap();
+        if selected_map_index >= self.loaded_course.level_map_data.len() {
+            self.course_settings.selected_map = Option::None;
+            log_write(format!("Selected map index out of bounds"), LogLevel::WARN);
+        }
+        let selected_map = &mut self.loaded_course.level_map_data[selected_map_index];
+        let map_exit = selected_map.get_exit(&selected_exit_uuid);
+        if map_exit.is_none() {
+            return Option::None;
+        }
+        map_exit
+    }
+
+}

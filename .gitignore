@@ -1,0 +1,14 @@
+/target
+pytools/
+
+# Testing
+*.arcz
+*.arcz.bin
+*.nds
+yids_extract/
+*.sav
+*.mch
+*.mpdz
+*.bin
+*.zip
+stork.log

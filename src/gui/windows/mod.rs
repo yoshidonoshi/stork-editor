@@ -1,0 +1,11 @@
+pub mod palettewin;
+pub mod tileswin;
+pub mod sprite_add;
+pub mod col_win;
+pub mod brushes;
+pub mod saved_brushes;
+pub mod course_win;
+pub mod triggers;
+pub mod paths_win;
+pub mod map_segs;
+pub mod scen_segs;

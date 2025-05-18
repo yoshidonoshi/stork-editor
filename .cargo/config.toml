@@ -1,0 +1,7 @@
+[env]
+DISCORD = "https://discord.gg/Fy4za2WsT6"
+GITHUB_REPO = "https://github.com/yoshidonoshi/stork-editor"
+DOC_URL = "https://github.com/yoshidonoshi/stork-editor/wiki/Stork-Editor"
+# This is a good fallback
+SMWC_FORUM = "https://www.smwcentral.net/?p=viewforum&f=25"
+SPRITE_DOC = "https://github.com/yoshidonoshi/stork-editor/wiki/Sprites"
