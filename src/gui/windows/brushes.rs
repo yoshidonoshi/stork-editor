@@ -1,4 +1,4 @@
-use egui::{Color32, Painter, Pos2, Rect, Response, Stroke, Vec2};
+use egui::{Color32, Painter, Pos2, Rect, Response, RichText, Stroke, Vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::{data::types::{MapTileRecordData, Palette}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, get_pixel_bytes_16, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, LogLevel}};
@@ -108,12 +108,57 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 log_write(format!("Failed to get pointer input when clicking Saved Brushes grid"), LogLevel::ERROR);
             }
         } // End interactivity
+        // Helper for selection
+        if !de.bg_sel_data.selected_map_indexes.is_empty() {
+            let sel_width: u16 = de.bg_sel_data.selection_width;
+            let sel_height: u16 = de.bg_sel_data.selection_height;
+            let odd_size = sel_width % 2 != 0 || sel_height % 2 != 0;
+            let raw_text = format!("Selection width/height: {}/{}",sel_width,sel_height);
+            let top_left = de.bg_sel_data.get_top_left(layer.get_info().expect("Layer has INFO").layer_width);
+            if top_left.is_none() {
+                log_write(format!("Unable to get top left from bg selection in brushes"), LogLevel::FATAL);
+                return;
+            }
+            let top_left = top_left.unwrap();
+            let odd_pos = (top_left.x as u32) % 2 != 0 || (top_left.y as u32) % 2 != 0;
+            let mut rich_text = RichText::new(raw_text);
+            if odd_pos {
+                rich_text = rich_text.color(Color32::RED).underline();
+                let odd_pos_label = ui.label(rich_text);
+                if odd_pos_label.hovered() {
+                    egui::show_tooltip(ui.ctx(), ui.layer_id(), egui::Id::new("odd_sel_pos"), |ui| {
+                        ui.label("The top left corner of your selection is odd, this is very unoptimal for Brushes");
+                        ui.label("Tip: Use the red square near your cursor to locate the nearest top left for selecting");
+                        ui.label("If the top left looks even, you may have selected invisible tiles");
+                        ui.label("Tip: Use Control + Drag to remove excess selected tiles, and Shift + Drag to add more");
+                    });
+                }
+            } else if odd_size {
+                rich_text = rich_text.color(Color32::ORANGE).underline();
+                let odd_size_label = ui.label(rich_text);
+                if odd_size_label.hovered() {
+                    egui::show_tooltip(ui.ctx(), ui.layer_id(), egui::Id::new("odd_sel_size"), |ui| {
+                        ui.label("Your selection's dimensions are odd (not divisible by 2), this is unoptimal for Brushes");
+                        ui.label("You can ignore this if the bottom left or right have a clear line");
+                        ui.label("Tip: Use Control + Drag to remove excess selected tiles, and Shift + Drag to add more");
+                    });
+                }
+            } else {
+                let _good_label = ui.label(rich_text);
+            }
+        } else {
+            ui.label(format!("Selection width/height: N/A"));
+        }
+        // Button panel
         ui.horizontal(|ui| {
             let mut label_str = String::from("Tile selection loadable");
             let mut load_tiles_enabled = true;
             if de.bg_sel_data.selection_width == 0 {
                 label_str = String::from("Nothing selected");
                 load_tiles_enabled = false;
+            // } else if odd_pos { // Potential edge cases, leave disabled for now
+            //     label_str = String::from("Selection top left is odd");
+            //     load_tiles_enabled = false;
             } else if de.bg_sel_data.selection_width > 16 {
                 label_str = String::from("Selection too wide (16 tiles max)");
                 load_tiles_enabled = false;

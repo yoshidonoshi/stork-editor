@@ -614,6 +614,7 @@ fn draw_background(
                         de.bg_sel_data.dragging = false;
                         de.bg_sel_data.selecting_rect = Rect::NOTHING;
                         de.bg_sel_data.selection_width = de.bg_sel_data.get_selection_width(info.layer_width);
+                        de.bg_sel_data.selection_height = de.bg_sel_data.get_selection_height(info.layer_width);
                     }
                     ////////////////////////
                     // MOUSE SINGLE CLICK //
@@ -621,9 +622,7 @@ fn draw_background(
                     if bg_interaction.clicked() {
                         // Deselect
                         //log_write(format!("Clearing BG selection"), LogLevel::DEBUG);
-                        de.bg_sel_data.dragging = false; // Just in case it doesn't detect end
-                        de.bg_sel_data.selected_map_indexes.clear();
-                        de.bg_sel_data.selection_width = 0;
+                        de.bg_sel_data.clear();
                     }
                     if bg_interaction.secondary_clicked() {
                         // Place tile //

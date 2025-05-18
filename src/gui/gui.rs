@@ -21,14 +21,17 @@ pub struct BgSelectData {
     /// Indexes on the map, no other info. Careful with sizing!
     pub selected_map_indexes: Vec<u32>,
     /// Primarily to assist with converting to clipboard selections
-    pub selection_width: u16
+    pub selection_width: u16,
+    /// Primarily for checking selections
+    pub selection_height: u16
 }
 
 impl Default for BgSelectData {
     fn default() -> Self {
         Self {
             dragging: false, start_pos: Pos2::new(0.0, 0.0), end_pos: Pos2::new(50.0, 50.0),
-            selecting_rect: Rect::NOTHING, selected_map_indexes: Vec::new(), selection_width: 0
+            selecting_rect: Rect::NOTHING, selected_map_indexes: Vec::new(),
+            selection_width: 0, selection_height: 0
         }
     }
 }
@@ -57,21 +60,51 @@ impl BgSelectData {
         max_x - min_x + 1 // Because same = 0, but that's 1x1
     }
 
-    pub fn get_top_left(&mut self, map_width: u16) -> Pos2 {
+    pub fn get_selection_height(&self, map_width: u16) -> u16 {
         if self.selected_map_indexes.is_empty() {
-            log_write(format!("Cannot get top left of selected tiles, empty"), LogLevel::ERROR);
-            return Pos2::new(0.0, 0.0);
+            return 0;
+        }
+        let mut max_y: u16 = 0;
+        let mut min_y: u16 = 0xffff;
+        for map_index in &self.selected_map_indexes {
+            let y_pos = get_y_pos_of_map_index(*map_index, &(map_width as u32));
+            if y_pos > max_y {
+                max_y = y_pos;
+            }
+            if y_pos < min_y {
+                min_y = y_pos;
+            }
+        }
+        if min_y > max_y {
+            log_write(format!("min_y > max_y: 0x{:X} > 0x{:X}",min_y,max_y), LogLevel::ERROR);
+            return 0;
+        }
+        max_y - min_y + 1 // Because same = 0, but that's 1x1
+    }
+
+    pub fn get_top_left(&mut self, map_width: u16) -> Option<Pos2> {
+        if self.selected_map_indexes.is_empty() {
+            return Option::None;
         }
         // Should be sorted anyway
         self.selected_map_indexes.sort();
         let x = get_x_pos_of_map_index(self.selected_map_indexes[0], &(map_width as u32));
         let y = get_y_pos_of_map_index(self.selected_map_indexes[0], &(map_width as u32));
-        Pos2::new(x as f32, y as f32)
+        Some(Pos2::new(x as f32, y as f32))
     }
 
     pub fn to_clipboard_tiles(&mut self, map_width: u16, map_tiles: &Vec<MapTileRecordData>) -> Vec<BgClipboardSelectedTile> {
         let mut ret: Vec<BgClipboardSelectedTile> = Vec::new();
+        if self.selected_map_indexes.is_empty() {
+            log_write(format!("Attempted to convert to clipboard tiles while empty"), LogLevel::WARN);
+            return ret;
+        }
         let top_left = self.get_top_left(map_width);
+        if top_left.is_none() {
+            log_write(format!("Could not get top left"), LogLevel::ERROR);
+            return Vec::new();
+        }
+        let top_left = top_left.unwrap();
         let top_abs_x = top_left.x as i32;
         let top_abs_y = top_left.y as i32;
         for selected_map_index in &self.selected_map_indexes {
@@ -87,6 +120,16 @@ impl BgSelectData {
             ret.push(clip);
         }
         ret
+    }
+
+    pub fn clear(&mut self) {
+        self.dragging = false;
+        self.end_pos = Pos2::ZERO;
+        self.start_pos = Pos2::ZERO;
+        self.selected_map_indexes.clear();
+        self.selecting_rect = Rect::NOTHING;
+        self.selection_height = 0;
+        self.selection_width = 0;
     }
 }
 
@@ -650,8 +693,7 @@ impl Gui {
                             self.display_engine.loaded_map.delete_bg_tile_by_map_index(
                                 self.display_engine.display_settings.current_layer as u8, *tile_index);
                         }
-                        self.display_engine.bg_sel_data.selected_map_indexes.clear();
-                        self.display_engine.bg_sel_data.selection_width = 0;
+                        self.display_engine.bg_sel_data.clear();
                         self.display_engine.graphics_update_needed = true;
                         self.display_engine.unsaved_changes = true;
                     }
@@ -744,8 +786,7 @@ impl Gui {
         if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
             self.display_engine.selected_sprite_uuids.clear();
         } else if self.is_cur_layer_bg() {
-            self.display_engine.bg_sel_data.selected_map_indexes.clear();
-            self.display_engine.bg_sel_data.selection_width = 0;
+            self.display_engine.bg_sel_data.clear();
         }
     }
 
@@ -871,8 +912,7 @@ impl Gui {
                         self.display_engine.loaded_map.delete_bg_tile_by_map_index(
                             self.display_engine.display_settings.current_layer as u8, *tile_index);
                     }
-                    self.display_engine.bg_sel_data.selected_map_indexes.clear();
-                    self.display_engine.bg_sel_data.selection_width = 0;
+                    self.display_engine.bg_sel_data.clear();
                     self.display_engine.unsaved_changes = true;
                     self.display_engine.graphics_update_needed = true;
                 } else {
