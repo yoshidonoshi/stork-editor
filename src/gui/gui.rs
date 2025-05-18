@@ -135,7 +135,6 @@ pub struct Gui {
     pub sprite_metadata: HashMap<u16,SpriteMetadata>,
     // Tools
     pub undoer: Undoer<MapData>,
-    pub bg_drag_data: BgDragData,
     pub scroll_to: Option<Pos2>
 }
 impl Default for Gui {
@@ -184,7 +183,6 @@ impl Default for Gui {
             clear_modal_open: false,
             help_modal_open: false,
             undoer: Undoer::default(),
-            bg_drag_data: BgDragData::default(),
             scroll_to: Option::None
         }
     }
@@ -641,15 +639,15 @@ impl Gui {
             }
             // BG CONTROLS //
             if self.is_cur_layer_bg() {
-                if !self.bg_drag_data.selected_map_indexes.is_empty() && !self.bg_drag_data.dragging {
+                if !self.display_engine.bg_drag_data.selected_map_indexes.is_empty() && !self.display_engine.bg_drag_data.dragging {
                     if i.key_pressed(egui::Key::Delete) {
-                        log_write(format!("Deleting selection with {} tiles",self.bg_drag_data.selected_map_indexes.len()), LogLevel::LOG);
-                        for tile_index in &self.bg_drag_data.selected_map_indexes {
+                        log_write(format!("Deleting selection with {} tiles",self.display_engine.bg_drag_data.selected_map_indexes.len()), LogLevel::LOG);
+                        for tile_index in &self.display_engine.bg_drag_data.selected_map_indexes {
                             self.display_engine.loaded_map.delete_bg_tile_by_map_index(
                                 self.display_engine.display_settings.current_layer as u8, *tile_index);
                         }
-                        self.bg_drag_data.selected_map_indexes.clear();
-                        self.bg_drag_data.selection_width = 0;
+                        self.display_engine.bg_drag_data.selected_map_indexes.clear();
+                        self.display_engine.bg_drag_data.selection_width = 0;
                         self.display_engine.graphics_update_needed = true;
                         self.display_engine.unsaved_changes = true;
                     }
@@ -727,8 +725,8 @@ impl Gui {
             if let Some(bg) = bg_res {
                 if let Some(tiles) = bg.get_mpbz() {
                     let all_indexes: Vec<u32> = (0..tiles.tiles.len() as u32).collect();
-                    self.bg_drag_data.selected_map_indexes = all_indexes;
-                    self.bg_drag_data.selection_width = bg.get_info().expect("Select All INFO").layer_width;
+                    self.display_engine.bg_drag_data.selected_map_indexes = all_indexes;
+                    self.display_engine.bg_drag_data.selection_width = bg.get_info().expect("Select All INFO").layer_width;
                 } else {
                     log_write(format!("MapTiles were not retrieved when seleting all"), LogLevel::ERROR);
                 }
@@ -742,8 +740,8 @@ impl Gui {
         if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
             self.display_engine.selected_sprite_uuids.clear();
         } else if self.is_cur_layer_bg() {
-            self.bg_drag_data.selected_map_indexes.clear();
-            self.bg_drag_data.selection_width = 0;
+            self.display_engine.bg_drag_data.selected_map_indexes.clear();
+            self.display_engine.bg_drag_data.selection_width = 0;
         }
     }
 
@@ -784,7 +782,7 @@ impl Gui {
             // No needs for any updates, selection remains
             log_write(format!("Copied {} Sprites onto the clipboard",self.display_engine.clipboard.sprite_clip.sprites.len()), LogLevel::LOG);
         } if self.is_cur_layer_bg() {
-            if self.bg_drag_data.selected_map_indexes.is_empty() {
+            if self.display_engine.bg_drag_data.selected_map_indexes.is_empty() {
                 log_write(format!("Cannot copy, no BG data selected"), LogLevel::WARN);
                 return;
             }
@@ -792,7 +790,7 @@ impl Gui {
             let bg_res = self.display_engine.loaded_map.get_background(which_bg);
             if let Some(bg) = bg_res {
                 if let Some(tiles) = bg.get_mpbz() {
-                    let clips = self.bg_drag_data.to_clipboard_tiles(
+                    let clips = self.display_engine.bg_drag_data.to_clipboard_tiles(
                         bg.get_info().expect("Copy BG info guarantee").layer_width, &tiles.tiles.clone());
                     self.display_engine.clipboard.bg_clip.tiles = clips;
                     log_write(format!("Copied {} MapTiles to clipboard",
@@ -853,7 +851,7 @@ impl Gui {
             self.display_engine.unsaved_changes = true;
             log_write(format!("Cut {} Sprites onto the clipboard",self.display_engine.clipboard.sprite_clip.sprites.len()), LogLevel::LOG);
         } if self.is_cur_layer_bg() {
-            if self.bg_drag_data.selected_map_indexes.is_empty() {
+            if self.display_engine.bg_drag_data.selected_map_indexes.is_empty() {
                 log_write(format!("Cannot cut, no BG data selected"), LogLevel::WARN);
                 return;
             }
@@ -862,15 +860,15 @@ impl Gui {
             if let Some(bg) = bg_res {
                 let width = bg.get_info().expect("Guaranteed INFO in BG").layer_width;
                 if let Some(tiles) = bg.get_mpbz_mut() {
-                    let clips = self.bg_drag_data.to_clipboard_tiles(width, &tiles.tiles.clone());
+                    let clips = self.display_engine.bg_drag_data.to_clipboard_tiles(width, &tiles.tiles.clone());
                     self.display_engine.clipboard.bg_clip.tiles = clips;
                     // Delete tiles that were selected
-                    for tile_index in &self.bg_drag_data.selected_map_indexes {
+                    for tile_index in &self.display_engine.bg_drag_data.selected_map_indexes {
                         self.display_engine.loaded_map.delete_bg_tile_by_map_index(
                             self.display_engine.display_settings.current_layer as u8, *tile_index);
                     }
-                    self.bg_drag_data.selected_map_indexes.clear();
-                    self.bg_drag_data.selection_width = 0;
+                    self.display_engine.bg_drag_data.selected_map_indexes.clear();
+                    self.display_engine.bg_drag_data.selection_width = 0;
                     self.display_engine.unsaved_changes = true;
                     self.display_engine.graphics_update_needed = true;
                 } else {
@@ -1132,7 +1130,7 @@ impl eframe::App for Gui {
             .drag_to_scroll(false)
             .max_height(600.0)
             .show(ctx, |ui| {
-                show_brushes_window(ui, &mut self.display_engine, &mut self.bg_drag_data);
+                show_brushes_window(ui, &mut self.display_engine);
             });
         egui::Window::new("Saved Brushes")
             .open(&mut self.stamps_window_open)
@@ -1214,7 +1212,7 @@ impl eframe::App for Gui {
                             self.scroll_to = Option::None;
                         }
                         if self.project_open {
-                            render_primary_grid(ui, &mut self.display_engine, &viewport_rect, &mut self.bg_drag_data);
+                            render_primary_grid(ui, &mut self.display_engine, &viewport_rect);
                         }
                     });
             });

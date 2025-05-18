@@ -163,10 +163,10 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             log_write(format!("Cleaning up due to layer change"), LogLevel::DEBUG);
             gui_state.display_engine.brush_settings.cur_selected_brush = Option::None;
             gui_state.display_engine.current_brush.clear();
-            gui_state.bg_drag_data.selected_map_indexes.clear();
+            gui_state.display_engine.bg_drag_data.selected_map_indexes.clear();
             gui_state.display_engine.clipboard.bg_clip.clear();
-            gui_state.bg_drag_data.dragging = false;
-            gui_state.bg_drag_data.selection_width = 0;
+            gui_state.display_engine.bg_drag_data.dragging = false;
+            gui_state.display_engine.bg_drag_data.selection_width = 0;
         }
         egui::ComboBox::new(egui::Id::new("visible_layers_drop"), "")
             .selected_text("Visible layers")
