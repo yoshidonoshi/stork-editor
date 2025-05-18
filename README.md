@@ -19,4 +19,15 @@ The game version used is **USA 1.0**, please rip legally. Support for other vers
 - View helpful display engine information such as loaded palettes and tiles
 - Helpful documentation and workflows
 
+## Building
+
+`cargo build --release`
+
+If on Linux, and you want to [Cross](https://github.com/cross-rs/cross) compile to Windows:
+```
+cargo install cross --git https://github.com/cross-rs/cross
+rustup target add x86_64-pc-windows-gnu
+cross build --release --target x86_64-pc-windows-gnu
+```
+
 ©YoshiDonoshi
