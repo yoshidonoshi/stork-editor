@@ -56,14 +56,6 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         continue;
                     }
                 }
-                if !de.brush_settings.cur_search_string.trim().is_empty() {
-                    // Filter
-                    let query = de.brush_settings.cur_search_string.clone();
-                    let stamp_name = stamp.name.clone().to_lowercase();
-                    if !stamp_name.contains(&query.trim()) {
-                        continue;
-                    }
-                }
                 let tileset_match = tileset_name == stamp.tileset;
                 body.row(20.0, |mut row| {
                     let row_index = row.index(); // Copies
@@ -72,6 +64,12 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                             row.set_selected(*sel_stamp == row.index());
                         }
                     } // Otherwise nothing selected
+
+                    let stamp_name = stamp.name.clone().to_lowercase();
+                    let cur_search_string = &de.brush_settings.cur_search_string.clone();
+                    if !stamp_name.contains(&cur_search_string.trim()) {
+                        return;
+                    }
                     
                     row.col(|ui| {
                         if !tileset_match {
