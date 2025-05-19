@@ -47,6 +47,12 @@ impl Default for DisplaySettings {
     }
 }
 
+impl DisplaySettings {
+    pub fn is_cur_layer_bg(&self) -> bool {
+        (self.current_layer == CurrentLayer::BG1) || (self.current_layer == CurrentLayer::BG2) || (self.current_layer == CurrentLayer::BG3)
+    }
+}
+
 #[derive(PartialEq,Clone,Copy,Debug)]
 pub enum GameVersion {
     /// AYWE

@@ -531,12 +531,13 @@ fn draw_background(
                     if is_selected_layer && de.bg_sel_data.selected_map_indexes.contains(&map_index) {
                         selected = true;
                     }
+                    let is_cur_lay_bg = de.display_settings.is_cur_layer_bg();
                     if let Some(tilecache) = &mut tc {
                         if !info.is_256_colorpal_mode() {
                             draw_tile_16(
                                 &map_tile, cur_pal, ctx, pixel_tiles,
                                 painter, tilecache,
-                                &true_rect, selected,!is_selected_layer);
+                                &true_rect, selected,!is_selected_layer && is_cur_lay_bg);
                         } else {
                             if let Some(pltb) = layer.get_pltb() {
                                 if pltb.palettes.is_empty() {
@@ -545,7 +546,7 @@ fn draw_background(
                                     draw_tile_256(
                                         &map_tile, &pltb.palettes[0], ctx,
                                         pixel_tiles, painter, tilecache,
-                                        &true_rect, selected, !is_selected_layer);
+                                        &true_rect, selected, !is_selected_layer && is_cur_lay_bg);
                                 }
                             } else {
                                 log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::ERROR);
