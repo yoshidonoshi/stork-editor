@@ -412,14 +412,16 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
     }
     if de.display_settings.current_layer == CurrentLayer::SPRITES {
         if let Some(cfr) = &click_fallback_response {
-            if cfr.clicked() {
+            if cfr.clicked() { // Clicked on empty background
                 de.selected_sprite_uuids.clear();
             }
-            if cfr.secondary_clicked() {
+            if cfr.secondary_clicked() { // Right clicked on empty background = place
+                log_write(format!("Placing new sprite from right click..."), LogLevel::DEBUG);
                 if de.selected_sprite_to_place.is_none() {
                     log_write(format!("Could not place sprite, none selected to add"), LogLevel::DEBUG);
                     return;
                 }
+                // Retrieve the base sprite ID to create, usually set by Add Sprite
                 let new_sprite_id = de.selected_sprite_to_place.unwrap();
                 if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                     let local_pos = pointer_pos - ui.min_rect().min;
@@ -427,8 +429,11 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     let base_tile_y: u16 = (local_pos.y/TILE_HEIGHT_PX) as u16;
                     let new_uuid = de.loaded_map.add_new_sprite_at(new_sprite_id, base_tile_x, base_tile_y, &de.sprite_metadata_copy);
                     log_write(format!("Placed sprite with UUID {}",new_uuid.to_string()), LogLevel::DEBUG);
-                    de.graphics_update_needed = true;
+                    de.selected_sprite_uuids = vec![new_uuid]; // Select only it
                     de.unsaved_changes = true;
+                    update_map = true;
+                } else {
+                    log_write(format!("Could not get pointer pos when right clicking Sprite"), LogLevel::ERROR);
                 }
             }
         }
