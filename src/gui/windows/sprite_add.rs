@@ -3,10 +3,13 @@ use std::collections::HashMap;
 use egui::{Hyperlink, ScrollArea};
 use egui_extras::{Column, TableBuilder};
 
-use crate::{data::sprites::SpriteMetadata, engine::displayengine::DisplayEngine};
+use crate::{data::{sprites::SpriteMetadata, types::CurrentLayer}, engine::displayengine::DisplayEngine};
 
 pub fn sprite_add_window_show(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,SpriteMetadata>) {
     ui.add(Hyperlink::from_label_and_url("Sprite Documentation", env!("SPRITE_DOC")));
+    if de.display_settings.current_layer != CurrentLayer::SPRITES {
+        ui.disable();
+    }
     let _search_bar = ui.text_edit_singleline(&mut de.sprite_search_query);
     ScrollArea::vertical()
         .auto_shrink(false)

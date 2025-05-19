@@ -9,6 +9,10 @@ use crate::{data::backgrounddata::BackgroundData, engine::displayengine::Display
 use super::brushes::Brush;
 
 pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    if !de.display_settings.is_cur_layer_bg() {
+        // Technically uneccesary, but the disabled appearance is good
+        ui.disable();
+    }
     let which_bg = de.display_settings.current_layer as u8;
     let layer: &Option<BackgroundData> = match which_bg {
         1 => &de.bg_layer_1,

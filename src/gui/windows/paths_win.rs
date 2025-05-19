@@ -2,7 +2,7 @@
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::engine::displayengine::DisplayEngine;
+use crate::{data::types::CurrentLayer, engine::displayengine::DisplayEngine};
 
 const CHANGE_RATE: u32 = 0x10000;
 
@@ -13,6 +13,9 @@ pub struct PathAngle {
 }
 
 pub fn show_paths_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    if de.display_settings.current_layer != CurrentLayer::PATHS {
+        ui.disable();
+    }
     StripBuilder::new(ui)
         .size(Size::exact(100.0))
         .size(Size::exact(100.0))

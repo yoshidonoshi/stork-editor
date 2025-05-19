@@ -56,6 +56,10 @@ const BRUSH_TILES_WIDE: i32 = 16;
 const BRUSH_TILE_RECT: Vec2 = Vec2::new(BRUSH_TILE_DIM, BRUSH_TILE_DIM);
 
 pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    if !de.display_settings.is_cur_layer_bg() {
+        // Technically uneccesary, but good for appearance
+        ui.disable();
+    }
     let top_left = ui.min_rect().min;
     ui.allocate_space(Vec2 { x:260.0, y: 000.0 });
     let cur_layer = de.display_settings.current_layer as u8;
