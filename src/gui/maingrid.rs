@@ -536,7 +536,7 @@ fn draw_background(
                             draw_tile_16(
                                 &map_tile, cur_pal, ctx, pixel_tiles,
                                 painter, tilecache,
-                                &true_rect, selected);
+                                &true_rect, selected,!is_selected_layer);
                         } else {
                             if let Some(pltb) = layer.get_pltb() {
                                 if pltb.palettes.is_empty() {
@@ -545,7 +545,7 @@ fn draw_background(
                                     draw_tile_256(
                                         &map_tile, &pltb.palettes[0], ctx,
                                         pixel_tiles, painter, tilecache,
-                                        &true_rect, selected);
+                                        &true_rect, selected, !is_selected_layer);
                                 }
                             } else {
                                 log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::ERROR);
@@ -884,7 +884,8 @@ pub fn draw_tile_16(
     tile: &MapTileRecordData, palette: &Palette,
     ctx: &Context, pixel_tiles: &Vec<u8>,
     painter: &Painter, tc: &mut TileCache,
-    true_rect: &Rect, selected: bool
+    true_rect: &Rect, selected: bool,
+    dim: bool
 ) {
     // See if the texture already exists in the cache, will save much processing power
     let tex_handle_opt: &Option<egui::TextureHandle> = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize);
@@ -898,7 +899,9 @@ pub fn draw_tile_16(
 
     let uvs = get_uvs_from_tile(tile);
     if let Some(t) = tex_handle_opt {
-        if selected {
+        if dim {
+            painter.image(t.id(), *true_rect, uvs, Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 0x40));
+        } else if selected {
             painter.image(t.id(), *true_rect, uvs, Color32::PURPLE);
         } else {
             painter.image(t.id(), *true_rect, uvs, Color32::WHITE);
@@ -914,7 +917,8 @@ pub fn draw_tile_256(
     tile: &MapTileRecordData, palette256: &Palette,
     ctx: &Context, pixel_tiles: &Vec<u8>,
     painter: &Painter, tc: &mut TileCache,
-    true_rect: &Rect, selected: bool
+    true_rect: &Rect, selected: bool,
+    dim: bool
 ) {
     let tex_handle_opt: &Option<egui::TextureHandle> = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize);
     let mut tex_handle_opt_2: Option<TextureHandle> = Option::None;
@@ -927,7 +931,9 @@ pub fn draw_tile_256(
 
     let uvs = get_uvs_from_tile(tile);
     if let Some(t) = tex_handle_opt {
-        if selected {
+        if dim {
+            painter.image(t.id(), *true_rect, uvs, Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 0x40));
+        } else if selected {
             painter.image(t.id(), *true_rect, uvs, Color32::PURPLE);
         } else {
             painter.image(t.id(), *true_rect, uvs, Color32::WHITE);
