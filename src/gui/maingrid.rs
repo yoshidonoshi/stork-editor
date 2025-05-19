@@ -644,6 +644,14 @@ fn draw_background(
                                 let offset_y = tile_index / de.current_brush.width;
                                 let true_x = base_tile_x + offset_x as u32;
                                 let true_y = base_tile_y + offset_y as u32;
+                                if true_y >= info.layer_height as u32 {
+                                    tile_index += 1;
+                                    continue;
+                                }
+                                if true_x >= info.layer_width as u32 {
+                                    tile_index += 1;
+                                    continue;
+                                }
                                 let map_index = true_y * (info.layer_width as u32) + true_x;
                                 if *tile != 0x0000 { // Don't overwrite tiles with blanks
                                     de.loaded_map.place_bg_tile_at_map_index(info.which_bg, map_index, tile);

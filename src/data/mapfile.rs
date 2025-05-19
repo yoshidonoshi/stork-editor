@@ -427,7 +427,8 @@ impl MapData {
         let bg: &mut BackgroundData = bg.unwrap();
         if let Some(tiles_segment) = bg.get_mpbz_mut() {
             if (map_index as usize) > tiles_segment.tiles.len() {
-                log_write(format!("Overflow in delete_bg_tilplace_bg_tile_at_map_indexe_by_map_index: {} >= {}",&map_index,&tiles_segment.tiles.len()), LogLevel::ERROR);
+                // May be pasted out of bounds
+                log_write(format!("Overflow in place_bg_tile_at_map_index {} >= {}",&map_index,&tiles_segment.tiles.len()), LogLevel::ERROR);
                 return false;
             }
             tiles_segment.tiles[map_index as usize] = MapTileRecordData::new(tile);
