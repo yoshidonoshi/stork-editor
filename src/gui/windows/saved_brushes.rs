@@ -66,6 +66,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 }
                 let tileset_match = tileset_name == stamp.tileset;
                 body.row(20.0, |mut row| {
+                    let row_index = row.index(); // Copies
                     if let Some(sel_stamp) = &de.brush_settings.cur_selected_brush {
                         if tileset_match { // Don't let them select the wrong one
                             row.set_selected(*sel_stamp == row.index());
@@ -76,20 +77,40 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         if !tileset_match {
                             ui.disable();
                         }
-                        ui.label(&stamp.name);
+                        let label_name = ui.label(&stamp.name);
+                        if label_name.clicked() {
+                            if tileset_match {
+                                de.brush_settings.cur_selected_brush = Some(row_index);
+                                let got_brush = get_selected_brush_data(&de.saved_brushes, row_index);
+                                if got_brush.is_ok() {
+                                    de.current_brush = got_brush.unwrap();
+                                }
+                            }
+                        }
                     });
                     row.col(|ui| {
                         if !tileset_match {
                             ui.disable();
                         }
-                        ui.label(&stamp.tileset);
+                        let tileset_label = ui.label(&stamp.tileset);
+                        if tileset_label.clicked() {
+                            if tileset_match {
+                                de.brush_settings.cur_selected_brush = Some(row_index);
+                                let got_brush = get_selected_brush_data(&de.saved_brushes, row_index);
+                                if got_brush.is_ok() {
+                                    de.current_brush = got_brush.unwrap();
+                                }
+                            }
+                        }
                     });
 
                     if row.response().clicked() {
                         if tileset_match {
-                            de.brush_settings.cur_selected_brush = Some(row.index());
-                        } else {
-                            log_write(format!("Cannot select, mismatched tileset"), LogLevel::DEBUG);
+                            de.brush_settings.cur_selected_brush = Some(row_index);
+                            let got_brush = get_selected_brush_data(&de.saved_brushes, row_index);
+                            if got_brush.is_ok() {
+                                de.current_brush = got_brush.unwrap();
+                            }
                         }
                     }
                 });
@@ -119,29 +140,6 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         }
     });
     ui.horizontal(|ui| {
-        let mut can_load_brush = true;
-        let mut cant_load_reason = String::from("ERROR");
-        if de.brush_settings.cur_selected_brush.is_none() {
-            cant_load_reason = String::from("No stored brush selected");
-            can_load_brush = false;
-        }
-
-        let load_brush_button = ui.add_enabled(can_load_brush, egui::Button::new("Load Selected Brush"));
-        if load_brush_button.clicked() {
-            if let Some(sel_brush_index) = &de.brush_settings.cur_selected_brush {
-                if *sel_brush_index < de.saved_brushes.len() {
-                    let brush_to_load = de.saved_brushes[*sel_brush_index].clone();
-                    de.current_brush = brush_to_load;
-                } else {
-                    log_write(format!("Selected brush out of bounds!"), LogLevel::ERROR);
-                }
-            }
-        }
-        if !can_load_brush {
-            ui.label(cant_load_reason);
-        }
-    });
-    ui.horizontal(|ui| {
         let brush_export_button = ui.button("Export Brushes JSON");
         if brush_export_button.clicked() {
             save_brushes_to_file(&de.saved_brushes);
@@ -157,6 +155,15 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
         }
     });
+}
+
+fn get_selected_brush_data(saved_brushes: &Vec<Brush>, sel_brush_index: usize) -> Result<Brush,()> {
+    if sel_brush_index >= saved_brushes.len() {
+        log_write(format!("Selected Brush index out of bounds"), LogLevel::ERROR);
+        return Err(());
+    }
+    let brush_to_load = saved_brushes[sel_brush_index].clone();
+    Ok(brush_to_load)
 }
 
 pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
