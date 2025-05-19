@@ -310,7 +310,7 @@ pub fn get_pixel_bytes_16(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
     if array_end > pixel_tiles.len() {
         // Without ANMZ, this fired constantly
         log_write(format!("get_pixel_bytes_16 draw overflow, offending tile_id: 0x{:X}/{}",tile_id,tile_id), LogLevel::ERROR);
-        return vec![1;64].to_vec();
+        return [1;64].to_vec();
     }
     let byte_array = pixel_tiles[array_start..array_end].to_vec();
     byte_array
@@ -323,7 +323,7 @@ pub fn get_pixel_bytes_256(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
         // Without ANMZ, this fired constantly
         log_write(format!("get_pixel_bytes_256 draw overflow(0x{:X} >= 0x{:X}), offending tile_id: 0x{:X}/{}",
             array_end,pixel_tiles.len(),tile_id,tile_id), LogLevel::ERROR);
-        return vec![16;64].to_vec();
+        return [16;64].to_vec();
     }
     let byte_array = pixel_tiles[array_start..array_end].to_vec();
     byte_array

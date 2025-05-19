@@ -95,7 +95,7 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 }
 
 fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
-    if de.course_settings.selected_map == Option::None {
+    if de.course_settings.selected_map.is_none() {
         ui.label("No Map selected");
         return;
     }

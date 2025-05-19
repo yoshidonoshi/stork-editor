@@ -304,7 +304,7 @@ impl Gui {
         let generate_result = filesys::generate_rom(
             &format!("{}/config.yaml",&self.export_directory.display()), &path);
         if generate_result.is_err() {
-            log_write("Failed to generate ROM".to_owned(), LogLevel::ERROR);
+            log_write("Failed to generate ROM".to_string(), LogLevel::ERROR);
         }
     }
     pub fn do_save(&mut self) {
@@ -312,7 +312,7 @@ impl Gui {
     }
     pub fn do_undo(&mut self) {
         if let Some(map_state) = self.undoer.undo(&self.display_engine.loaded_map) {
-            log_write(format!("Undoing"), LogLevel::DEBUG);
+            log_write("Undoing".to_string(), LogLevel::DEBUG);
             self.display_engine.loaded_map = map_state.clone();
             self.display_engine.unsaved_changes = true; // In case you saved
             self.display_engine.graphics_update_needed = true;
@@ -320,7 +320,7 @@ impl Gui {
     }
     pub fn do_redo(&mut self) {
         if let Some(map_state) = self.undoer.redo(&self.display_engine.loaded_map) {
-            log_write(format!("Redoing"), LogLevel::DEBUG);
+            log_write("Redoing".to_string(), LogLevel::DEBUG);
             self.display_engine.loaded_map = map_state.clone();
             self.display_engine.unsaved_changes = true; // In case you saved
             self.display_engine.graphics_update_needed = true;
@@ -508,11 +508,11 @@ impl Gui {
                 return cache;
             } else {
                 log_write(format!("generate_bg_cache: Failed to retrieve pix_tiles for bg '{}'",which_bg), LogLevel::WARN);
-                return Vec::new();
+                Vec::new()
             }
         } else {
             log_write(format!("No BG Layer found when caching layer '{}'",which_bg), LogLevel::LOG);
-            return Vec::new();
+            Vec::new()
         }
     }
 

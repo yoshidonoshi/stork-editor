@@ -560,7 +560,7 @@ fn draw_background(
                     if let Some(tilecache) = &mut tc {
                         if !info.is_256_colorpal_mode() {
                             draw_tile_16(
-                                &map_tile, cur_pal, ctx, pixel_tiles,
+                                map_tile, cur_pal, ctx, pixel_tiles,
                                 painter, tilecache,
                                 &true_rect, selected,!is_selected_layer && is_cur_lay_bg);
                         } else {
@@ -569,7 +569,7 @@ fn draw_background(
                                     log_write("PLTB palettes were empty when trying to draw 256 tile!".to_owned(), LogLevel::ERROR);
                                 } else {
                                     draw_tile_256(
-                                        &map_tile, &pltb.palettes[0], ctx,
+                                        map_tile, &pltb.palettes[0], ctx,
                                         pixel_tiles, painter, tilecache,
                                         &true_rect, selected, !is_selected_layer && is_cur_lay_bg);
                                 }

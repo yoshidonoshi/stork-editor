@@ -166,7 +166,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 // This can't divide by zero as it already checked if selection_width was 0
                 label_str = String::from("Selection too tall (16 tiles max)");
                 load_tiles_enabled = false;
-            } else if de.bg_sel_data.selected_map_indexes.len() == 0 {
+            } else if de.bg_sel_data.selected_map_indexes.is_empty() {
                 label_str = String::from("No tiles selected");
                 load_tiles_enabled = false;
             }
