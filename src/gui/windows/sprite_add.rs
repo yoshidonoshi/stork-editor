@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use egui::{Hyperlink, ScrollArea};
 use egui_extras::{Column, TableBuilder};
 
-use crate::{data::sprites::SpriteMetadata, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::sprites::SpriteMetadata, engine::displayengine::DisplayEngine};
 
 pub fn sprite_add_window_show(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,SpriteMetadata>) {
     ui.add(Hyperlink::from_label_and_url("Sprite Documentation", env!("SPRITE_DOC")));
@@ -47,12 +47,13 @@ fn create_table(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,Sp
                     }
                 }
                 body.row(20.0, |mut row| {
+                    row.set_selected(sprite_index == de.selected_sprite_to_place.unwrap_or(0xffff));
                     // ID
                     row.col(|ui| {
                         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::PointingHand);
                         let res = ui.label(format!("0x{:03X}",sprite.sprite_id));
                         if res.clicked() {
-                            add_sprite(de, meta, sprite.sprite_id);
+                            de.selected_sprite_to_place = Some(sprite_index);
                         }
                     });
                     // Name
@@ -60,7 +61,7 @@ fn create_table(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,Sp
                         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::PointingHand);
                         let res = ui.label(format!("{}",sprite.name));
                         if res.clicked() {
-                            add_sprite(de, meta, sprite.sprite_id);
+                            de.selected_sprite_to_place = Some(sprite_index);
                         }
                     });
                     // Description
@@ -68,25 +69,15 @@ fn create_table(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,Sp
                         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::PointingHand);
                         let res = ui.label(format!("{}",sprite.description));
                         if res.clicked() {
-                            add_sprite(de, meta, sprite.sprite_id);
+                            de.selected_sprite_to_place = Some(sprite_index);
                         }
                     });
                     if row.response().clicked() {
-                        add_sprite(de, meta, sprite.sprite_id);
+                        de.selected_sprite_to_place = Some(sprite_index);
                     }
                 });
 
             }
         }
     });
-}
-
-fn add_sprite(de: &mut DisplayEngine, meta: &HashMap<u16,SpriteMetadata>, sprite_id: u16) {
-    log_write(format!("Adding sprite with ID 0x{:X} to vrect corner",sprite_id), LogLevel::LOG);
-    let sprite_meta = meta.get(&sprite_id).expect("Sprite Metadata should exist in add_sprite");
-    let uuid = de.loaded_map.add_sprite_for_centering(sprite_id, vec![0;sprite_meta.default_settings_len as usize]);
-    de.selected_sprite_uuids.clear();
-    de.selected_sprite_uuids.push(uuid);
-    de.graphics_update_needed = true;
-    de.unsaved_changes = true;
 }

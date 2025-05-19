@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 /// This is a container for MPDZ files
 /// 
 /// It represents an entire map, primarily including
@@ -23,7 +24,7 @@ use super::brak::BrakData;
 use super::grad::GradientData;
 use super::path::PathDatabase;
 use super::segments::DataSegment;
-use super::sprites::{LevelSprite, LevelSpriteSet};
+use super::sprites::{LevelSprite, LevelSpriteSet, SpriteMetadata};
 use super::types::MapTileRecordData;
 use super::{GenericTopLevelSegment, TopLevelSegment};
 
@@ -333,19 +334,30 @@ impl MapData {
         }
     }
 
-    pub fn add_sprite_for_centering(&mut self, sprite_id: u16, settings: Vec<u8>) -> Uuid {
-        let sprite_set: &mut LevelSpriteSet = self.get_setd().expect("Expected SETD to exist");
-        // 0xffff will be detected later in maingrid.rs since it's looping through sprites anyway
-        let new_sprite = LevelSprite::new(sprite_id, 0xffff, 0xffff, settings);
-        let spr_uuid = new_sprite.uuid;
-        sprite_set.sprites.push(new_sprite);
-        spr_uuid
-    }
-
     pub fn add_sprite(&mut self, sprite: &LevelSprite) -> Uuid {
         let sprite_set: &mut LevelSpriteSet = self.get_setd().expect("Expected SETD to exist");
         sprite_set.sprites.push(sprite.clone());
         return sprite.uuid;
+    }
+
+    pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16, meta: &HashMap<u16,SpriteMetadata>) -> Uuid {
+        let sprite_set_res = self.get_setd();
+        if sprite_set_res.is_none() {
+            // This really shouldn't be possible
+            log_write("SETD not loaded when placing sprite".to_owned(),LogLevel::ERROR);
+            return Uuid::nil();
+        }
+        let sprite_meta = meta.get(&sprite_id);
+        if sprite_meta.is_none() {
+            log_write(format!("No Sprite metadata found for 0x{:X}",sprite_id),LogLevel::ERROR);
+            return Uuid::nil();
+        }
+        let sprite_meta = sprite_meta.unwrap();
+        let sprite_set: &mut LevelSpriteSet = sprite_set_res.unwrap();
+        let new_sprite = LevelSprite::new(sprite_id, x, y, vec![0;sprite_meta.default_settings_len as usize]);
+        let ret = new_sprite.uuid;
+        sprite_set.sprites.push(new_sprite);
+        ret
     }
 
     /// Return a cloned copy of a Sprite from the current level map
