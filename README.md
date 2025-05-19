@@ -22,6 +22,13 @@ The game version used is **USA 1.0**, please rip legally. Support for other vers
 - View helpful display engine information such as loaded palettes and tiles
 - Helpful documentation and workflows
 
+## Usage
+
+1. Download the latest version from [Releases](https://github.com/yoshidonoshi/stork-editor/releases)
+2. Read the [Manual](https://github.com/yoshidonoshi/stork-editor/wiki/Stork-Editor) for how to use it properly
+3. Acquire a legal copy of the game (USA r0 is best supported)
+4. Run the software. It should require no dependencies
+
 ## Building
 
 `cargo build --release`
