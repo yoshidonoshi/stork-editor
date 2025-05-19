@@ -49,23 +49,28 @@ impl Default for DisplaySettings {
 
 #[derive(PartialEq,Clone,Copy,Debug)]
 pub enum GameVersion {
-    /// USA v1.0 AYWE
-    USA10,
-    /// Also AYWE, but v1.1
-    USA11,
+    /// AYWE
+    USA10, // r0
+    USA11, // r1
+    USAXX, // Unknown revision
     /// AYWP
-    EUR11,
+    EUR10, // r0
+    EUR11, // r1
+    EURXX, // Unknown revision
     /// AYWJ
     JAP,
     /// What?
     UNKNOWN
 }
-pub fn gameversion_prettyname(gv: &GameVersion) -> String {
+pub fn get_gameversion_prettyname(gv: &GameVersion) -> String {
     match gv {
-        GameVersion::EUR11 => String::from("EUR 1.1"),
+        GameVersion::EUR10 => String::from("EUR 1.0"),
+        GameVersion::EUR11 => String::from("EUR 1.1 (rev1)"),
+        GameVersion::EURXX => String::from("Unknown EUR"),
         GameVersion::JAP => String::from("JPN"),
         GameVersion::USA10 => String::from("USA 1.0"),
         GameVersion::USA11 => String::from("USA 1.1 (rev1)"),
+        GameVersion::USAXX => String::from("Unknown USA"),
         GameVersion::UNKNOWN => String::from("Unknown Game Version")
     }
 }
@@ -262,7 +267,18 @@ impl DisplayEngine {
     pub fn new(extract_dir: PathBuf) -> Result<DisplayEngine, DisplayEngineError> {
         let mut de = DisplayEngine::default(); // Everything is empty
 
-        // Check Header and game version //
+        // Build Stamp //
+        let rc_path: PathBuf = PathBuf::from(&extract_dir);
+        let stamp_rc_path = nitrofs_abs(&rc_path, &"stamp.rc".to_owned());
+        let build_date = read_to_string(stamp_rc_path);
+        if build_date.is_err() {
+            let rc_err1 = format!("Failed to open stamp.rc: {}",build_date.unwrap_err());
+            log_write(rc_err1.clone(), LogLevel::ERROR);
+            return Err(DisplayEngineError::new(rc_err1));
+        }
+        let build_date = build_date.unwrap();
+
+        // Check Header //
         let mut header_path: PathBuf = PathBuf::from(&extract_dir);
         header_path.push("header.yaml");
         let yaml_content = read_to_string(header_path);
@@ -274,13 +290,14 @@ impl DisplayEngine {
         let yaml_content = yaml_content.unwrap();
         let yaml: Value = serde_yml::from_str(&yaml_content).expect("Failed to parse header.yaml");
         if let Some(game_code) = yaml["gamecode"].as_str() {
+            // Does not get the revision, do that later
             let game_ver = match game_code {
-                "AYWE"=> GameVersion::USA10,
-                "AYWP"=> GameVersion::EUR11,
-                "AYWJ"=> GameVersion::JAP,
+                "AYWE"=> GameVersion::USAXX,
+                "AYWP"=> GameVersion::EURXX,
+                "AYWJ"=> GameVersion::JAP, // Only one Japanese version
                 _=> GameVersion::UNKNOWN
             };
-            log_write(format!("Found game version: '{}'",game_code), LogLevel::LOG);
+            log_write(format!("Found game version header: '{}'",game_code), LogLevel::DEBUG);
             de.game_version = Some(game_ver);
         }
         if let Some(maker_code) = yaml["makercode"].as_str() {
@@ -316,31 +333,26 @@ impl DisplayEngine {
         }
         de.loaded_arm9 = Some(contents.unwrap());
 
-        // Literally just loaded
-        let got_contents = de.loaded_arm9.clone().expect("Unwrap ARM9 clone"); // got_contents will be released at end of scope
-        // Check if ARM9 works
-        let gamever_check = de.game_version.expect("Gameversion set");
-        match &gamever_check {
-            GameVersion::USA10 => {
-                let found_str = utils::read_fixed_string(&got_contents, 0xe1e6e, 6);
-                if !found_str.eq("1-1_D3") {
-                    let found_str2 = utils::read_fixed_string(&got_contents, 0x0e20ae, 6);
-                    if found_str2.eq("1-1_D3") {
-                        log_write(format!("USA version found: 1.1"), LogLevel::LOG);
-                        log_write(format!("Support for USA rev1 is weak, tread cautiously"), LogLevel::WARN);
-                        de.game_version = Some(GameVersion::USA11);
-                    } else {
-                        let unk_ver1 = format!("Unknown version when trying to find 1-1_D3");
-                        log_write(unk_ver1.clone(), LogLevel::ERROR);
-                        return Err(DisplayEngineError::new(unk_ver1));
-                    }
-                } else {
-                    log_write(format!("USA version found: 1.0"), LogLevel::LOG);
-                }
+        // Get Revision
+        let gamever = de.game_version.expect("Gameversion set"); // Copies
+        match gamever {
+            GameVersion::USAXX => {
+                de.game_version = Some(match build_date.as_str() {
+                    "061110.1620" => GameVersion::USA11,
+                    "061009.0352" => GameVersion::USA10,
+                    _ => GameVersion::USAXX
+                });
+            }
+            GameVersion::EURXX => {
+                de.game_version = Some(match build_date.as_str() {
+                    "061009.0352" => GameVersion::EUR10,
+                    "061110.1620" => GameVersion::EUR11,
+                    _ => GameVersion::EURXX
+                });
             }
             GameVersion::UNKNOWN => {
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unknown game");
-                let unsupported_msg = "Game Version is unsupported, canceling load".to_owned();
+                let unsupported_msg = "Game Version is unknown, canceling load".to_owned();
                 log_write(unsupported_msg.clone(), LogLevel::ERROR);
                 return Err(DisplayEngineError::new(unsupported_msg));
             }
@@ -349,16 +361,59 @@ impl DisplayEngine {
                 log_write(jpn_msg.clone(), LogLevel::ERROR);
                 return Err(DisplayEngineError::new(jpn_msg))
             }
-            GameVersion::EUR11 => {
-                log_write("EUR version not yet supported, will break".to_owned(), LogLevel::WARN);
-            }
             _ => {
-                let unk_version_msg = "Unsupported Game Version, this is weird to be hit".to_owned();
+                let bad_logic_gamever = format!("Game version {:?} should not be hit here",gamever);
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unsupported game");
-                log_write(unk_version_msg.clone(), LogLevel::ERROR);
-                return Err(DisplayEngineError::new(unk_version_msg));
+                log_write(bad_logic_gamever.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(bad_logic_gamever));
             }
         }
+
+        // Version checks //
+        let got_contents = de.loaded_arm9.clone().expect("ARM9 was loaded properly");
+        match de.game_version.expect("Must be a version") {
+            GameVersion::USA10 => {
+                let found_str = utils::read_fixed_string(&got_contents, 0xe1e6e, 6);
+                if !found_str.eq("1-1_D3") {
+                    let unk_ver1 = format!("Could not find 1-1_D3 in USA 1.0");
+                    log_write(unk_ver1.clone(), LogLevel::ERROR);
+                    return Err(DisplayEngineError::new(unk_ver1));
+                }
+            },
+            GameVersion::USA11 => {
+                let found_str2 = utils::read_fixed_string(&got_contents, 0x0e20ae, 6);
+                if !found_str2.eq("1-1_D3") {
+                    let unk_ver2 = format!("Could not find 1-1_D3 in USA 1.1");
+                    log_write(unk_ver2.clone(), LogLevel::ERROR);
+                    return Err(DisplayEngineError::new(unk_ver2));
+                }
+                log_write(format!("USA 1.1 is poorly supported, likely to crash"), LogLevel::WARN);
+            }
+            GameVersion::USAXX => {
+                let unk_ver3 = format!("Unknown USA version");
+                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(unk_ver3));
+            }
+            GameVersion::EURXX => {
+                let unk_ver3 = format!("Unknown EUR version");
+                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(unk_ver3));
+            }
+            GameVersion::EUR10 => {
+                let unk_ver3 = format!("EURr0 unsupported");
+                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(unk_ver3));
+            }
+            GameVersion::EUR11 => {
+                let unk_ver3 = format!("EURr1 unsupported");
+                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(unk_ver3));
+            }
+            _ => {
+                log_write(format!("This should be impossible to hit in version test"), LogLevel::FATAL);
+            }
+        }
+        log_write(format!("Assuming game version {}",get_gameversion_prettyname(&de.game_version.unwrap())), LogLevel::LOG);
         Ok(de)
     }
 

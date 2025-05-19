@@ -5,7 +5,7 @@ use rfd::FileDialog;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -272,7 +272,7 @@ impl Gui {
         
         if self.display_engine.game_version.expect("Game version cannot be not set here") != GameVersion::USA10 {
             let unsupported_alert = format!("You are using an unsupported version '{}', saves will likely break. Supported versions: USA 1.0",
-                gameversion_prettyname(&self.display_engine.game_version.unwrap()));
+                get_gameversion_prettyname(&self.display_engine.game_version.unwrap()));
             self.do_alert(&unsupported_alert);
         }
         self.display_engine.export_folder = self.export_directory.clone();
