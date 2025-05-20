@@ -3,7 +3,7 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::{path::PathLine, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::{path::{PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 const CHANGE_RATE: u32 = 0x10000;
 
@@ -36,7 +36,23 @@ pub fn show_paths_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
-        ui.add_enabled(false, egui::Button::new("New"));
+        let btn_add = ui.add(egui::Button::new("New"));
+        if btn_add.clicked() {
+            log_write("Creating new PathLine", LogLevel::LOG);
+            let path_res = de.loaded_map.get_path();
+            if path_res.is_none() {
+                de.path_settings.selected_line = Uuid::nil();
+                de.path_settings.selected_point = Uuid::nil();
+                return;
+            }
+            let path = path_res.unwrap();
+            // Empty, but with a new UUID
+            let new_blank_line = PathLine::default();
+            path.lines.push(new_blank_line);
+            log_write("New PathLine created", LogLevel::DEBUG);
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+        }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let del = ui.add_enabled(!de.path_settings.selected_line.is_nil(), egui::Button::new("Delete"));
         if del.clicked() {
@@ -88,7 +104,28 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
-        ui.add_enabled(false, egui::Button::new("New"));
+        let new_btn = ui.add(egui::Button::new("New"));
+        if new_btn.clicked() {
+            log_write("Creating PathPoint", LogLevel::DEBUG);
+            let path_res = de.loaded_map.get_path();
+            if path_res.is_none() {
+                log_write("Cannot get PATH for point creation", LogLevel::ERROR);
+                return;
+            }
+            let path = path_res.unwrap();
+            // Now get the line
+            let line_res = path.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
+            if line_res.is_none() {
+                log_write("Cannot get Line for point creation", LogLevel::ERROR);
+                return;
+            }
+            let line = line_res.unwrap();
+            let new_point = PathPoint::default();
+            line.points.push(new_point);
+            de.unsaved_changes = true;
+            de.graphics_update_needed = true;
+            log_write("PathPoint created", LogLevel::LOG);
+        }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let del = ui.add_enabled(!de.path_settings.selected_point.is_nil(), egui::Button::new("Delete"));
         if del.clicked() {

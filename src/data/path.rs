@@ -124,6 +124,15 @@ impl PathPoint {
         }
     }
 }
+impl Default for PathPoint {
+    fn default() -> Self {
+        Self {
+            angle: 0, distance: 1,
+            x_fine: 0, y_fine: 0,
+            uuid: Uuid::new_v4()
+        }
+    }
+}
 impl Compilable for PathPoint {
     fn compile(&self) -> Vec<u8> {
         let mut comp: Vec<u8> = vec![];
