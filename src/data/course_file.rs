@@ -145,7 +145,7 @@ impl CourseInfo {
     }
 
     /// Update UUID lists from indexes, only do right after load
-    fn update_exit_uuids(&mut self) -> Result<(),()> {
+    pub fn update_exit_uuids(&mut self) -> Result<(),()> {
         log_write(format!("Updating Exit UUIDs for {}",self.src_filename), LogLevel::DEBUG);
         let maps_ro = self.level_map_data.clone();
         for map in &mut self.level_map_data {
@@ -167,7 +167,7 @@ impl CourseInfo {
         Ok(())
     }
 
-    fn update_exit_indexes(&mut self) {
+    pub fn update_exit_indexes(&mut self) {
         log_write(format!("Updating Exit indexes for {}",self.src_filename), LogLevel::DEBUG);
         let maps_ro = self.level_map_data.clone();
         for map in &mut self.level_map_data {
@@ -289,6 +289,35 @@ impl CourseMapInfo {
             }
         }
         Option::None
+    }
+    pub fn add_entrance(&mut self) -> Uuid {
+        let new_index = self.map_entrances.len(); // Indexes start at 0
+        let label = format!("Entrance 0x{:X}",new_index);
+        let new_ent = MapEntrance {
+            entrance_x: 0, entrance_y: 0,
+            entrance_flags: 0x8009, // TODO: Better default?
+            label, uuid: Uuid::new_v4()
+        };
+        let ret_uuid = new_ent.uuid;
+        self.map_entrances.push(new_ent);
+        ret_uuid
+    }
+    pub fn add_exit(&mut self) -> Uuid {
+        let new_index = self.map_exits.len(); // So this is the next index
+        let new_exit = MapExit {
+            exit_x: 0,
+            exit_y: 0,
+            exit_type: 0,
+            target_map_raw: 0,
+            target_map: Uuid::nil(), // Fix this from course
+            target_map_entrance_raw: 0,
+            target_map_entrance: Uuid::nil(),
+            label: format!("Exit 0x{:X}",new_index),
+            uuid: Uuid::new_v4()
+        };
+        let ret_uuid = new_exit.uuid;
+        self.map_exits.push(new_exit);
+        ret_uuid
     }
 }
 

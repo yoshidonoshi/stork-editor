@@ -119,6 +119,17 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     // ENTRANCES //
     ui.heading("Entrances");
     ui.horizontal(|ui| {
+        let add = ui.add(egui::Button::new("New"));
+        if add.clicked() {
+            let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
+            let new_uuid = selected_map_data.add_entrance();
+            de.course_settings.selected_entrance = Some(new_uuid);
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+        }
+        ui.add_enabled(false, egui::Button::new("Delete"));
+    });
+    ui.horizontal(|ui| {
         let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
         let _table_entrances = TableBuilder::new(ui)
         .id_salt("entrances")
@@ -171,6 +182,19 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.separator();
     // EXITS //
     ui.heading("Exits");
+    ui.horizontal(|ui| {
+        let add = ui.add(egui::Button::new("New"));
+        if add.clicked() {
+            let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
+            let new_uuid = selected_map_data.add_exit();
+            // New exits have nil UUIDs but first (0) indexes, fix the UUIDs
+            let _ = de.loaded_course.update_exit_uuids();
+            de.course_settings.selected_exit = Some(new_uuid);
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+        }
+        ui.add_enabled(false, egui::Button::new("Delete"));
+    });
     ui.horizontal(|ui| {
         let _table_exits = TableBuilder::new(ui)
         .id_salt("exits")
