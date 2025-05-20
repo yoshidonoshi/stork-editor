@@ -2,9 +2,16 @@
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::area::{Trigger, TriggerData}, engine::displayengine::DisplayEngine};
+use crate::{data::{area::{Trigger, TriggerData}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 pub fn show_triggers_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    if de.display_settings.current_layer != CurrentLayer::TRIGGERS {
+        ui.disable();
+    }
+    if de.loaded_map.get_area().is_none() {
+        // TODO: Allow creation
+        ui.disable();
+    }
     StripBuilder::new(ui)
         .size(Size::exact(100.0))
         .size(Size::remainder())
@@ -22,7 +29,18 @@ pub fn show_triggers_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
-        ui.add_enabled(false, egui::Button::new("New"));
+        let add_button = ui.add(egui::Button::new("New"));
+        if add_button.clicked() {
+            log_write("Adding new Trigger", LogLevel::LOG);
+            let area_mut_res = de.loaded_map.get_area_mut();
+            if area_mut_res.is_none() {
+                return;
+            }
+            let area = area_mut_res.unwrap();
+            area.triggers.push(Trigger { left_x: 2, top_y: 2, right_x: 12, bottom_y: 12, uuid: Uuid::new_v4() });
+            de.unsaved_changes = true;
+            de.graphics_update_needed = true;
+        }
         ui.add_enabled(false, egui::Button::new("Delete"));
     });
     ui.add_space(5.0);
