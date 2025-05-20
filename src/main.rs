@@ -39,7 +39,7 @@ fn main() -> eframe::Result {
                 // The software simply won't work without this. It shouldn't be possible
                 log_write(format!("Sprite database load error: '{}'",sprite_load_result.unwrap_err()), LogLevel::FATAL);
             } else {
-                log_write(format!("Sprite database loaded successfully"), LogLevel::LOG);
+                log_write("Sprite database loaded successfully", LogLevel::LOG);
             }
             Ok(gui)
         })

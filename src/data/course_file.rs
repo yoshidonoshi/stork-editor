@@ -54,7 +54,7 @@ impl CourseInfo {
         }
         let file_header = file_header.unwrap();
         if header_to_string(&file_header) != "CRSB" {
-            utils::log_write("Course data header was not CRSB".to_owned(), utils::LogLevel::WARN);
+            utils::log_write("Course data header was not CRSB", utils::LogLevel::WARN);
         }
         // Okay, checks are out of the way. Lets start reading!
         let _crsb_internal_size = rdr.read_u32::<LittleEndian>().unwrap();
@@ -151,13 +151,13 @@ impl CourseInfo {
         for map in &mut self.level_map_data {
             for exit in &mut map.map_exits {
                 if exit.target_map_raw as usize >= maps_ro.len() {
-                    log_write(format!("Target Map Raw out of bounds!"), LogLevel::ERROR);
+                    log_write("Target Map Raw out of bounds!", LogLevel::ERROR);
                     return Err(());
                 }
                 let target_map = &maps_ro[exit.target_map_raw as usize];
                 exit.target_map = target_map.uuid;
                 if exit.target_map_entrance_raw as usize >= target_map.map_entrances.len() {
-                    log_write(format!("Target Map Entrance Raw out of bounds!"), LogLevel::ERROR);
+                    log_write("Target Map Entrance Raw out of bounds!", LogLevel::ERROR);
                     return Err(());
                 }
                 let target_map_entrance = &target_map.map_entrances[exit.target_map_entrance_raw as usize];
@@ -181,7 +181,7 @@ impl CourseInfo {
                     map_index += 1;
                 }
                 if map_index as usize >= maps_ro.len() {
-                    log_write(format!("map_index was out of bounds, setting to first"), LogLevel::ERROR);
+                    log_write("map_index was out of bounds, setting to first", LogLevel::ERROR);
                     map_index = 0;
                 }
                 exit.target_map_raw = map_index;
@@ -194,7 +194,7 @@ impl CourseInfo {
                 } else {
                     let ent_index = ent_index.unwrap();
                     if ent_index as usize >= target_map.map_entrances.len() {
-                        log_write(format!("ent_index out of bounds, setting to first"), LogLevel::ERROR);
+                        log_write("ent_index out of bounds, setting to first", LogLevel::ERROR);
                         exit.target_map_entrance_raw = 0;
                     } else {
                         exit.target_map_entrance_raw = ent_index;

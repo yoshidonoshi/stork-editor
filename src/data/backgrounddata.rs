@@ -84,7 +84,7 @@ impl BackgroundData {
                         log_write(format!("Warning: PLTB color mode {} may be poorly supported",ret.info_ro.color_mode), LogLevel::WARN);
                     }
                     if !ret.info_ro.is_256_colorpal_mode() {
-                        log_write(format!("Loading PLTB with 16 color format"), LogLevel::DEBUG);
+                        log_write("Loading PLTB with 16 color format", LogLevel::DEBUG);
                         // Palette in 16 mode: each is 16 colors * 2 bytes
                         let count_16: u32 = seg_internal_length / (16*2);
                         let mut index: u32 = 0;
@@ -94,7 +94,7 @@ impl BackgroundData {
                             index += 1;
                         }
                     } else {
-                        log_write(format!("Loading PLTB with 256 color format"), LogLevel::DEBUG);
+                        log_write("Loading PLTB with 256 color format", LogLevel::DEBUG);
                         // Note: Not every 256 palette has 256 colors
                         // Read forwards, including garbage data (probably don't do this)
                         // But the garbage data will never be read anyway so...
@@ -124,7 +124,7 @@ impl BackgroundData {
                     ret.scen_segments.push(ScenSegmentWrapper::IMGB(imgb_data));
                     // Update preview
                     if ret.pixel_tiles_preview.is_some() {
-                        log_write("IMGB: Attempting to write to pixeltiles when already contains data".to_owned(), LogLevel::WARN);
+                        log_write("IMGB: Attempting to write to pixeltiles when already contains data", LogLevel::WARN);
                     }
                     ret.pixel_tiles_preview = Some(buffer.clone()); // Hand the actual data into it
                 }
@@ -137,7 +137,7 @@ impl BackgroundData {
                     // Now decompress it for the preview
                     let imbz_decomped = lamezip77_lz10_decomp(&imbz_comped_buffer);
                     if ret.pixel_tiles_preview.is_some() {
-                        log_write("IMBZ: Attempting to write to pixeltiles when already contains data".to_owned(), LogLevel::WARN);
+                        log_write("IMBZ: Attempting to write to pixeltiles when already contains data", LogLevel::WARN);
                     }
                     ret.pixel_tiles_preview = Some(imbz_decomped); // Move it in
                 }
@@ -182,7 +182,7 @@ impl BackgroundData {
         if let Some(anmz_data) = ret.clone().get_anmz() {
             let mut cur_vram_offset: usize = anmz_data.vram_offset as usize;
             if ret.info_ro.color_mode > 0x1 {
-                log_write(format!("Color Modes above 1 may be poorly supported"), LogLevel::WARN);
+                log_write("Color Modes above 1 may be poorly supported", LogLevel::WARN);
             }
             if ret.info_ro.is_256_colorpal_mode() {
                 cur_vram_offset *= 64;
@@ -199,7 +199,7 @@ impl BackgroundData {
                     cur_vram_offset += 1;
                 }
             } else {
-                log_write("Unable to unwrap pixeltiles when creating ANMZ".to_owned(), LogLevel::ERROR);
+                log_write("Unable to unwrap pixeltiles when creating ANMZ", LogLevel::ERROR);
             }
         }
 

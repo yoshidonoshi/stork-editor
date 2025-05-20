@@ -416,9 +416,9 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                 de.selected_sprite_uuids.clear();
             }
             if cfr.secondary_clicked() { // Right clicked on empty background = place
-                log_write(format!("Placing new sprite from right click..."), LogLevel::DEBUG);
+                log_write("Placing new sprite from right click...", LogLevel::DEBUG);
                 if de.selected_sprite_to_place.is_none() {
-                    log_write(format!("Could not place sprite, none selected to add"), LogLevel::DEBUG);
+                    log_write("Could not place sprite, none selected to add", LogLevel::DEBUG);
                     return;
                 }
                 // Retrieve the base sprite ID to create, usually set by Add Sprite
@@ -433,7 +433,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     de.unsaved_changes = true;
                     update_map = true;
                 } else {
-                    log_write(format!("Could not get pointer pos when right clicking Sprite"), LogLevel::ERROR);
+                    log_write("Could not get pointer pos when right clicking Sprite", LogLevel::ERROR);
                 }
             }
         }
@@ -587,12 +587,12 @@ fn draw_background(
                     // all() because it uses click, drag, and hover
                     let bg_interaction = ui.interact(true_rect, interaction_id, egui::Sense::all());
                     if bg_interaction.drag_started() {
-                        log_write(format!("Started dragging in BG render function"), LogLevel::DEBUG);
+                        log_write("Started dragging in BG render function", LogLevel::DEBUG);
                         de.bg_sel_data.dragging = true;
                         let cur_pos_res = ui.ctx().pointer_interact_pos();
                         if cur_pos_res.is_none() {
                             // This has failed before, somehow, so don't panic
-                            log_write(format!("Failed to get pointer_interact_pos in BG .drag_started"), LogLevel::ERROR);
+                            log_write("Failed to get pointer_interact_pos in BG .drag_started", LogLevel::ERROR);
                             return;
                         }
                         let cur_pos: Pos2 = cur_pos_res.unwrap();
@@ -602,7 +602,7 @@ fn draw_background(
                     if bg_interaction.dragged() {
                         let cur_pos_res = ui.ctx().pointer_interact_pos();
                         if cur_pos_res.is_none() {
-                            log_write(format!("Failed to get pointer_interact_pos in BG .dragged"), LogLevel::ERROR);
+                            log_write("Failed to get pointer_interact_pos in BG .dragged", LogLevel::ERROR);
                             return;
                         }
                         de.bg_sel_data.end_pos = cur_pos_res.unwrap();
@@ -617,7 +617,7 @@ fn draw_background(
                         de.bg_sel_data.selecting_rect = drag_rect; // Pass the data on in
                     }
                     if bg_interaction.drag_stopped() {
-                        log_write(format!("Stopped dragging in draw_background"), LogLevel::DEBUG);
+                        log_write("Stopped dragging in draw_background", LogLevel::DEBUG);
                         let shift_held = ui.input(|i| i.modifiers.shift);
                         let ctrl_held = ui.input(|i| i.modifiers.ctrl);
                         if shift_held { // Add
@@ -653,7 +653,7 @@ fn draw_background(
                     if bg_interaction.secondary_clicked() {
                         // Place tile //
                         // Lots of opportunities to crash here, so include Debug
-                        log_write(format!("Stamping Brush to BG"), LogLevel::DEBUG);
+                        log_write("Stamping Brush to BG", LogLevel::DEBUG);
                         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                             let local_pos = pointer_pos - true_rect.min;
                             let mut base_tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
@@ -687,7 +687,7 @@ fn draw_background(
                             de.graphics_update_needed = true;
                             de.unsaved_changes = true;
                         } else {
-                            log_write(format!("Failed to get pointer when stamping Brush"), LogLevel::ERROR);
+                            log_write("Failed to get pointer when stamping Brush", LogLevel::ERROR);
                         }
                     }
                     if bg_interaction.middle_clicked() {
@@ -813,7 +813,7 @@ fn draw_background(
             }
             // COLZ Interactivity //
             if de.display_settings.current_layer == CurrentLayer::COLLISION {
-                let col_sense_resp: Response = ui.interact(true_rect, egui::Id::new(format!("col_tile_click")), egui::Sense::all());
+                let col_sense_resp: Response = ui.interact(true_rect, egui::Id::new("col_tile_click"), egui::Sense::all());
                 // Do it in three separate ones to avoid repeated input checking that won't be used
                 if col_sense_resp.clicked() {
                     // Add a new tile 
@@ -876,7 +876,7 @@ fn draw_background(
                     }
                     let cur_pos_res = ui.ctx().pointer_interact_pos();
                     if cur_pos_res.is_none() {
-                        log_write(format!("Failed to get pointer_interact_pos in col .dragged"), LogLevel::ERROR);
+                        log_write("Failed to get pointer_interact_pos in col .dragged", LogLevel::ERROR);
                         return;
                     }
                     de.col_selector_status.end_pos = cur_pos_res.unwrap();

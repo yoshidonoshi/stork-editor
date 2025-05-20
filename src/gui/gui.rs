@@ -96,12 +96,12 @@ impl BgSelectData {
     pub fn to_clipboard_tiles(&mut self, map_width: u16, map_tiles: &Vec<MapTileRecordData>) -> Vec<BgClipboardSelectedTile> {
         let mut ret: Vec<BgClipboardSelectedTile> = Vec::new();
         if self.selected_map_indexes.is_empty() {
-            log_write(format!("Attempted to convert to clipboard tiles while empty"), LogLevel::WARN);
+            log_write("Attempted to convert to clipboard tiles while empty", LogLevel::WARN);
             return ret;
         }
         let top_left = self.get_top_left(map_width);
         if top_left.is_none() {
-            log_write(format!("Could not get top left"), LogLevel::ERROR);
+            log_write("Could not get top left", LogLevel::ERROR);
             return Vec::new();
         }
         let top_left = top_left.unwrap();
@@ -248,7 +248,7 @@ impl Gui {
                 log_write(format!("Project file failed existence check: '{}'",&path.display()), LogLevel::ERROR);
             }
         } else {
-            log_write(format!("Did not get folder path"), LogLevel::WARN);
+            log_write("Did not get folder path", LogLevel::WARN);
         }
     }
     pub fn do_alert(&mut self, alert_text: &String) {
@@ -295,7 +295,7 @@ impl Gui {
             log_write(brush_db_err.clone(), LogLevel::ERROR);
             self.do_alert(&brush_db_err);
         } else {
-            log_write(format!("Brush database loaded successfully"), LogLevel::LOG);
+            log_write("Brush database loaded successfully", LogLevel::LOG);
             self.display_engine.saved_brushes = brushes_load_result.unwrap();
         }
     }
@@ -304,7 +304,7 @@ impl Gui {
         let generate_result = filesys::generate_rom(
             &format!("{}/config.yaml",&self.export_directory.display()), &path);
         if generate_result.is_err() {
-            log_write("Failed to generate ROM".to_string(), LogLevel::ERROR);
+            log_write("Failed to generate ROM", LogLevel::ERROR);
         }
     }
     pub fn do_save(&mut self) {
@@ -312,7 +312,7 @@ impl Gui {
     }
     pub fn do_undo(&mut self) {
         if let Some(map_state) = self.undoer.undo(&self.display_engine.loaded_map) {
-            log_write("Undoing".to_string(), LogLevel::DEBUG);
+            log_write("Undoing", LogLevel::DEBUG);
             self.display_engine.loaded_map = map_state.clone();
             self.display_engine.unsaved_changes = true; // In case you saved
             self.display_engine.graphics_update_needed = true;
@@ -320,7 +320,7 @@ impl Gui {
     }
     pub fn do_redo(&mut self) {
         if let Some(map_state) = self.undoer.redo(&self.display_engine.loaded_map) {
-            log_write("Redoing".to_string(), LogLevel::DEBUG);
+            log_write("Redoing", LogLevel::DEBUG);
             self.display_engine.loaded_map = map_state.clone();
             self.display_engine.unsaved_changes = true; // In case you saved
             self.display_engine.graphics_update_needed = true;
@@ -344,7 +344,7 @@ impl Gui {
         }
     }
     pub fn change_level(&mut self, world_index: u32, level_index: u32) {
-        log_write(format!("Changing Level"), LogLevel::LOG);
+        log_write("Changing Level", LogLevel::LOG);
         if world_index > 5 {
             log_write(format!("Attempted to load world greater than 5: {}",world_index+1), LogLevel::ERROR);
             return;
@@ -442,14 +442,14 @@ impl Gui {
     pub fn generate_bg_cache(&self, ctx: &egui::Context, which_bg: u8, bg_pal: &Palette) -> Vec<TextureHandle> {
         #[allow(unused_assignments)] // It blatantly is used wtf
         let mut layer: &Option<BackgroundData> = &Option::None;
-        if which_bg == 0x1 {
+        if which_bg == 0x1 { // TODO: match-ify
             layer = &self.display_engine.bg_layer_1;
         } else if which_bg == 0x2 {
             layer = &self.display_engine.bg_layer_2;
         } else if which_bg == 0x3 {
             layer = &self.display_engine.bg_layer_3;
         } else {
-            log_write("Something is very wrong in generate_bg_cache".to_owned(), LogLevel::FATAL);
+            log_write("Something is very wrong in generate_bg_cache", LogLevel::FATAL);
         }
         if let Some(layer_data) = &layer {
             let info = layer_data.get_info().expect("INFO exists in bg cache generator");
@@ -674,7 +674,7 @@ impl Gui {
                             self.display_engine.unsaved_changes = true;
                         }
                     } else {
-                        log_write(format!("Something is very wrong in handle_input, sprite_data unwrap failed"), LogLevel::ERROR);
+                        log_write("Something is very wrong in handle_input, sprite_data unwrap failed", LogLevel::ERROR);
                     }
                 }
                 if should_update {
@@ -725,7 +725,7 @@ impl Gui {
             if let Some(export_directory) = FileDialog::new().set_title("Choose folder to extract project into").pick_folder() {
                 self.export_directory = export_directory;
                 if !fs::exists(&self.export_directory).expect("FS Existence check should not fail") {
-                    let exists_fail = format!("Project path failed existence check");
+                    let exists_fail = "Project path failed existence check".to_string();
                     log_write(exists_fail.clone(), LogLevel::LOG);
                     return Err(RomExtractError::new(&exists_fail));
                 }
@@ -739,7 +739,7 @@ impl Gui {
                 return Ok(());
             }
         }
-        Err(RomExtractError::new(&format!("Open ROM failed")))
+        Err(RomExtractError::new(&"Open ROM failed".to_string()))
     }
 
     pub fn select_sprite_from_list(&mut self, sprite_index: &usize, sprite_uuid: &Uuid) {
@@ -753,7 +753,7 @@ impl Gui {
         self.display_engine.selected_sprite_uuids.push(*sprite_uuid);
         let spr_res = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid);
         if spr_res.is_err() {
-            log_write(format!("Failed to get sprite by UUID in select_sprite_from_list"), LogLevel::ERROR);
+            log_write("Failed to get sprite by UUID in select_sprite_from_list", LogLevel::ERROR);
             return;
         }
         self.display_engine.latest_sprite_settings = settings_to_string(&spr_res.unwrap().settings);
@@ -828,7 +828,7 @@ impl Gui {
             log_write(format!("Copied {} Sprites onto the clipboard",self.display_engine.clipboard.sprite_clip.sprites.len()), LogLevel::LOG);
         } if self.is_cur_layer_bg() {
             if self.display_engine.bg_sel_data.selected_map_indexes.is_empty() {
-                log_write(format!("Cannot copy, no BG data selected"), LogLevel::WARN);
+                log_write("Cannot copy, no BG data selected", LogLevel::WARN);
                 return;
             }
             let which_bg = self.display_engine.display_settings.current_layer as u8;
@@ -842,13 +842,13 @@ impl Gui {
                         self.display_engine.clipboard.bg_clip.tiles.len()
                     ), LogLevel::LOG);
                 } else {
-                    log_write(format!("MapTiles not retrieved when attempting to copy"), LogLevel::ERROR);
+                    log_write("MapTiles not retrieved when attempting to copy", LogLevel::ERROR);
                 }
             } else {
-                log_write(format!("BG not retrieved when attempting to copy"), LogLevel::ERROR);
+                log_write("BG not retrieved when attempting to copy", LogLevel::ERROR);
             }
         } else {
-            log_write(format!("Copy not yet implemented for this layer"), LogLevel::WARN);
+            log_write("Copy not yet implemented for this layer", LogLevel::WARN);
         }
     }
 
@@ -885,7 +885,7 @@ impl Gui {
                 self.display_engine.clipboard.sprite_clip.sprites.push(cur_sprite);
                 let cut_delete_result = self.display_engine.loaded_map.delete_sprite_by_uuid(*spr_id);
                 if cut_delete_result.is_err() {
-                    log_write(format!("Failed to delete Sprite by UUID in do_cut"), LogLevel::ERROR);
+                    log_write("Failed to delete Sprite by UUID in do_cut", LogLevel::ERROR);
                 }
             }
             // Deal with found top left most
@@ -897,7 +897,7 @@ impl Gui {
             log_write(format!("Cut {} Sprites onto the clipboard",self.display_engine.clipboard.sprite_clip.sprites.len()), LogLevel::LOG);
         } if self.is_cur_layer_bg() {
             if self.display_engine.bg_sel_data.selected_map_indexes.is_empty() {
-                log_write(format!("Cannot cut, no BG data selected"), LogLevel::WARN);
+                log_write("Cannot cut, no BG data selected", LogLevel::WARN);
                 return;
             }
             let which_bg = self.display_engine.display_settings.current_layer as u8;
@@ -916,13 +916,13 @@ impl Gui {
                     self.display_engine.unsaved_changes = true;
                     self.display_engine.graphics_update_needed = true;
                 } else {
-                    log_write(format!("MapTiles not retrieved when attempting to cut"), LogLevel::ERROR);
+                    log_write("MapTiles not retrieved when attempting to cut", LogLevel::ERROR);
                 }
             } else {
-                log_write(format!("BG not retrieved when attempting to cut"), LogLevel::ERROR);
+                log_write("BG not retrieved when attempting to cut", LogLevel::ERROR);
             }
         } else {
-            log_write(format!("Cut not yet implemented for this layer"), LogLevel::WARN);
+            log_write("Cut not yet implemented for this layer", LogLevel::WARN);
         }
         
     }
@@ -939,7 +939,7 @@ impl Gui {
 
     pub fn do_paste(&mut self) {
         if !self.project_open {
-            log_write(format!("Cannot paste while project is closed"), LogLevel::LOG);
+            log_write("Cannot paste while project is closed", LogLevel::LOG);
             return;
         }
         if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
@@ -964,7 +964,7 @@ impl Gui {
             self.display_engine.unsaved_changes = true;
         } else if self.is_cur_layer_bg() {
             if self.display_engine.clipboard.bg_clip.tiles.is_empty() {
-                log_write(format!("Could not paste tiles, clipboard empty"), LogLevel::DEBUG);
+                log_write("Could not paste tiles, clipboard empty", LogLevel::DEBUG);
                 return;
             }
             log_write(format!("Pasting {} MapTiles",self.display_engine.clipboard.bg_clip.tiles.len()), LogLevel::LOG);
@@ -986,7 +986,7 @@ impl Gui {
             self.display_engine.graphics_update_needed = true;
             self.display_engine.unsaved_changes = true;
         } else {
-            log_write(format!("Paste not yet implemented for this layer"), LogLevel::WARN);
+            log_write("Paste not yet implemented for this layer", LogLevel::WARN);
         }
     }
 
@@ -999,23 +999,23 @@ impl Gui {
             CurrentLayer::COLLISION => {
                 let colz_index = self.display_engine.loaded_map.get_bg_with_colz();
                 if colz_index.is_none() {
-                    log_write(format!("Somehow, there is no layer with COLZ during clear"), LogLevel::ERROR);
+                    log_write("Somehow, there is no layer with COLZ during clear", LogLevel::ERROR);
                     return;
                 }
                 let bg = self.display_engine.loaded_map.get_background(colz_index.unwrap());
                 if bg.is_none() {
-                    log_write(format!("COLZ not found in background when clearing"), LogLevel::ERROR);
+                    log_write("COLZ not found in background when clearing", LogLevel::ERROR);
                     return;
                 }
                 let bg = bg.unwrap();
                 let colz_res = bg.get_colz_mut();
                 if colz_res.is_none() {
-                    log_write(format!("Failed to retrieve COLZ from BG during clear"), LogLevel::ERROR);
+                    log_write("Failed to retrieve COLZ from BG during clear", LogLevel::ERROR);
                     return;
                 }
                 let colz = colz_res.unwrap();
                 colz.col_tiles.clear();
-                log_write(format!("COLZ Layer cleared"), LogLevel::DEBUG);
+                log_write("COLZ Layer cleared", LogLevel::DEBUG);
                 self.display_engine.graphics_update_needed = true;
                 self.display_engine.unsaved_changes = true;
             }
@@ -1073,7 +1073,7 @@ impl eframe::App for Gui {
 
         // Tile storage //
         if self.needs_bg_tile_refresh {
-            log_write("Regenerating BG tile cache".to_owned(), LogLevel::LOG);
+            log_write("Regenerating BG tile cache", LogLevel::LOG);
             self.needs_bg_tile_refresh = false;
             if self.tile_preview_pal >= 16 {
                 // Should be completely impossible

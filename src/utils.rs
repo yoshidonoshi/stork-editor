@@ -15,7 +15,8 @@ pub enum LogLevel {
     FATAL
 }
 
-pub fn log_write(msg: String, level: LogLevel) {
+pub fn log_write(msg: impl Into<String>, level: LogLevel) {
+    let msg = msg.into();
     match level {
         LogLevel::DEBUG => {
             let args: Vec<String> = env::args().collect();
@@ -49,7 +50,7 @@ pub fn log_write(msg: String, level: LogLevel) {
 pub fn print_vector_u8(byte_vector: &Vec<u8>) {
     let vec_length: usize = byte_vector.len();
     if vec_length == 0 {
-        log_write("print_vector_u8: vector is empty".to_owned(), LogLevel::LOG);
+        log_write("print_vector_u8: vector is empty", LogLevel::LOG);
     }
     let mut i: usize = 0;
     while i < vec_length {
@@ -62,7 +63,7 @@ pub fn print_vector_u8(byte_vector: &Vec<u8>) {
         println!("{starting_string} | {hex_line}");
         i += 0x10;
         if i > 0xffffff {
-            log_write(String::from("i index too high in print_vector_u8!"), LogLevel::LOG);
+            log_write("i index too high in print_vector_u8!", LogLevel::LOG);
             break;
         }
     }
@@ -173,7 +174,7 @@ pub fn read_c_string(rdr: &mut Cursor<&Vec<u8>>) -> String {
     }
     let result_string = String::from_utf8(string_buffer);
     if result_string.is_err() {
-        log_write("Failed to read mpdz_name_noext".to_owned(), LogLevel::ERROR);
+        log_write("Failed to read mpdz_name_noext", LogLevel::ERROR);
     }
     let result_string: String = result_string.unwrap();
     result_string
@@ -205,7 +206,7 @@ pub fn read_fixed_string_cursor(rdr: &mut Cursor<&Vec<u8>>, length: u32) -> Stri
     }
     let result_string = String::from_utf8(string_buffer);
     if result_string.is_err() {
-        log_write("Failed to read fixed string".to_owned(), LogLevel::ERROR);
+        log_write("Failed to read fixed string", LogLevel::ERROR);
     }
     let result_string: String = result_string.unwrap();
     result_string

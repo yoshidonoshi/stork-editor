@@ -92,12 +92,12 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let tile_x: u32 = (local_pos.x/BRUSH_TILE_DIM) as u32;
                 let mut should_delete: bool = true;
                 if tile_x >= de.current_brush.width as u32 {
-                    log_write(format!("tile_x out of bounds for Brush"), LogLevel::WARN);
+                    log_write("tile_x out of bounds for Brush", LogLevel::WARN);
                     should_delete = false;
                 }
                 let tile_y: u32 = (local_pos.y/BRUSH_TILE_DIM) as u32;
                 if tile_y >= de.current_brush.height as u32 {
-                    log_write(format!("tile_y out of bounds for Brush"), LogLevel::WARN);
+                    log_write("tile_y out of bounds for Brush", LogLevel::WARN);
                     should_delete = false;
                 }
                 let tile_index: u32 = tile_y * (de.current_brush.width as u32) + tile_x;
@@ -109,7 +109,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     de.current_brush.tiles[tile_index as usize] = 0x0000;
                 }
             } else {
-                log_write(format!("Failed to get pointer input when clicking Saved Brushes grid"), LogLevel::ERROR);
+                log_write("Failed to get pointer input when clicking Saved Brushes grid", LogLevel::ERROR);
             }
         } // End interactivity
         // Helper for selection
@@ -120,7 +120,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             let raw_text = format!("Selection width/height: {}/{}",sel_width,sel_height);
             let top_left = de.bg_sel_data.get_top_left(layer.get_info().expect("Layer has INFO").layer_width);
             if top_left.is_none() {
-                log_write(format!("Unable to get top left from bg selection in brushes"), LogLevel::FATAL);
+                log_write("Unable to get top left from bg selection in brushes", LogLevel::ERROR);
                 return;
             }
             let top_left = top_left.unwrap();
@@ -179,17 +179,17 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             ui.label(label_str);
             if load_tiles.clicked() {
                 if de.bg_sel_data.selection_width == 0 {
-                    log_write(format!("Cannot load selected tiles, selection width is 0"), LogLevel::WARN);
+                    log_write("Cannot load selected tiles, selection width is 0", LogLevel::WARN);
                     return;
                 }
                 if de.bg_sel_data.selected_map_indexes.is_empty() {
-                    log_write(format!("Cannot load selected tiles, nothing selected"), LogLevel::WARN);
+                    log_write("Cannot load selected tiles, nothing selected", LogLevel::WARN);
                     return;
                 }
                 let maptiles = layer.get_mpbz().clone().expect("maptiles should be Some'd on a layer");
                 de.current_brush.tiles.clear();
                 if de.bg_sel_data.selection_width >= u8::MAX as u16 {
-                    log_write(format!("Selection width higher than u8 able"), LogLevel::ERROR);
+                    log_write("Selection width higher than u8 able", LogLevel::ERROR);
                     return;
                 }
                 de.current_brush.width = de.bg_sel_data.selection_width as u8;
@@ -204,7 +204,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.horizontal(|ui| {
             // Clear button
             if ui.button("Clear Brush").clicked() {
-                log_write(format!("Clearing current Brush"), LogLevel::LOG);
+                log_write("Clearing current Brush", LogLevel::LOG);
                 de.current_brush.clear();
             }
         });

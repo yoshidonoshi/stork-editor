@@ -398,27 +398,27 @@ impl DisplayEngine {
                 log_write(format!("USA 1.1 is poorly supported, likely to crash"), LogLevel::WARN);
             }
             GameVersion::USAXX => {
-                let unk_ver3 = format!("Unknown USA version");
+                let unk_ver3 = "Unknown USA version".to_string();
                 log_write(unk_ver3.clone(), LogLevel::ERROR);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             GameVersion::EURXX => {
-                let unk_ver3 = format!("Unknown EUR version");
+                let unk_ver3 = "Unknown EUR version".to_string();
                 log_write(unk_ver3.clone(), LogLevel::ERROR);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             GameVersion::EUR10 => {
-                let unk_ver3 = format!("EURr0 unsupported");
+                let unk_ver3 = "EURr0 unsupported".to_string();
                 log_write(unk_ver3.clone(), LogLevel::ERROR);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             GameVersion::EUR11 => {
-                let unk_ver3 = format!("EURr1 unsupported");
+                let unk_ver3 = "EURr1 unsupported".to_string();
                 log_write(unk_ver3.clone(), LogLevel::ERROR);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             _ => {
-                log_write(format!("This should be impossible to hit in version test"), LogLevel::FATAL);
+                log_write("This should be impossible to hit in version test", LogLevel::FATAL);
             }
         }
         log_write(format!("Assuming game version {}",get_gameversion_prettyname(&de.game_version.unwrap())), LogLevel::LOG);
@@ -428,7 +428,7 @@ impl DisplayEngine {
     fn get_level_filename(&self, world_index: &u32, level_index: &u32) -> String {
         if self.game_version.is_none() {
             // Should be impossible
-            log_write(format!("Attempted to call get_level_filename before game opened"), LogLevel::FATAL);
+            log_write("Attempted to call get_level_filename before game opened", LogLevel::FATAL);
             return String::new();
         }
         let game_ver = self.game_version.expect("Game version can't not be loaded");
@@ -458,13 +458,13 @@ impl DisplayEngine {
     fn get_level_filename_usa(&self, world_index: &u32, level_index: &u32, game_version: GameVersion) -> Result<String,String> {
         if world_index + 1 > 5 {
             let world_fail = "World 5 is the highest World";
-            log_write(world_fail.to_owned(), LogLevel::ERROR);
+            log_write(world_fail, LogLevel::ERROR);
             return Err(world_fail.to_owned());
         }
 
         if level_index + 1 > 10 {
             let level_fail = "There are only 10 levels per World";
-            log_write(level_fail.to_owned(), LogLevel::ERROR);
+            log_write(level_fail, LogLevel::ERROR);
             return Err(level_fail.to_owned());
         }
 
@@ -588,7 +588,7 @@ impl DisplayEngine {
         let map_path = nitrofs_abs(&self.export_folder, &map_name);
         let loaded_map_res = MapData::new(&map_path,&self.export_folder);
         if loaded_map_res.is_err() {
-            log_write(format!("Failed to load MapData"), LogLevel::ERROR);
+            log_write("Failed to load MapData", LogLevel::ERROR);
             return;
         }
         self.loaded_map = loaded_map_res.unwrap();
@@ -627,7 +627,7 @@ impl DisplayEngine {
             let pal = Palette::from_cur(&mut cur,16);
             self.bg_palettes[pal_index] = pal;
         } else {
-            log_write("Could not load ARM9 to get universal palette".to_owned(), LogLevel::ERROR);
+            log_write("Could not load ARM9 to get universal palette", LogLevel::ERROR);
         }
         pal_index += 1;
 
@@ -711,7 +711,7 @@ impl DisplayEngine {
         let selected_map_index = selected_map_index.unwrap();
         if selected_map_index >= self.loaded_course.level_map_data.len() {
             self.course_settings.selected_map = Option::None;
-            log_write(format!("Selected map index out of bounds"), LogLevel::WARN);
+            log_write("Selected map index out of bounds", LogLevel::WARN);
         }
         let selected_map = &mut self.loaded_course.level_map_data[selected_map_index];
         let map_exit = selected_map.get_exit(&selected_exit_uuid);

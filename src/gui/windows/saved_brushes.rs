@@ -161,7 +161,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn get_selected_brush_data(saved_brushes: &Vec<Brush>, sel_brush_index: usize) -> Result<Brush,()> {
     if sel_brush_index >= saved_brushes.len() {
-        log_write(format!("Selected Brush index out of bounds"), LogLevel::ERROR);
+        log_write("Selected Brush index out of bounds", LogLevel::ERROR);
         return Err(());
     }
     let brush_to_load = saved_brushes[sel_brush_index].clone();
@@ -169,7 +169,7 @@ fn get_selected_brush_data(saved_brushes: &Vec<Brush>, sel_brush_index: usize) -
 }
 
 pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
-    log_write(format!("Saving loaded Brushes to JSON..."), LogLevel::LOG);
+    log_write("Saving loaded Brushes to JSON...", LogLevel::LOG);
     let mut out_json = json!({
         "brushes": []
     });
