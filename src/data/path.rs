@@ -46,6 +46,18 @@ impl PathDatabase {
         }
         ret
     }
+
+    pub fn delete_line(&mut self, line_uuid: Uuid) -> Result<(),()> {
+        log_write("Deleting Line", LogLevel::DEBUG);
+        let line_pos = self.lines.iter().position(|x| x.uuid == line_uuid);
+        if line_pos.is_none() {
+            return Err(());
+        }
+        let line_pos = line_pos.unwrap();
+        self.lines.remove(line_pos);
+        log_write("Line data deleted", LogLevel::DEBUG);
+        Ok(())
+    }
 }
 impl TopLevelSegment for PathDatabase {
     fn compile(&self) -> Vec<u8> {
