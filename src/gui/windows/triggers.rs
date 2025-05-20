@@ -3,14 +3,20 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::{area::{Trigger, TriggerData}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::{area::{Trigger, TriggerData}, mapfile::TopLevelSegmentWrapper, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 pub fn show_triggers_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     if de.display_settings.current_layer != CurrentLayer::TRIGGERS {
         ui.disable();
     }
     if de.loaded_map.get_area().is_none() {
-        // TODO: Allow creation
+        let create = ui.button("Trigger database not found, create?");
+        if create.clicked() {
+            let t = TriggerData::default();
+            de.loaded_map.segments.push(TopLevelSegmentWrapper::AREA(t));
+            log_write("Created new AREA database", LogLevel::LOG);
+            return;
+        }
         ui.disable();
     }
     StripBuilder::new(ui)
