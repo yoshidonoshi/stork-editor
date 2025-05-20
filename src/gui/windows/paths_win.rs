@@ -3,7 +3,7 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::{path::{PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::{mapfile::TopLevelSegmentWrapper, path::{PathDatabase, PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 const CHANGE_RATE: u32 = 0x10000;
 
@@ -15,6 +15,16 @@ pub struct PathAngle {
 
 pub fn show_paths_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     if de.display_settings.current_layer != CurrentLayer::PATHS {
+        ui.disable();
+    }
+    if de.loaded_map.get_path().is_none() {
+        let create = ui.button("Path database not found, create?");
+        if create.clicked() {
+            let pd = PathDatabase::default();
+            de.loaded_map.segments.push(TopLevelSegmentWrapper::PATH(pd));
+            log_write("Create PATH database", LogLevel::LOG);
+            return;
+        }
         ui.disable();
     }
     StripBuilder::new(ui)
