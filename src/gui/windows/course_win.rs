@@ -3,19 +3,11 @@ use uuid::Uuid;
 
 use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
+#[derive(Default)]
 pub struct CourseSettings {
     pub selected_map: Option<usize>,
     pub selected_entrance: Option<Uuid>,
     pub selected_exit: Option<Uuid>
-}
-impl Default for CourseSettings {
-    fn default() -> Self {
-        Self {
-            selected_map: Option::None,
-            selected_entrance: Option::None,
-            selected_exit: Option::None
-        }
-    }
 }
 
 fn get_course_music_name(music: u8) -> String {

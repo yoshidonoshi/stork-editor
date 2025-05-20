@@ -12,7 +12,7 @@ use super::{Compilable, TopLevelSegment};
 pub const AREA_RECT_COLOR: Color32 = Color32::from_rgba_premultiplied(0x60, 0x00, 0x00, 0x40);
 pub const AREA_RECT_COLOR_SELECTED: Color32 = Color32::from_rgba_premultiplied(0x80, 0x10, 0x10, 0x50);
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct TriggerData {
     pub triggers: Vec<Trigger>
 }
@@ -20,11 +20,6 @@ impl fmt::Display for TriggerData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Maybe print them all out at some point?
         write!(f,"Trigger [ TriggerCount=0x{:X}/{} ]",self.triggers.len(),self.triggers.len())
-    }
-}
-impl Default for TriggerData {
-    fn default() -> Self {
-        Self { triggers: Vec::new() }
     }
 }
 impl TopLevelSegment for TriggerData {

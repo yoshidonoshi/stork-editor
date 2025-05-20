@@ -157,16 +157,9 @@ impl fmt::Display for BgClipboardSelectedTile {
     }
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,Default)]
 pub struct BgClipboard {
     pub tiles: Vec<BgClipboardSelectedTile>
-}
-impl Default for BgClipboard {
-    fn default() -> Self {
-        Self {
-            tiles: Vec::new()
-        }
-    }
 }
 impl BgClipboard {
     pub fn clear(&mut self) {
@@ -174,17 +167,10 @@ impl BgClipboard {
     }
 }
 
+#[derive(Default)]
 pub struct Clipboard {
     pub sprite_clip: SpriteClipboard,
     pub bg_clip: BgClipboard
-}
-impl Default for Clipboard {
-    fn default() -> Self {
-        Self {
-            sprite_clip: Default::default(),
-            bg_clip: Default::default()
-        }
-    }
 }
 
 /// NDS Graphical data and memory, tailored for YIDS

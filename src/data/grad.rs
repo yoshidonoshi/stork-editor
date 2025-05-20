@@ -6,7 +6,7 @@ use crate::{engine::compression::segment_wrap, utils::{log_write, read_fixed_str
 
 use super::TopLevelSegment;
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct GradientData {
     // GINF
     pub color_count: u16,
@@ -16,18 +16,6 @@ pub struct GradientData {
     pub y_offset: u32,
     // GCOL
     pub color_shorts: Vec<u16>
-}
-impl Default for GradientData {
-    fn default() -> Self {
-        Self {
-            color_count: 0,
-            unknown1: 0,
-            unknown2: 0,
-            _padding: 0,
-            y_offset: 0,
-            color_shorts: Vec::new()
-        }
-    }
 }
 impl TopLevelSegment for GradientData {
     fn compile(&self) -> Vec<u8> {

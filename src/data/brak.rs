@@ -2,15 +2,11 @@ use crate::engine::compression::segment_wrap;
 
 use super::TopLevelSegment;
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct BrakData {
     pub raw_bytes: Vec<u8>
 }
-impl Default for BrakData {
-    fn default() -> Self {
-        Self { raw_bytes: Vec::new() }
-    }
-}
+
 impl BrakData {
     pub fn new(byte_data: &Vec<u8>) -> Self {
         let mut brak = BrakData::default();

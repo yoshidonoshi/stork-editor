@@ -7,19 +7,10 @@ use crate::{engine::compression::segment_wrap, utils::{log_write, LogLevel}};
 use super::{info::ScenInfoData, ScenSegment};
 
 
-#[derive(Debug,Clone,Copy,PartialEq)]
+#[derive(Debug,Clone,Copy,PartialEq,Default)]
 pub struct ScrollData {
     pub left_velocity: i32,
     pub up_velocity: i32
-}
-
-impl Default for ScrollData {
-    fn default() -> Self {
-        Self {
-            left_velocity: 0x00000000,
-            up_velocity: 0x00000000
-        }
-    }
 }
 
 impl ScrollData {

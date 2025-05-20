@@ -9,18 +9,10 @@ pub const COLLISION_BG_COLOR_PASSABLE: Color32 = Color32::from_rgba_premultiplie
 pub const COLLISION_OUTLINE_COLOR: Color32 = Color32::from_rgba_premultiplied(0x40, 0x40, 0x60, 0xff);
 pub const COLLISION_SQUARE: Vec2 = Vec2::new(16.0, 16.0);
 
-#[derive(Debug, Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct CollisionData {
     /// Just keep it the same, it's just u8s
     pub col_tiles: Vec<u8>
-}
-
-impl Default for CollisionData {
-    fn default() -> Self {
-        Self {
-            col_tiles: Vec::new()
-        }
-    }
 }
 
 impl CollisionData {

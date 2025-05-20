@@ -101,17 +101,12 @@ impl Compilable for Palette {
 }
 
 /// This is the record stored within MPBZ data. 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct MapTileRecordData {
     pub tile_id: u16,
     pub palette_id: u16,
     pub flip_h: bool,
     pub flip_v: bool
-}
-impl Default for MapTileRecordData {
-    fn default() -> Self {
-        Self { tile_id: 0, palette_id: 0, flip_h: false, flip_v: false }
-    }
 }
 impl fmt::Display for MapTileRecordData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -2,17 +2,9 @@ use crate::engine::compression::segment_wrap;
 
 use super::{info::ScenInfoData, ScenSegment};
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct AnimatedPaletteData {
     pub _raw: Vec<u8>
-}
-
-impl Default for AnimatedPaletteData {
-    fn default() -> Self {
-        Self {
-            _raw: Vec::new()
-        }
-    }
 }
 
 impl AnimatedPaletteData {

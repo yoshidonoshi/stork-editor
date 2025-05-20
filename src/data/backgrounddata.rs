@@ -13,7 +13,7 @@ use crate::{engine::compression::{lamezip77_lz10_decomp, segment_wrap}, utils::{
 
 use super::{scendata::{anmz::AnmzDataSegment, colz::CollisionData, imbz::ImbzData, imgb::ImgbData, info::ScenInfoData, mpbz::MapTileDataSegment, plan::AnimatedPaletteData, pltb::PltbData, rast::RastData, scrl::ScrollData, ScenSegment, ScenSegmentWrapper}, types::Palette, TopLevelSegment};
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct BackgroundData {
     /// INFO (ideally only use this in new)
     pub info_ro: ScenInfoData, // Only guaranteed thing in each SCEN
@@ -22,16 +22,6 @@ pub struct BackgroundData {
     /// Unedited, straight out of the data. Cache it once rendered
     pub pixel_tiles_preview: Option<Vec<u8>>, // For previews
     pub scen_segments: Vec<ScenSegmentWrapper>,
-}
-impl Default for BackgroundData {
-    fn default() -> Self {
-        Self {
-            info_ro: Default::default(),
-            pixel_tiles_preview: Option::None,
-            _pal_offset: 0,
-            scen_segments: Vec::new()
-        }
-    }
 }
 impl fmt::Display for BackgroundData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -7,22 +7,13 @@ use crate::{engine::compression::{lamezip77_lz10_decomp, lamezip77_lz10_recomp, 
 use super::{types::MapTileRecordData, TopLevelSegment};
 
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct SoftRockBackdrop {
     pub x_offset: u16,
     pub y_offset: u16,
     pub width: u16,
     pub height: u16,
     pub tiles: Vec<MapTileRecordData>
-}
-impl Default for SoftRockBackdrop {
-    fn default() -> Self {
-        Self {
-            x_offset: 0x00,y_offset: 0x00,
-            width: 0x00, height: 0x00,
-            tiles: Vec::new()
-        }
-    }
 }
 
 impl SoftRockBackdrop {

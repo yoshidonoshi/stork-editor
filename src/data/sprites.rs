@@ -75,14 +75,9 @@ impl LevelSprite {
     }
 }
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Clone,PartialEq,Debug,Default)]
 pub struct LevelSpriteSet {
     pub sprites: Vec<LevelSprite>
-}
-impl Default for LevelSpriteSet {
-    fn default() -> Self {
-        Self { sprites: Vec::new() }
-    }
 }
 impl LevelSpriteSet {
     pub fn new(byte_data: &Vec<u8>) -> Self {
@@ -173,27 +168,27 @@ pub fn draw_sprite(
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
             gra.render_sprite_frame(painter,ctx,0,&pal,&rect.left_top(),tile_dim,selected);
-            return true;
+            true
         },
         0x28 => { // Flower Collectible
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x16);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x9b, 0, 16);
             gra.render_sprite_frame(painter,ctx,0,&pal,&rect.left_top(),tile_dim,selected);
-            return true;
+            true
         }
         0x3b => { // Red Coin
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
             gra.render_sprite_frame(painter,ctx,6,&pal,&rect.left_top(),tile_dim,selected);
-            return true;
+            true
         }
         0x9F => { // Hint Block
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x5d);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0xa9, 0, 16);
             gra.render_sprite_frame(painter,ctx,0,&pal,&rect.left_top(),tile_dim,selected);
-            return true;
+            true
         }
-        _ => return false
+        _ => true
     }
 }
 
@@ -221,18 +216,10 @@ pub struct SpriteBuildData {
     pub flags: u16
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Default)]
 pub struct SpriteGraphicsSegment {
     pub sprite_frames: Vec<SpriteAnimFrame>,
     internal_data: Vec<u8>
-}
-impl Default for SpriteGraphicsSegment {
-    fn default() -> Self {
-        Self {
-            sprite_frames: Vec::new(),
-            internal_data: Vec::new()
-        }
-    }
 }
 impl SpriteGraphicsSegment {
     pub fn from_data_segment(segment: &DataSegment) -> Self {
