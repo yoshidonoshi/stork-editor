@@ -70,7 +70,7 @@ impl TopLevelSegment for GradientData {
 impl GradientData {
     pub fn new(bytedata: &Vec<u8>) -> Self {
         let mut ret = GradientData::default();
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&bytedata);
+        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(bytedata);
 
         let ginf_header: String = read_fixed_string_cursor(&mut rdr, 4);
         if ginf_header != "GINF" {

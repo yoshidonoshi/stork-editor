@@ -53,7 +53,7 @@ impl LevelSprite {
     }
     #[allow(dead_code)] // only for debug, so may not be used
     pub fn from_vec(vec: &mut Vec<u8>) -> Self {
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&vec);
+        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(vec);
         LevelSprite::from_cursor(&mut rdr)
     }
     pub fn compile(&self) -> Vec<u8> {

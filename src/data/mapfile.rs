@@ -115,7 +115,7 @@ impl MapData {
             log_write(file_exists_err.clone(), LogLevel::ERROR);
             return Err(file_exists_err);
         }
-        let file_bytes: Vec<u8> = compression::decompress_file(&filename_abs);
+        let file_bytes: Vec<u8> = compression::decompress_file(filename_abs);
         let mut rdr = Cursor::new(&file_bytes);
         let file_header = rdr.read_u32::<LittleEndian>();
         if file_header.is_err() {

@@ -42,7 +42,7 @@ pub fn lamezip77_lz10_recomp(data: &Vec<u8>) -> Vec<u8> {
     output.push(first as u8);
     output.push(second as u8);
     output.push(third as u8);
-    compressor.compress(true, &data, true, |val| {
+    compressor.compress(true, data, true, |val| {
         output.push(val);
     });
     output

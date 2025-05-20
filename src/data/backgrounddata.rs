@@ -43,7 +43,7 @@ impl BackgroundData {
         // Since the issue is commonly tied to a specific background, this should stick out
         log_write("> Creating SCEN...", LogLevel::DEBUG);
         let mut ret: BackgroundData = BackgroundData::default();
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&vec);
+        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(vec);
         let file_end_pos: u64 = vec.len().try_into().unwrap();
         let mut test_load_count: usize = 0;
         while rdr.position() < file_end_pos {

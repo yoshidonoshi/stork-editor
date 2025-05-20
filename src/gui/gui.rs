@@ -958,7 +958,7 @@ impl Gui {
                 copied_sprite.x_position = true_level_x as u16;
                 copied_sprite.y_position = true_level_y as u16;
                 copied_sprite.uuid = Uuid::new_v4();
-                self.display_engine.loaded_map.add_sprite(&copied_sprite);
+                self.display_engine.loaded_map.add_sprite(copied_sprite);
             }
             self.display_engine.graphics_update_needed = true;
             self.display_engine.unsaved_changes = true;
@@ -1471,7 +1471,7 @@ impl eframe::App for Gui {
                     egui::Id::new("change_level_world"), "World")
                     .selected_text(format!("{}",self.change_level_world_index+1))
                     .show_ui(ui, |ui| {
-                        for x in 0..5 as u32 {
+                        for x in 0..5_u32 {
                             ui.selectable_value(&mut self.change_level_world_index, x, (x+1).to_string());                          
                         }
                     });
@@ -1479,7 +1479,7 @@ impl eframe::App for Gui {
                     egui::Id::new("change_level_level"), "Level")
                     .selected_text(format!("{}",self.change_level_level_index+1))
                     .show_ui(ui, |ui| {
-                        for y in 0..10 as u32 {
+                        for y in 0..10_u32 {
                             ui.selectable_value(&mut self.change_level_level_index, y, (y+1).to_string());
                         }
                     });

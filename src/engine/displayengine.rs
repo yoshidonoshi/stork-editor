@@ -632,7 +632,7 @@ impl DisplayEngine {
         pal_index += 1;
 
         // BG loop //
-        for which in 1..4 as u8 { // This is 1,2,3; 4 is excluded
+        for which in 1..4_u8 { // This is 1,2,3; 4 is excluded
             let bg: Option<&mut BackgroundData> = self.loaded_map.get_background(which);
             if let Some(bg_data) = bg {
                 // Palette

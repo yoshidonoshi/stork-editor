@@ -71,7 +71,7 @@ pub fn print_vector_u8(byte_vector: &Vec<u8>) {
 
 pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16) -> PathAngle {
     const TABLE_ADDR: u32 = 0x0d1878; //0x020d1878;
-    let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&arm9);
+    let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9);
     // Value 1
     let pos1 = TABLE_ADDR + ((value as u32 >> 4) * 2 + 1) * 2;
     rdr.set_position(pos1 as u64);
@@ -187,7 +187,7 @@ pub fn read_address(rdr: &mut Cursor<&Vec<u8>>) -> u32 {
 }
 
 pub fn read_fixed_string(vec_data: &Vec<u8>, position: u64, length: u32) -> String {
-    let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&vec_data);
+    let mut rdr: Cursor<&Vec<u8>> = Cursor::new(vec_data);
     rdr.set_position(position);
     read_fixed_string_cursor(&mut rdr, length)
 }
