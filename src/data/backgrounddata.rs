@@ -41,7 +41,7 @@ impl fmt::Display for BackgroundData {
 impl BackgroundData {
     pub fn new(vec: &Vec<u8>, project_directory: &PathBuf) -> Result<BackgroundData,String> {
         // Since the issue is commonly tied to a specific background, this should stick out
-        log_write(format!("> Creating SCEN..."), LogLevel::DEBUG);
+        log_write("> Creating SCEN...", LogLevel::DEBUG);
         let mut ret: BackgroundData = BackgroundData::default();
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&vec);
         let file_end_pos: u64 = vec.len().try_into().unwrap();

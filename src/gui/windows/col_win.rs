@@ -38,7 +38,7 @@ pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.label("Info on Collision here");
     // Interactivity
     if de.display_settings.current_layer == CurrentLayer::COLLISION {
-        let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new(format!("col_window_tile_click")), egui::Sense::click());
+        let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new("col_window_tile_click"), egui::Sense::click());
         if click_response.clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                 let local_pos = pointer_pos - ui.min_rect().min;

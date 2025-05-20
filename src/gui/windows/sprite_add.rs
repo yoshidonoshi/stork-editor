@@ -62,7 +62,7 @@ fn create_table(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,Sp
                     // Name
                     row.col(|ui| {
                         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::PointingHand);
-                        let res = ui.label(format!("{}",sprite.name));
+                        let res = ui.label(sprite.name.to_string());
                         if res.clicked() {
                             de.selected_sprite_to_place = Some(sprite_index);
                         }
@@ -70,7 +70,7 @@ fn create_table(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,Sp
                     // Description
                     row.col(|ui| {
                         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::PointingHand);
-                        let res = ui.label(format!("{}",sprite.description));
+                        let res = ui.label(sprite.description.to_string());
                         if res.clicked() {
                             de.selected_sprite_to_place = Some(sprite_index);
                         }

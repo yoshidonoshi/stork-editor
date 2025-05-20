@@ -774,10 +774,10 @@ impl Gui {
                     self.display_engine.bg_sel_data.selected_map_indexes = all_indexes;
                     self.display_engine.bg_sel_data.selection_width = bg.get_info().expect("Select All INFO").layer_width;
                 } else {
-                    log_write(format!("MapTiles were not retrieved when seleting all"), LogLevel::ERROR);
+                    log_write("MapTiles were not retrieved when seleting all", LogLevel::ERROR);
                 }
             } else {
-                log_write(format!("BG was not retrieved when selecting all"), LogLevel::ERROR);
+                log_write("BG was not retrieved when selecting all", LogLevel::ERROR);
             }
         }
     }
@@ -1513,7 +1513,7 @@ impl eframe::App for Gui {
             let bug_modal = Modal::new(egui::Id::new("bug_report_modal"));
             bug_modal.show(ctx, |ui| {
                 ui.heading("Report a Bug");
-                ui.label(format!("The best place to report a bug or request features is on the Github:"));
+                ui.label("The best place to report a bug or request features is on the Github:");
                 ui.hyperlink(env!("GITHUB_REPO"));
                 ui.label(format!("Please include your stork.log and version ({})",VERSION));
                 ui.label("You can do the same on Discord, with more timely help and answers:");

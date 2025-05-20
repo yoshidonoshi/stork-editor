@@ -85,7 +85,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         }
         ui.add_space(push_height);
         // Interactivity
-        let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new(format!("saved_brushes_window_click")), egui::Sense::click());
+        let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new("saved_brushes_window_click"), egui::Sense::click());
         if click_response.secondary_clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                 let local_pos = pointer_pos - top_left;
@@ -151,7 +151,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let _good_label = ui.label(rich_text);
             }
         } else {
-            ui.label(format!("Selection width/height: N/A"));
+            ui.label("Selection width/height: N/A");
         }
         // Button panel
         ui.horizontal(|ui| {

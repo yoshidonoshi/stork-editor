@@ -18,7 +18,7 @@ pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, laye
                     if let ScenSegmentWrapper::INFO(info) = seg {
                         let changed = show_info_segment(ui, info);
                         if changed {
-                            log_write(format!("Changed INFO"), LogLevel::DEBUG);
+                            log_write("Changed INFO", LogLevel::DEBUG);
                             de.unsaved_changes = true;
                             de.graphics_update_needed = true;
                         }
@@ -122,56 +122,56 @@ fn show_info_segment(ui: &mut egui::Ui, info: &mut ScenInfoData) -> bool {
     let pre_change = info.clone();
     ui.horizontal(|ui| {
         ui.label(format!("0x{:04X}",info.layer_width));
-        ui.label(format!("Layer Width"));
+        ui.label("Layer Width");
     });
     ui.horizontal(|ui| {
         ui.label(format!("0x{:04X}",info.layer_height));
-        ui.label(format!("Layer Height"));
+        ui.label("Layer Height");
     });
     ui.horizontal(|ui| {
         ui.label(format!("0x{:08X}",info.height_offset));
-        ui.label(format!("Height Offset (Fine)"));
+        ui.label("Height Offset (Fine)");
     });
     ui.horizontal(|ui| {
         ui.label(format!("0x{:08X}",info.x_scroll));
-        ui.label(format!("X Scroll"));
+        ui.label("X Scroll");
     });
     ui.horizontal(|ui| {
         ui.label(format!("0x{:08X}",info.y_scroll));
-        ui.label(format!("Y Scroll"));
+        ui.label("Y Scroll");
     });
     ui.horizontal(|ui| {
         ui.label(format!("{}",info.which_bg));
-        ui.label(format!("BG Index"));
+        ui.label("BG Index");
     });
     ui.horizontal(|ui| {
         ui.label(format!("{}",info.layer_order));
-        ui.label(format!("Layer Order"));
+        ui.label("Layer Order");
     });
     ui.horizontal(|ui| {
         ui.label(format!("{}",info.char_base_block));
-        ui.label(format!("Char Base Block"));
+        ui.label("Char Base Block");
     });
     ui.horizontal(|ui| {
         ui.label(format!("{}",info.screen_base_block));
-        ui.label(format!("Screen Base Block"));
+        ui.label("Screen Base Block");
     });
     ui.horizontal(|ui| {
         let color_mode_drag = egui::DragValue::new(&mut info.color_mode)
             .speed(1)
             .range(0..=3);
         ui.add_enabled(false,color_mode_drag);
-        ui.label(format!("Color Mode"));
+        ui.label("Color Mode");
     });
     if info.imbz_filename_noext.is_none() {
         ui.horizontal(|ui| {
-            ui.label(format!("'Local'"));
-            ui.label(format!("Pixel Tile Source"));
+            ui.label("'Local'");
+            ui.label("Pixel Tile Source");
         });
     } else {
         ui.horizontal(|ui| {
             ui.label(format!("'{}'",info.imbz_filename_noext.clone().unwrap()));
-            ui.label(format!("Pixel Tile Source"));
+            ui.label("Pixel Tile Source");
         });
     }
     // If it differs, return true and refresh

@@ -160,7 +160,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 ui.selectable_value(selected_bg, CurrentLayer::TRIGGERS, "Triggers");
             });
         if *selected_bg != old_selected_bg {
-            log_write(format!("Cleaning up due to layer change"), LogLevel::DEBUG);
+            log_write("Cleaning up due to layer change", LogLevel::DEBUG);
             gui_state.display_engine.brush_settings.cur_selected_brush = Option::None;
             gui_state.display_engine.current_brush.clear();
             gui_state.display_engine.clipboard.bg_clip.clear();

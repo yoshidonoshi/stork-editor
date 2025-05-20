@@ -81,7 +81,7 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     let row_index = row.index();
                     row.set_selected(de.course_settings.selected_map.unwrap_or(0xffff) == row_index);
                     row.col(|ui| {
-                        let label = ui.label(format!("{}",map.label));
+                        let label = ui.label(map.label.to_string());
                         if label.clicked() {
                             de.course_settings.selected_map = Some(row_index);
                         }
@@ -101,7 +101,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     }
     let selected_map_index = de.course_settings.selected_map.unwrap();
     if selected_map_index >= de.loaded_course.level_map_data.len() {
-        log_write(format!("Selected map index out of bounds, clearing"), LogLevel::ERROR);
+        log_write("Selected map index out of bounds, clearing", LogLevel::ERROR);
         de.course_settings.selected_map = Option::None;
         return;
     }
@@ -138,7 +138,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 body.row(20.0, |mut row| {
                     row.set_selected(de.course_settings.selected_entrance.unwrap_or(Uuid::nil()) == entrance.uuid);
                     row.col(|ui| {
-                        let label = ui.label(format!("{}",entrance.label));
+                        let label = ui.label(entrance.label.to_string());
                         if label.clicked() {
                             de.course_settings.selected_entrance = Some(entrance.uuid);
                         }
@@ -191,7 +191,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 body.row(20.0, |mut row| {
                     row.set_selected(de.course_settings.selected_exit.unwrap_or(Uuid::nil()) == exit.uuid);
                     row.col(|ui| {
-                        let label = ui.label(format!("{}",exit.label));
+                        let label = ui.label(exit.label.to_string());
                         if label.clicked() {
                             de.course_settings.selected_exit = Some(exit.uuid);
                         }
@@ -257,7 +257,7 @@ fn show_exit_type(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
 fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
     let course = maps.iter().find(|x| x.uuid == selected_exit.target_map );
     if course.is_none() {
-        log_write(format!("Somehow, course was none"), LogLevel::ERROR);
+        log_write("Somehow, course was none", LogLevel::ERROR);
         return;
     }
     let course = course.unwrap();
@@ -271,14 +271,14 @@ fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &V
         });
     if selected_exit_stored != *selected_exit {
         // The new entrance will be invalid! Reset it to the first one
-        log_write(format!("Selected exit target map changed"), LogLevel::DEBUG);
+        log_write("Selected exit target map changed", LogLevel::DEBUG);
         let course_new = maps.iter().find(|x| x.uuid == selected_exit.target_map );
         if course_new.is_none() {
-            log_write(format!("Failed to find course for selected exit target map"), LogLevel::ERROR);
+            log_write("Failed to find course for selected exit target map", LogLevel::ERROR);
         }
         let course_new = course_new.unwrap();
         if course_new.map_entrances.is_empty() {
-            log_write(format!("New exit target map has no entrances"),LogLevel::ERROR);
+            log_write("New exit target map has no entrances",LogLevel::ERROR);
         }
         selected_exit.target_map_entrance = course_new.map_entrances[0].uuid;
     }
@@ -287,7 +287,7 @@ fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &V
 fn show_exit_target_entrance(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
     let course = maps.iter().find(|x| x.uuid == selected_exit.target_map );
     if course.is_none() {
-        log_write(format!("Somehow, course was none"), LogLevel::ERROR);
+        log_write("Somehow, course was none", LogLevel::ERROR);
         return;
     }
     let course = course.unwrap();

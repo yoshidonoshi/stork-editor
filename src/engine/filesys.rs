@@ -30,14 +30,14 @@ pub fn extract_rom_files(nds_file: &PathBuf, output_dir: &PathBuf) -> Result<Pat
     let raw_rom = raw_rom.unwrap();
     let rom = Rom::extract(&raw_rom);
     if rom.is_err() {
-        let extract_err = format!("Failed to extract ROM contents");
+        let extract_err = "Failed to extract ROM contents".to_string();
         log_write(extract_err.clone(), utils::LogLevel::ERROR);
         return Err(RomExtractError::new(&extract_err));
     }
     let rom = rom.unwrap();
     let save_result = rom.save(&output_dir, None);
     if save_result.is_err() {
-        let save_fail = format!("Failed to save extracted ROM contents");
+        let save_fail = "Failed to save extracted ROM contents".to_string();
         log_write(save_fail.clone(), utils::LogLevel::ERROR);
         Err(RomExtractError::new(&save_fail))
     } else {
@@ -51,13 +51,13 @@ pub fn extract_rom_files(nds_file: &PathBuf, output_dir: &PathBuf) -> Result<Pat
 pub struct RomGenerateError{}
 
 pub fn generate_rom(config: &String, new_nds_file: &String) -> Result<(),RomGenerateError> {
-    log_write(format!("This will take a long time..."), utils::LogLevel::LOG);
+    log_write("This will take a long time...", LogLevel::LOG);
     let rom = Rom::load(&config, RomLoadOptions::default());
     if rom.is_err() {
         utils::log_write(format!("Failed to load directory '{}'",&config), utils::LogLevel::ERROR);
         return Err(RomGenerateError{});
     } else {
-        log_write(format!("Config processed successfully"), LogLevel::LOG);
+        log_write("Config processed successfully", LogLevel::LOG);
     }
     let rom = rom.unwrap();
     let raw_rom = rom.build(None);

@@ -153,7 +153,7 @@ impl MapData {
                 "SCEN" => {
                     let bg_res = BackgroundData::new(&segment.internal_data,project_folder);
                     if bg_res.is_err() {
-                        let bg_fail_msg = format!("Failed to generate BackgroundData in MapData");
+                        let bg_fail_msg = "Failed to generate BackgroundData in MapData".to_string();
                         log_write(bg_fail_msg.clone(), LogLevel::ERROR);
                         return Err(bg_fail_msg);
                     }

@@ -61,7 +61,7 @@ fn draw_triggers(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     }
 
     if de.display_settings.current_layer == CurrentLayer::TRIGGERS {
-        let click_response = ui.interact(ui.min_rect(), egui::Id::new(format!("AREA_click")), egui::Sense::click());
+        let click_response = ui.interact(ui.min_rect(), egui::Id::new("AREA_click"), egui::Sense::click());
         if click_response.clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                 let mut found: bool = false;
@@ -92,7 +92,7 @@ fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
     let colz_layer = de.loaded_map.get_bg_with_colz();
     if colz_layer.is_none() {
-        log_write(format!("There is no layer with COLZ"), LogLevel::ERROR);
+        log_write("There is no layer with COLZ", LogLevel::ERROR);
         return;
     }
     let bg = de.loaded_map.get_background(colz_layer.unwrap()).expect("Already confirmed COLZ");
@@ -250,7 +250,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         }
         // Interactivity
         if de.display_settings.current_layer == CurrentLayer::PATHS {
-            let click_response = ui.interact(ui.min_rect(), egui::Id::new(format!("PATH_click")), egui::Sense::click());
+            let click_response = ui.interact(ui.min_rect(), egui::Id::new("PATH_click"), egui::Sense::click());
             if click_response.clicked() {
                 if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                     let local_pos = pointer_pos - ui.min_rect().min;
@@ -288,7 +288,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
     // If this always fires, it will block COLZ clicks
     let mut click_fallback_response: Option<Response> = Option::None;
     if de.display_settings.current_layer == CurrentLayer::SPRITES {
-        click_fallback_response = Some(ui.interact(ui.min_rect(), egui::Id::new(format!("sprite_click_fallback")), egui::Sense::click()));
+        click_fallback_response = Some(ui.interact(ui.min_rect(), egui::Id::new("sprite_click_fallback"), egui::Sense::click()));
     }
     // It's one way, don't mutable borrow
     let sprite_list: Vec<LevelSprite> = de.level_sprites.clone();

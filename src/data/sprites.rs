@@ -92,7 +92,7 @@ impl LevelSpriteSet {
         // If all goes well, the terminating position should be equal to the length
         while (rdr.position() as usize) != seg_end {
             if (rdr.position() as usize) > seg_end {
-                log_write(format!("Overflow when reading SETD"), LogLevel::ERROR);
+                log_write("Overflow when reading SETD", LogLevel::ERROR);
                 break;
             }
             let sprite: LevelSprite = LevelSprite::from_cursor(&mut rdr);

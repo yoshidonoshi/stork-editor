@@ -383,7 +383,7 @@ impl DisplayEngine {
             GameVersion::USA10 => {
                 let found_str = utils::read_fixed_string(&got_contents, 0xe1e6e, 6);
                 if !found_str.eq("1-1_D3") {
-                    let unk_ver1 = format!("Could not find 1-1_D3 in USA 1.0");
+                    let unk_ver1 = "Could not find 1-1_D3 in USA 1.0".to_string();
                     log_write(unk_ver1.clone(), LogLevel::ERROR);
                     return Err(DisplayEngineError::new(unk_ver1));
                 }
@@ -391,11 +391,11 @@ impl DisplayEngine {
             GameVersion::USA11 => {
                 let found_str2 = utils::read_fixed_string(&got_contents, 0x0e20ae, 6);
                 if !found_str2.eq("1-1_D3") {
-                    let unk_ver2 = format!("Could not find 1-1_D3 in USA 1.1");
+                    let unk_ver2 = "Could not find 1-1_D3 in USA 1.1".to_string();
                     log_write(unk_ver2.clone(), LogLevel::ERROR);
                     return Err(DisplayEngineError::new(unk_ver2));
                 }
-                log_write(format!("USA 1.1 is poorly supported, likely to crash"), LogLevel::WARN);
+                log_write("USA 1.1 is poorly supported, likely to crash", LogLevel::WARN);
             }
             GameVersion::USAXX => {
                 let unk_ver3 = "Unknown USA version".to_string();
@@ -476,7 +476,7 @@ impl DisplayEngine {
             // 02050024 (some function that takes in 0), does not break
         }
         if level_id == 0 {
-            return Ok(format!("0-1_D3"));
+            return Ok("0-1_D3".to_string());
         } else {
             if level_id == 0x7a {
                 // FUN_020173c0(0xd,1);
