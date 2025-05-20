@@ -1,4 +1,5 @@
 
+use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
@@ -37,11 +38,27 @@ fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 return;
             }
             let area = area_mut_res.unwrap();
-            area.triggers.push(Trigger { left_x: 2, top_y: 2, right_x: 12, bottom_y: 12, uuid: Uuid::new_v4() });
+            let new_trigger = Trigger { left_x: 2, top_y: 2, right_x: 12, bottom_y: 12, uuid: Uuid::new_v4() };
+            de.trigger_settings.selected_uuid = new_trigger.uuid;
+            area.triggers.push(new_trigger);
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
         }
-        ui.add_enabled(false, egui::Button::new("Delete"));
+        ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
+        let del = ui.add_enabled(de.trigger_settings.selected_uuid != Uuid::nil(),
+            egui::Button::new("Delete"));
+        if del.clicked() {
+            log_write(format!("Attempting to delete Trigger {}",de.trigger_settings.selected_uuid), LogLevel::DEBUG);
+            let area_mut_res = de.loaded_map.get_area_mut();
+            if area_mut_res.is_none() {
+                return;
+            }
+            let area = area_mut_res.unwrap();
+            let _did_delete = area.delete(de.trigger_settings.selected_uuid);
+            de.trigger_settings.selected_uuid = Uuid::nil();
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+        }
     });
     ui.add_space(5.0);
     let _table = TableBuilder::new(ui)
@@ -83,8 +100,13 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
         return;
     }
     let triggers = &mut trigger_data.triggers;
-    let mut t1 = triggers.iter_mut().filter(|x| x.uuid == trigger_uuid).collect::<Vec<&mut Trigger>>();
-    let t = &mut t1[0];
+    let t1 = triggers.iter_mut().find(|x| x.uuid == trigger_uuid);
+    if t1.is_none() {
+        log_write(format!("Could not find Trigger with UUID '{}'",trigger_uuid), LogLevel::WARN);
+        de.trigger_settings.selected_uuid = Uuid::nil();
+        return;
+    }
+    let t = t1.unwrap();
     let trigger_before = t.clone();
     // Left X
     ui.horizontal(|ui| {
@@ -118,7 +140,7 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
         ui.label("Bottom Y");
         ui.add(bottom_y);
     });
-    if **t != trigger_before {
+    if *t != trigger_before {
         de.unsaved_changes = true;
     }
 }

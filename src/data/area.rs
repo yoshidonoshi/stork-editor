@@ -61,6 +61,16 @@ impl TriggerData {
         }
         ret
     }
+
+    pub fn delete(&mut self, uuid: Uuid) -> bool {
+        let pos = self.triggers.iter().position(|x| x.uuid == uuid);
+        if pos.is_none() {
+            return false;
+        }
+        self.triggers.remove(pos.unwrap());
+        log_write("Trigger data deleted", LogLevel::DEBUG);
+        true
+    }
 }
 
 #[derive(Debug,Clone,Copy,PartialEq)]
