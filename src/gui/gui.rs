@@ -1,11 +1,11 @@
-use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, path::PathBuf};
+use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
 
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -401,8 +401,9 @@ impl Gui {
         }
     }
     fn save_map(&mut self) {
-        let file_name_ext: &String = &self.display_engine.loaded_map.src_file;
-        log_write(format!("Saving Map file '{}'",file_name_ext), LogLevel::LOG);
+        log_write("Saving Map file", LogLevel::DEBUG);
+        let file_name_ext: String = self.display_engine.loaded_map.src_file.clone();
+        let _backup_res = self.backup_map();
         // Create Map file
         let file_data = self.display_engine.loaded_map.package();
         let file_result = File::create(&file_name_ext);
@@ -420,6 +421,25 @@ impl Gui {
             self.display_engine.unsaved_changes = false;
         }
     }
+
+    fn backup_map(&mut self) -> Result<PathBuf,()> {
+        log_write("Backing up current map file...", LogLevel::DEBUG);
+        let backup_folder = get_backup_folder(&self.export_directory);
+        if backup_folder.is_err() {
+            // Already logs
+            return Err(());
+        }
+        let mut backup_folder = backup_folder.unwrap();
+        let filename_path = Path::new(&self.display_engine.loaded_map.src_file);
+        let file_name = filename_path.file_name().expect("Should be a file name for the path");
+        let file_name = file_name.to_string_lossy().to_string();
+        let time = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time Travel").as_secs();
+        backup_folder.push(format!("{}.{:?}.bak",file_name,time));
+        let _copy_res = fs::copy(&mut self.display_engine.loaded_map.src_file.clone(), &mut backup_folder);
+        log_write(format!("Backed up {} to {}",&self.display_engine.loaded_map.src_file,backup_folder.display()), LogLevel::LOG);
+        Ok(backup_folder)
+    }
+
     fn save_course(&mut self) {
         let file_name_ext = self.display_engine.loaded_course.src_filename.clone();
         log_write(format!("Saving Course file '{}'",&file_name_ext), LogLevel::LOG);
