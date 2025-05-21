@@ -24,19 +24,25 @@ impl PathDatabase {
         ret.path_count = path_count.unwrap();
         let mut path_index: u32 = 0;
         while path_index < ret.path_count { // Build the line
-            let mut line = PathLine::default();
+            // Don't use default, it adds a blank point
+            let mut points: Vec<PathPoint> = Vec::new();
             loop { // Build the points
-                let angle = rdr.read_i16::<LittleEndian>().expect("angle i16 in PathDatabase");
+                let angle = rdr.read_i16::<LittleEndian>();
+                if angle.is_err() {
+                    log_write(format!("Failed to read Path angle: '{}'",angle.unwrap_err()), LogLevel::ERROR);
+                    return ret;
+                }
+                let angle = angle.unwrap();
                 let distance = rdr.read_i16::<LittleEndian>().expect("distance i16 in PathDatabase");
                 let x_fine = rdr.read_u32::<LittleEndian>().expect("x_fine u32 in PathDatabase");
                 let y_fine = rdr.read_u32::<LittleEndian>().expect("y_fine u32 in PathDatabase");
                 let point = PathPoint::new(angle, distance, x_fine, y_fine);
-                line.points.push(point);
+                points.push(point);
                 if distance == 0x0000 {
                     break;
                 }
             }
-            ret.lines.push(line);
+            ret.lines.push(PathLine { points: points, uuid: Uuid::new_v4() });
             path_index += 1;
         }
         ret
@@ -52,6 +58,18 @@ impl PathDatabase {
         self.lines.remove(line_pos);
         log_write("Line data deleted", LogLevel::DEBUG);
         Ok(())
+    }
+    pub fn fix_term(&mut self) {
+        for line in &mut self.lines {
+            if line.points.is_empty() {
+                // No empty Lines
+                line.points.push(PathPoint::default());
+            } else {
+                let line_len = line.points.len();
+                // End must have distance 0
+                line.points[line_len-1].distance = 0;
+            }
+        }
     }
 }
 impl TopLevelSegment for PathDatabase {
@@ -84,8 +102,9 @@ pub struct PathLine {
 }
 impl Default for PathLine {
     fn default() -> Self {
+        let blank_point = PathPoint::default();
         Self {
-            points: Vec::new(),
+            points: vec![blank_point],
             uuid: Uuid::new_v4()
         }
     }
@@ -122,7 +141,7 @@ impl PathPoint {
 impl Default for PathPoint {
     fn default() -> Self {
         Self {
-            angle: 0, distance: 1,
+            angle: 0, distance: 0x0000,
             x_fine: 0, y_fine: 0,
             uuid: Uuid::new_v4()
         }

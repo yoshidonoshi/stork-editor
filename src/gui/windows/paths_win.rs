@@ -59,9 +59,10 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             // Empty, but with a new UUID
             let new_blank_line = PathLine::default();
             path.lines.push(new_blank_line);
-            log_write("New PathLine created", LogLevel::DEBUG);
+            path.fix_term();
             de.graphics_update_needed = true;
             de.unsaved_changes = true;
+            log_write("New PathLine created", LogLevel::DEBUG);
         }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let del = ui.add_enabled(!de.path_settings.selected_line.is_nil(), egui::Button::new("Delete"));
@@ -78,6 +79,7 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             de.path_settings.selected_point = Uuid::nil();
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
+            path.fix_term();
             log_write("Line deleted", LogLevel::LOG);
         }
     });
@@ -134,6 +136,7 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             line.points.push(new_point);
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
+            path.fix_term();
             log_write("PathPoint created", LogLevel::LOG);
         }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
@@ -156,6 +159,10 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 return;
             }
             let line = line_res.unwrap();
+            if line.points.len() <= 1 {
+                log_write("There can only be (at least) one (point)!", LogLevel::WARN);
+                return;
+            }
             let point_pos_res = line.points.iter().position(|x| x.uuid == de.path_settings.selected_point);
             if point_pos_res.is_none() {
                 log_write("Cannot get Point for point deletion", LogLevel::ERROR);
@@ -167,6 +174,7 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             de.path_settings.selected_point = Uuid::nil();
             de.graphics_update_needed = true;
             de.unsaved_changes = true;
+            path.fix_term();
             log_write("Point deleted", LogLevel::LOG);
         }
     });
@@ -215,7 +223,8 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     if path_res.is_none() {
         return;
     }
-    let paths = &mut path_res.unwrap().lines;
+    let path_db = path_res.unwrap();
+    let paths = &mut path_db.lines;
     if let Some(path) = paths.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) {
         if let Some(point) = path.points.iter_mut().find(|y| y.uuid == de.path_settings.selected_point) {
             let point_before = point.clone();
@@ -280,6 +289,7 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 ui.add(y_drag);
             });
             if point_before != *point {
+                path_db.fix_term();
                 de.unsaved_changes = true;
                 de.graphics_update_needed = true;
             }
