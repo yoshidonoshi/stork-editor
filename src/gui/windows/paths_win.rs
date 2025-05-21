@@ -57,7 +57,8 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
             let path = path_res.unwrap();
             // Empty, but with a new UUID
-            let new_blank_line = PathLine::default();
+            let mut new_blank_line = PathLine::default();
+            new_blank_line.points.push(PathPoint::default()); // Don't let it be empty
             path.lines.push(new_blank_line);
             path.fix_term();
             de.graphics_update_needed = true;

@@ -65,8 +65,14 @@ impl PathDatabase {
                 // No empty Lines
                 line.points.push(PathPoint::default());
             } else {
-                let line_len = line.points.len();
+                // Don't let any be zero... except the last
+                for p in &mut line.points {
+                    if p.distance == 0 {
+                        p.distance = 1;
+                    }
+                }
                 // End must have distance 0
+                let line_len = line.points.len();
                 line.points[line_len-1].distance = 0;
             }
         }
@@ -102,9 +108,8 @@ pub struct PathLine {
 }
 impl Default for PathLine {
     fn default() -> Self {
-        let blank_point = PathPoint::default();
         Self {
-            points: vec![blank_point],
+            points: Vec::new(),
             uuid: Uuid::new_v4()
         }
     }
