@@ -1,12 +1,16 @@
-use crate::{data::{backgrounddata::BackgroundData, mapfile::TopLevelSegmentWrapper, TopLevelSegment}, engine::displayengine::DisplayEngine};
+use egui::Color32;
+
+use crate::{data::{backgrounddata::BackgroundData, mapfile::TopLevelSegmentWrapper, TopLevelSegment}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 pub fn show_map_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    let mut do_del: Option<usize> = Option::None;
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .min_scrolled_height(1.0)
         .show(ui, |ui| {
-            for seg in &mut de.loaded_map.segments {
-                match seg.header().as_str() {
+            for (i,seg) in &mut de.loaded_map.segments.iter_mut().enumerate() {
+                let header = seg.header().clone();
+                match header.as_str() {
                     "SCEN" => {
                         ui.heading("SCEN");
                         if let TopLevelSegmentWrapper::SCEN(scendata) = seg {
@@ -66,13 +70,46 @@ pub fn show_map_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                             ui.label("ERROR: Could not retrieve AREA");
                         }
                     }
+                    "PATH" => {
+                        ui.heading("PATH");
+                        if let TopLevelSegmentWrapper::PATH(path) = seg {
+                            ui.label(format!("Path count: {}",path.lines.len()));
+                        } else {
+                            ui.label("ERROR: Could not retrieve PATH");
+                        }
+                    }
                     _ => {
                         ui.label(format!("Unhandled: {}",seg.header()));
                     }
                 }
+                ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
+                let is_undeletable = header.eq("SETD") || header.eq("SCEN");
+                let del_button = ui.add_enabled(!is_undeletable, egui::Button::new("Delete"));
+                if del_button.clicked() {
+                    do_del = Some(i);
+                }
                 ui.separator();
             }
         });
+    if let Some(to_del) = do_del {
+        let header = &de.loaded_map.segments[to_del].header();
+        log_write(format!("Deleting segment '{}' at index {}",header,to_del), LogLevel::LOG);
+        // These are way too important, and can just be emptied instead of outright deleted
+        match header.as_str() {
+            "SETD" => {
+                log_write("Cannot delete Sprite database", LogLevel::WARN);
+                return;
+            }
+            "SCEN" => {
+                log_write("Cannot delete Background", LogLevel::WARN);
+                return;
+            }
+            _ => { /* Do nothing */ }
+        }
+        de.loaded_map.segments.remove(to_del);
+        de.graphics_update_needed = true;
+        de.unsaved_changes = true;
+    }
 }
 
 fn show_scen_data(ui: &mut egui::Ui, scen: &mut BackgroundData) {
