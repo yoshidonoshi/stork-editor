@@ -112,6 +112,12 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 gui_state.clear_modal_open = true;
                 ui.close_menu();
             }
+            let button_resize = ui.button("Resize layer");
+            if button_resize.clicked() {
+                gui_state.resize_settings.reset_needed = true;
+                gui_state.resize_settings.window_open = true;
+                ui.close_menu();
+            }
         });
         // View Menu //
         ui.menu_button("View", |ui| {

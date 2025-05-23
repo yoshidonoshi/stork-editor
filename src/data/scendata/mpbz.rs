@@ -67,6 +67,17 @@ impl MapTileDataSegment {
         let comp = self.compile(info);
         compare_vector_u8s(&comp, raw_decomp);
     }
+
+    pub fn increase_width(&mut self, old_width: u16, increase_by: usize) {
+        let mut idx: usize = old_width as usize;
+        // Do loop here
+        while idx <= self.tiles.len() {
+            for _ in 0..increase_by {
+                self.tiles.insert(idx, MapTileRecordData::new(&0x0000));
+            }
+            idx = idx + (old_width as usize) + increase_by;
+        }
+    }
 }
 
 impl ScenSegment for MapTileDataSegment {

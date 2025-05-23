@@ -276,13 +276,47 @@ impl BackgroundData {
         }
         Option::None
     }
+
+    pub fn get_info_mut(&mut self) -> Option<&mut ScenInfoData> {
+        for seg in &mut self.scen_segments {
+            if let ScenSegmentWrapper::INFO(info) = seg {
+                return Some(info);
+            }
+        }
+        Option::None
+    }
+
+    pub fn increase_width(&mut self, new_width: u16) -> Result<u16,()> {
+        if new_width % 2 != 0 {
+            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::WARN);
+            return Err(());
+        }
+        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::LOG);
+        let info_ro = self.get_info().expect("INFO is always there").clone();
+        let old_width = info_ro.layer_width;
+        if new_width <= old_width {
+            log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::ERROR);
+            return Err(());
+        }
+        let how_much_add = new_width - old_width;
+        if let Some(mpbz) = self.get_mpbz_mut() {
+            mpbz.increase_width(old_width, how_much_add as usize);
+        }
+        if let Some(colz) = self.get_colz_mut() {
+            colz.increase_width(old_width, how_much_add as usize);
+        }
+        let info = self.get_info_mut().expect("Done earlier");
+        info.layer_width = new_width;
+        Ok(info.layer_width)
+    }
 }
 
 impl TopLevelSegment for BackgroundData {
     fn compile(&self) -> Vec<u8> {
         let mut compiled: Vec<u8> = Vec::new();
+        let info_ro = self.get_info().expect("There is always INFO");
         for segment in &self.scen_segments {
-            let mut seg_comp = segment.wrap(&Some(self.info_ro.clone()));
+            let mut seg_comp = segment.wrap(&Some(info_ro.clone()));
             compiled.append(&mut seg_comp);
         }
 

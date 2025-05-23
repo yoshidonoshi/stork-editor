@@ -1,6 +1,6 @@
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
-use crate::engine::compression::{lamezip77_lz10_decomp, lamezip77_lz10_recomp, segment_wrap};
+use crate::{engine::compression::{lamezip77_lz10_decomp, lamezip77_lz10_recomp, segment_wrap}, utils::{log_write, LogLevel}};
 
 use super::{info::ScenInfoData, ScenSegment};
 
@@ -22,6 +22,28 @@ impl CollisionData {
         ret.col_tiles = decomp;
 
         ret
+    }
+    pub fn increase_width(&mut self, old_width: u16, increase_by: usize) {
+        // Tiles are 2x2
+        if increase_by % 2 != 0 {
+            log_write(format!("increase_bg was not even: 0x{:X}",increase_by), LogLevel::ERROR);
+            return;
+        }
+        if old_width % 2 != 0 {
+            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::ERROR);
+            return;
+        }
+        let increase_by = increase_by / 2;
+        let old_width = old_width / 2;
+        // Do increase logic
+        let mut idx: usize = old_width as usize;
+        // Do loop here
+        while idx <= self.col_tiles.len() {
+            for _ in 0..increase_by {
+                self.col_tiles.insert(idx, 0x00);
+            }
+            idx = idx + (old_width as usize) + increase_by;
+        }
     }
 }
 
