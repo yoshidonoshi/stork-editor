@@ -205,7 +205,7 @@ impl MapData {
     pub fn get_background(&mut self, which_background: u8) -> Option<&mut BackgroundData> {
         for seg in &mut self.segments {
             if let TopLevelSegmentWrapper::SCEN(scen) = seg {
-                if scen.info_ro.which_bg == which_background {
+                if scen.get_info().expect("get_background info").which_bg == which_background {
                     return Some(scen);
                 }
             }

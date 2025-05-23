@@ -292,8 +292,8 @@ impl BackgroundData {
             return Err(());
         }
         log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::LOG);
-        let info_ro = self.get_info().expect("INFO is always there").clone();
-        let old_width = info_ro.layer_width;
+        let info_c = self.get_info().expect("INFO is always there");
+        let old_width = info_c.layer_width;
         if new_width <= old_width {
             log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::ERROR);
             return Err(());
@@ -309,14 +309,38 @@ impl BackgroundData {
         info.layer_width = new_width;
         Ok(info.layer_width)
     }
+
+    pub fn decrease_width(&mut self, new_width: u16) -> Result<u16,()> {
+        if new_width % 2 != 0 {
+            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::WARN);
+            return Err(());
+        }
+        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::LOG);
+        let info_c = self.get_info().expect("INFO is always there");
+        let old_width = info_c.layer_width;
+        if new_width >= old_width {
+            log_write(format!("Cannot decrease, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::ERROR);
+            return Err(());
+        }
+        let how_much_remove = old_width - new_width;
+        if let Some(mpbz) = self.get_mpbz_mut() {
+            mpbz.decrease_width(old_width, how_much_remove as usize);
+        }
+        if let Some(colz) = self.get_colz_mut() {
+            colz.decrease_width(old_width as i32, how_much_remove as i32);
+        }
+        let info = self.get_info_mut().expect("Done earlier");
+        info.layer_width = new_width;
+        Ok(info.layer_width)
+    }
 }
 
 impl TopLevelSegment for BackgroundData {
     fn compile(&self) -> Vec<u8> {
         let mut compiled: Vec<u8> = Vec::new();
-        let info_ro = self.get_info().expect("There is always INFO");
+        let info_c = self.get_info().expect("There is always INFO");
         for segment in &self.scen_segments {
-            let mut seg_comp = segment.wrap(&Some(info_ro.clone()));
+            let mut seg_comp = segment.wrap(&Some(info_c.clone()));
             compiled.append(&mut seg_comp);
         }
 

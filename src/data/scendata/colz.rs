@@ -26,7 +26,7 @@ impl CollisionData {
     pub fn increase_width(&mut self, old_width: u16, increase_by: usize) {
         // Tiles are 2x2
         if increase_by % 2 != 0 {
-            log_write(format!("increase_bg was not even: 0x{:X}",increase_by), LogLevel::ERROR);
+            log_write(format!("increase_by was not even: 0x{:X}",increase_by), LogLevel::ERROR);
             return;
         }
         if old_width % 2 != 0 {
@@ -43,6 +43,27 @@ impl CollisionData {
                 self.col_tiles.insert(idx, 0x00);
             }
             idx = idx + (old_width as usize) + increase_by;
+        }
+    }
+    pub fn decrease_width(&mut self, old_width: i32, decrease_by: i32) {
+        // Tiles are 2x2
+        if decrease_by % 2 != 0 {
+            log_write(format!("decrease_by was not even: 0x{:X}",decrease_by), LogLevel::ERROR);
+            return;
+        }
+        if old_width % 2 != 0 {
+            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::ERROR);
+            return;
+        }
+        let decrease_by = decrease_by / 2;
+        let old_width = old_width / 2;
+        let mut idx: i32 = old_width - 1;
+        while idx < self.col_tiles.len() as i32 {
+            for _ in 0..decrease_by {
+                self.col_tiles.remove(idx as usize);
+                idx -= 1;
+            }
+            idx += old_width;
         }
     }
 }

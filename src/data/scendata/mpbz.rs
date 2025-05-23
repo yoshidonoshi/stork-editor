@@ -78,6 +78,18 @@ impl MapTileDataSegment {
             idx = idx + (old_width as usize) + increase_by;
         }
     }
+
+    pub fn decrease_width(&mut self, old_width: u16, decrease_by: usize) {
+        let mut idx: i32 = old_width as i32 -1;
+
+        while idx < self.tiles.len() as i32 {
+            for _ in 0..decrease_by {
+                self.tiles.remove(idx as usize);
+                idx -= 1;
+            }
+            idx += old_width as i32;
+        }
+    }
 }
 
 impl ScenSegment for MapTileDataSegment {

@@ -60,7 +60,6 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         let button_ok = ui.button("Okay");
         if button_ok.clicked() {
             // Do update
-            log_write("Starting Layer resize...", LogLevel::DEBUG);
             let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
             if bg.is_none() {
                 log_write("Failed to get BG in resize modal resizing", LogLevel::ERROR);
@@ -78,23 +77,38 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
             log_write(format!("Changing size of layer from 0x{:X}/0x{:X} to 0x{:X}/0x{:X}",
                 info.layer_width,info.layer_height,
                 settings.new_width,settings.new_height), LogLevel::LOG);
-            if settings.new_width % 2 != 0 {
-                settings.new_width += 1;
-            }
-            if settings.new_height % 2 != 0 {
-                settings.new_height += 1;
-            }
-            let increase_result = bg.increase_width(settings.new_width);
-            if increase_result.is_err() {
-                log_write("Error increasing size of layer", LogLevel::ERROR);
-                settings.reset_needed = true;
-                settings.window_open = false;
-                return;
-            }
-            if increase_result.unwrap() != settings.new_width {
-                log_write("Mismatch in result width", LogLevel::ERROR);
+            // Actual resizing calls
+            if settings.new_width > info.layer_width {
+                // Width is greater, increase width //
+                let increase_result = bg.increase_width(settings.new_width);
+                // Handle results
+                if increase_result.is_err() {
+                    log_write("Error increasing size of layer", LogLevel::ERROR);
+                    settings.reset_needed = true;
+                    settings.window_open = false;
+                    return;
+                }
+                if increase_result.unwrap() != settings.new_width {
+                    log_write("Mismatch in result width", LogLevel::ERROR);
+                } else {
+                    log_write("Resize successful, updating", LogLevel::LOG);
+                }
+            } else if settings.new_width < info.layer_width {
+                let decrease_result = bg.decrease_width(settings.new_width);
+                // Handle results
+                if decrease_result.is_err() {
+                    log_write("Error decreasing size of layer", LogLevel::ERROR);
+                    settings.reset_needed = true;
+                    settings.window_open = false;
+                    return;
+                }
+                if decrease_result.unwrap() != settings.new_width {
+                    log_write("Mismatch in result width", LogLevel::ERROR);
+                } else {
+                    log_write("Resize successful, updating", LogLevel::LOG);
+                }
             } else {
-                log_write("Resize successful, updating", LogLevel::LOG);
+                log_write("No change in layer width", LogLevel::DEBUG);
             }
             // Do things to trigger updates
             de.unsaved_changes = true;

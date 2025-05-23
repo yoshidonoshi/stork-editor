@@ -72,10 +72,11 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if pal.is_none() {
             return;
         }
+        let info = layer.get_info().expect("brush layer has info");
         if let Some(tiles) = &layer.pixel_tiles_preview {
             do_tile_draw(
                 ui, &mut de.current_brush, &de.bg_palettes,
-                tiles,&layer.info_ro.color_mode,&layer._pal_offset
+                tiles,&info.color_mode,&layer._pal_offset
             );
         }
         let mut push_height: f32 = 260.0;

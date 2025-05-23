@@ -998,6 +998,9 @@ impl Gui {
                 .expect("BG should exist").get_info().expect("Info guar.").layer_width;
             for tile_data in &self.display_engine.clipboard.bg_clip.tiles {
                 let true_x = cursor_level_x + tile_data.x_offset;
+                if true_x >= layer_width as i32 {
+                    continue;
+                }
                 let true_y = cursor_level_y + tile_data.y_offset;
                 let where_to_place_in_layer = xy_to_index(true_x as u32, true_y as u32, &(layer_width as u32));
                 if tile_data.tile.to_short() != 0x0000 { // Dont paste blank tiles
