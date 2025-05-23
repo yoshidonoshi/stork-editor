@@ -229,49 +229,19 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     if let Some(path) = paths.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) {
         if let Some(point) = path.points.iter_mut().find(|y| y.uuid == de.path_settings.selected_point) {
             let point_before = point.clone();
-            ui.label("Warning: This section is WIP");
-            // First is Angle
-            if ui.button("Invert Angle").clicked() {
-                point.angle *= -1;
-            }
-            if point.angle < 0 {
-                ui.horizontal(|ui| {
-                    let angle_drag = egui::DragValue::new(&mut point.angle)
-                        .hexadecimal(4, false, true)
-                        .range(i16::MIN..=-1);
-                    ui.label("Neg. Angle");
-                    ui.add(angle_drag);
-                });
-            } else {
-                ui.horizontal(|ui| {
-                    let angle_drag = egui::DragValue::new(&mut point.angle)
-                        .hexadecimal(4, false, true)
-                        .range(0..=i16::MAX);
-                    ui.label("Pos. Angle");
-                    ui.add(angle_drag);
-                });
-            }
-            // Next is distance
-            if ui.button("Invert distance").clicked() {
-                point.distance *= -1;
-            }
-            if point.distance >= 0 {
-                ui.horizontal(|ui| {
-                    let distance_drag = egui::DragValue::new(&mut point.distance)
-                        .hexadecimal(4, false, true)
-                        .range(0..=u32::MAX);
-                    ui.label("Pos. Distance");
-                    ui.add(distance_drag);
-                });
-            } else {
-                ui.horizontal(|ui| {
-                    let distance_drag = egui::DragValue::new(&mut point.distance)
-                        .hexadecimal(4, false, true)
-                        .range(i32::MIN..=-1);
-                    ui.label("Neg. Distance");
-                    ui.add(distance_drag);
-                });
-            }
+            ui.label("Warning: This section is WIP, red connecting line is not accurate");
+            ui.horizontal(|ui| {
+                let angle = egui::DragValue::new(&mut point.angle)
+                    .hexadecimal(5, false, true);
+                ui.add(angle);
+                ui.label("Angle");
+            });
+            ui.horizontal(|ui| {
+                let distance = egui::DragValue::new(&mut point.distance)
+                    .hexadecimal(4, false,true);
+                ui.add(distance);
+                ui.label("Distance");
+            });
             // Then X and Y
             ui.horizontal(|ui| {
                 let x_drag = egui::DragValue::new(&mut point.x_fine)

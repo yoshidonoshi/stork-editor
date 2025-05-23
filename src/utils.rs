@@ -1,4 +1,4 @@
-use std::{env, fs::write, io::{Cursor, Read}, path::PathBuf};
+use std::{env, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
@@ -290,6 +290,19 @@ pub fn nitrofs_abs(export_dir: &PathBuf,filename_local: &String) -> PathBuf {
     p.push("file");
     p.push(filename_local);
     p
+}
+
+pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
+    let mut p: PathBuf = PathBuf::from(export_dir);
+    p.push("backups");
+    if !p.exists() {
+        let create_res = fs::create_dir(p.clone());
+        if create_res.is_err() {
+            log_write(format!("Error creating backup folder: '{}'",create_res.unwrap_err()), LogLevel::ERROR);
+            return Err(());
+        }
+    }
+    Ok(p)
 }
 
 /// Get the Rect determining how the tile is flipped
