@@ -90,6 +90,11 @@ impl MapTileDataSegment {
             idx += old_width as i32;
         }
     }
+
+    pub fn change_height(&mut self, new_height: u16, width: u16) {
+        let new_len = (new_height as u32) * (width as u32);
+        self.tiles.resize(new_len as usize, MapTileRecordData::new(&0x0000));
+    }
 }
 
 impl ScenSegment for MapTileDataSegment {

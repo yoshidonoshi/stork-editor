@@ -1,3 +1,5 @@
+use egui::Color32;
+
 use crate::{engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 #[derive(Default)]
@@ -14,6 +16,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         settings.window_open = false;
         return;
     }
+    let mut okay_enabled = true;
     if settings.reset_needed {
         let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
         if bg.is_none() {
@@ -34,7 +37,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
     }
     ui.heading("Resize Current Layer");
     ui.label("Set the current layer's new width and height (must be even)");
-    ui.label("WARNING: This action may be destructive");
+    ui.label(egui::RichText::new("Warning: this action is highly destructive").color(Color32::RED));
     ui.horizontal(|ui| {
         let width = egui::DragValue::new(&mut settings.new_width)
             .hexadecimal(4, false, true)
@@ -57,7 +60,14 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
             settings.reset_needed = true;
             settings.window_open = false;
         }
-        let button_ok = ui.button("Okay");
+        // No odd values
+        if settings.new_height % 2 != 0 {
+            okay_enabled = false;
+        }
+        if settings.new_width % 2 != 0 {
+            okay_enabled = false;
+        }
+        let button_ok = ui.add_enabled(okay_enabled, egui::Button::new("Okay"));
         if button_ok.clicked() {
             // Do update
             let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
@@ -110,6 +120,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
             } else {
                 log_write("No change in layer width", LogLevel::DEBUG);
             }
+            let _change_height_result = bg.change_height(settings.new_height);
             // Do things to trigger updates
             de.unsaved_changes = true;
             de.graphics_update_needed = true;

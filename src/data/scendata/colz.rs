@@ -66,6 +66,10 @@ impl CollisionData {
             idx += old_width;
         }
     }
+    pub fn change_height(&mut self, new_height: u16, current_width: u16) {
+        let new_len = (new_height as u32) * (current_width as u32);
+        self.col_tiles.resize(new_len as usize, 0x00);
+    }
 }
 
 impl ScenSegment for CollisionData {

@@ -333,6 +333,23 @@ impl BackgroundData {
         info.layer_width = new_width;
         Ok(info.layer_width)
     }
+
+    pub fn change_height(&mut self, new_height: u16) -> Result<u16,()> {
+        let info_c = self.get_info().expect("INFO is always there").clone();
+        if new_height % 2 != 0 {
+            log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::WARN);
+            return Err(());
+        }
+        if let Some(mpbz) = self.get_mpbz_mut() {
+            mpbz.change_height(new_height, info_c.layer_width);
+        }
+        if let Some(colz) = self.get_colz_mut() {
+            colz.change_height(new_height, info_c.layer_width);
+        }
+        let info = self.get_info_mut().expect("Done earlier");
+        info.layer_height = new_height;
+        Ok(info.layer_height)
+    }
 }
 
 impl TopLevelSegment for BackgroundData {

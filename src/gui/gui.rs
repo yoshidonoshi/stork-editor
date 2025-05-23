@@ -994,14 +994,19 @@ impl Gui {
             let cursor_level_y = self.display_engine.latest_square_pos_level_space.y as i32;
             //let mut tile_index: u32 = 0;
             let which_bg = self.display_engine.display_settings.current_layer as u8;
-            let layer_width = self.display_engine.loaded_map.get_background(which_bg)
-                .expect("BG should exist").get_info().expect("Info guar.").layer_width;
+            let info_ro = self.display_engine.loaded_map.get_background(which_bg)
+                .expect("BG should exist").get_info().expect("Info guar.");
+            let layer_width = info_ro.layer_width;
+            let layer_height = info_ro.layer_height;
             for tile_data in &self.display_engine.clipboard.bg_clip.tiles {
                 let true_x = cursor_level_x + tile_data.x_offset;
                 if true_x >= layer_width as i32 {
                     continue;
                 }
                 let true_y = cursor_level_y + tile_data.y_offset;
+                if true_y >= layer_height as i32 {
+                    continue;
+                }
                 let where_to_place_in_layer = xy_to_index(true_x as u32, true_y as u32, &(layer_width as u32));
                 if tile_data.tile.to_short() != 0x0000 { // Dont paste blank tiles
                     self.display_engine.loaded_map.place_bg_tile_at_map_index(
