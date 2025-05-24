@@ -6,6 +6,7 @@ use super::{info::ScenInfoData, ScenSegment};
 
 pub const COLLISION_BG_COLOR: Color32 = Color32::from_rgba_premultiplied(0x40, 0x40, 0x60, 0x40);
 pub const COLLISION_BG_COLOR_PASSABLE: Color32 = Color32::from_rgba_premultiplied(0x10, 0x40, 0x10, 0x40);
+pub const COLLISION_BG_COLOR_LAVA: Color32 = Color32::from_rgba_premultiplied(0x80, 0x00, 0x00, 0x40);
 pub const COLLISION_OUTLINE_COLOR: Color32 = Color32::from_rgba_premultiplied(0x40, 0x40, 0x60, 0xff);
 pub const COLLISION_SQUARE: Vec2 = Vec2::new(16.0, 16.0);
 
@@ -104,15 +105,29 @@ pub fn draw_collision(painter: &Painter, rect: &Rect, col_type: u8) {
         0x05 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.center_top(),rect.right_top(),rect.right_bottom()],COLLISION_BG_COLOR),
         0x06 => draw_collision_polygon(painter, vec![rect.right_top(),rect.right_bottom(),rect.center_bottom()],COLLISION_BG_COLOR),
         0x07 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()],COLLISION_BG_COLOR),
+        0x09 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_LAVA),
+        0x14 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_center(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x15 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x18 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x1A => { /* Coin */ },
+        0x1F => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x43 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x44 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_center(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x45 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_top(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x46 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x47 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
+        0x54 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x55 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_center(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x58 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x83 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_center()], COLLISION_BG_COLOR),
+        0x84 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_center()], COLLISION_BG_COLOR),
+        0x85 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.center_bottom()], COLLISION_BG_COLOR),
+        0x86 => draw_collision_polygon(painter, vec![rect.center_top(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR),
         0x87 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom()],COLLISION_BG_COLOR),
         0xC3 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.left_center()],COLLISION_BG_COLOR),
         0xC4 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_center(),rect.left_bottom()],COLLISION_BG_COLOR),
+        0xC5 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.center_bottom(),rect.left_bottom()], COLLISION_BG_COLOR),
+        0xC6 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_top(),rect.left_bottom()], COLLISION_BG_COLOR),
         0xC7 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.left_bottom()],COLLISION_BG_COLOR),
         _ => {
             // Unknown, put text
