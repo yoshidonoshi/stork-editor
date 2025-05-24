@@ -95,6 +95,32 @@ impl LevelSpriteSet {
         }
         seg
     }
+
+    pub fn trim(&mut self, width: u16, height: u16) -> usize {
+        let mut deleted_count: usize = 0;
+        let mut uuids_to_delete: Vec<Uuid> = Vec::new();
+        for spr in &self.sprites {
+            if spr.x_position >= width || spr.y_position >= height {
+                uuids_to_delete.push(spr.uuid);
+            }
+        }
+        for uid in &uuids_to_delete {
+            let del_res = self.delete_sprite(*uid);
+            if del_res.is_ok() {
+                deleted_count += 1
+            }
+        }
+        deleted_count
+    }
+
+    pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> Result<(),()> {
+        let pos = self.sprites.iter().position(|x|x.uuid == sprite_uuid);
+        if pos.is_none() {
+            return Err(());
+        }
+        self.sprites.remove(pos.unwrap());
+        Ok(())
+    }
 }
 impl TopLevelSegment for LevelSpriteSet {
     fn compile(&self) -> Vec<u8> {

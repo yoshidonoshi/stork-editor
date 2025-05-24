@@ -16,28 +16,32 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         settings.window_open = false;
         return;
     }
+    // Get BG and INFO read-only
+    let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
+    if bg.is_none() {
+        log_write("Failed to get BG in resize modal", LogLevel::ERROR);
+        settings.window_open = false;
+        return;
+    }
+    let info = bg.unwrap().get_info();
+    if info.is_none() {
+        log_write("Failed to get INFO in resize modal", LogLevel::ERROR);
+        settings.window_open = false;
+        return;
+    }
+    let info = info.unwrap();
+    // Check reset
     let mut okay_enabled = true;
     if settings.reset_needed {
-        let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
-        if bg.is_none() {
-            log_write("Failed to get BG in resize modal", LogLevel::ERROR);
-            settings.window_open = false;
-            return;
-        }
-        let info = bg.unwrap().get_info();
-        if info.is_none() {
-            log_write("Failed to get INFO in resize modal", LogLevel::ERROR);
-            settings.window_open = false;
-            return;
-        }
-        let info = info.unwrap();
         settings.new_width = info.layer_width;
         settings.new_height = info.layer_height;
         settings.reset_needed = false;
     }
     ui.heading("Resize Current Layer");
     ui.label("Set the current layer's new width and height (must be even)");
-    ui.label(egui::RichText::new("Warning: this action is highly destructive").color(Color32::RED));
+    if settings.new_height < info.layer_height || settings.new_width < info.layer_width {
+        ui.label(egui::RichText::new("Warning: this action is highly destructive").color(Color32::RED));
+    }
     ui.horizontal(|ui| {
         let width = egui::DragValue::new(&mut settings.new_width)
             .hexadecimal(4, false, true)
@@ -69,7 +73,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         }
         let button_ok = ui.add_enabled(okay_enabled, egui::Button::new("Okay"));
         if button_ok.clicked() {
-            // Do update
+            // Do update with mutable versions
             let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
             if bg.is_none() {
                 log_write("Failed to get BG in resize modal resizing", LogLevel::ERROR);
@@ -120,7 +124,21 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
             } else {
                 log_write("No change in layer width", LogLevel::DEBUG);
             }
-            let _change_height_result = bg.change_height(settings.new_height);
+            let change_height_result = bg.change_height(settings.new_height);
+            if change_height_result.is_err() {
+                log_write("Error changing height of layer", LogLevel::ERROR);
+                settings.reset_needed = true;
+                settings.window_open = false;
+                return;
+            }
+            // Trim sprites
+            let spr_res = de.loaded_map.get_setd();
+            if spr_res.is_none() {
+                log_write("Failed to get SETD when resizing", LogLevel::ERROR);
+            } else {
+                let trimmed = spr_res.unwrap().trim(settings.new_width, settings.new_height);
+                log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::DEBUG);
+            }
             // Do things to trigger updates
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
