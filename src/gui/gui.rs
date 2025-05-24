@@ -462,17 +462,16 @@ impl Gui {
         }
     }
     pub fn generate_bg_cache(&self, ctx: &egui::Context, which_bg: u8, bg_pal: &Palette) -> Vec<TextureHandle> {
-        #[allow(unused_assignments)] // It blatantly is used wtf
-        let mut layer: &Option<BackgroundData> = &Option::None;
-        if which_bg == 0x1 { // TODO: match-ify
-            layer = &self.display_engine.bg_layer_1;
-        } else if which_bg == 0x2 {
-            layer = &self.display_engine.bg_layer_2;
-        } else if which_bg == 0x3 {
-            layer = &self.display_engine.bg_layer_3;
-        } else {
-            log_write("Something is very wrong in generate_bg_cache", LogLevel::FATAL);
-        }
+        let layer: &Option<BackgroundData> = match which_bg {
+            0x1 => &self.display_engine.bg_layer_1,
+            0x2 => &self.display_engine.bg_layer_2,
+            0x3 => &self.display_engine.bg_layer_3,
+            _ => {
+                // This should be impossible
+                log_write("Invalid bg index in generate_bg_cache", LogLevel::FATAL);
+                &Option::None
+            }
+        };
         if let Some(layer_data) = &layer {
             let info = layer_data.get_info().expect("INFO exists in bg cache generator");
             if let Some(pix_tiles) = &layer_data.pixel_tiles_preview {
@@ -815,6 +814,8 @@ impl Gui {
     pub fn is_copy_possible(&self) -> bool {
         if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
             !self.display_engine.selected_sprite_uuids.is_empty()
+        } else if self.display_engine.display_settings.is_cur_layer_bg() {
+            !self.display_engine.bg_sel_data.selected_map_indexes.is_empty()
         } else {
             false
         }
@@ -877,6 +878,8 @@ impl Gui {
     pub fn is_cut_possible(&self) -> bool {
         if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
             !self.display_engine.selected_sprite_uuids.is_empty()
+        } else if self.display_engine.display_settings.is_cur_layer_bg() {
+            !self.display_engine.bg_sel_data.selected_map_indexes.is_empty()
         } else {
             false
         }
