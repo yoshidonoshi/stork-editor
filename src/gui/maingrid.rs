@@ -24,6 +24,9 @@ pub fn render_primary_grid(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Re
     draw_background(ui, de, vrect, 3, de.display_settings.show_bg3);
     draw_background(ui, de, vrect, 2, de.display_settings.show_bg2);
     draw_background(ui, de, vrect, 1, de.display_settings.show_bg1);
+    if de.display_settings.show_col {
+        draw_collision_layer(ui, de, vrect);
+    }
     if de.display_settings.show_breakable_rock {
         draw_breakable_rock(ui, de);
     }
@@ -41,6 +44,180 @@ pub fn render_primary_grid(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Re
     }
     if de.display_settings.show_triggers {
         draw_triggers(ui, de);
+    }
+}
+
+fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) {
+    let bg_with_col = de.loaded_map.get_bg_with_colz();
+    if bg_with_col.is_none() {
+        return;
+    }
+    let bg_with_col = bg_with_col.unwrap();
+    let bg_res = de.loaded_map.get_background(bg_with_col);
+    if bg_res.is_none() {
+        return;
+    }
+    let bg = bg_res.unwrap();
+    let info_c = bg.get_info().unwrap().clone();
+    let grid_width = info_c.layer_width as u32;
+    let colz = bg.get_colz_mut();
+    if colz.is_none() {
+        return;
+    }
+    let col = colz.unwrap();
+    // Precursors
+    let true_rect = ui.min_rect();
+    let top_left: Pos2 = ui.min_rect().min;
+    // These will be used for rendering fewer tiles to save CPU
+    let leftmost_tile = vrect.left() / TILE_WIDTH_PX;
+    let rightmost_tile = vrect.right() / TILE_WIDTH_PX;
+    let uppermost_tile = vrect.top() / TILE_HEIGHT_PX;
+    let bottommost_tile = vrect.bottom() / TILE_HEIGHT_PX;
+    // Start!
+    let mut col_index: u32 = 0;
+    // Include the image cached, and tint it light blue to show it's different
+    let image: Image<'_> = egui::Image::new(egui::include_image!("../../assets/collision_coin.png")).tint(Color32::LIGHT_BLUE);
+    for col_u8 in &mut col.col_tiles {
+        if *col_u8 != 0 { // 0x0 = Nothing, skip render
+            let painter: &Painter = ui.painter();
+            let tile_x: f32 = (col_index % (grid_width/2)) as f32;
+            let tile_y: f32 = (col_index / (grid_width/2)) as f32;
+            // Don't render outside the viewport
+            if tile_x > rightmost_tile/2.0 + RECT_TRIM_PADDING_TILE {
+                // Skip
+                col_index += 1;
+                continue;
+            }
+            if tile_x < leftmost_tile/2.0 - RECT_TRIM_PADDING_TILE {
+                // Skip
+                col_index += 1;
+                continue;
+            }
+            if tile_y > bottommost_tile/2.0 + RECT_TRIM_PADDING_TILE {
+                // Skip
+                col_index += 1;
+                continue;
+            }
+            if tile_y < uppermost_tile/2.0 - RECT_TRIM_PADDING_TILE {
+                // Skip
+                col_index += 1;
+                continue;
+            }
+            let tile_x_px: f32 = tile_x * (TILE_WIDTH_PX*2.0);
+            let tile_y_px: f32 = tile_y * (TILE_HEIGHT_PX*2.0);
+            let rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_x_px, tile_y_px), COLLISION_SQUARE);
+            let col_bg_color = COLLISION_BG_COLOR;
+            if *col_u8 == 0x1 { // Square, 95% of non-empty colliders (I checked)
+                painter.rect_filled(rect, 0.0, col_bg_color);
+                painter.rect_stroke(rect, 0.0, Stroke::new(1.0, COLLISION_OUTLINE_COLOR), egui::StrokeKind::Middle);
+            } else if *col_u8 == 0x1A { // 0x1A is the Collision coin
+                image.paint_at(ui, rect);
+            } else {
+                draw_collision(painter, &rect, *col_u8);
+            }
+            // If it overlaps the deletion rectangle... delete it
+            if
+                *col_u8 != 0x00
+                && de.col_selector_status.delete_under
+                && de.col_selector_status.selecting_rect.intersects(rect)
+            {
+                //let _ = de.loaded_map.set_col_tile(bg_with_col, col_index as u16, 0x00);
+                *col_u8 = 0x00;
+                de.graphics_update_needed = true;
+                de.unsaved_changes = true;
+            }
+        }
+        col_index += 1;
+    }
+    if de.col_selector_status.delete_under {
+        // Now that it deleted what it should, disable it all
+        de.col_selector_status.delete_under = false;
+        de.col_selector_status.dragging = false;
+        de.col_selector_status.selecting_rect = Rect::NOTHING;
+    }
+    // COLZ Interactivity //
+    if de.display_settings.current_layer == CurrentLayer::COLLISION {
+        let col_sense_resp: Response = ui.interact(true_rect, egui::Id::new("col_tile_click"), egui::Sense::all());
+        // Do it in three separate ones to avoid repeated input checking that won't be used
+        if col_sense_resp.clicked() {
+            // Add a new tile 
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                let local_pos = pointer_pos - true_rect.min;
+                let tile_index = local_pos_to_col_index(&local_pos, grid_width);
+                if tile_index as usize >= col.col_tiles.len() {
+                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
+                    return;
+                }
+                let _ = de.loaded_map.set_col_tile(bg_with_col, tile_index as u16, de.col_tile_to_place);
+                de.graphics_update_needed = true;
+                de.unsaved_changes = true;
+            }
+        } else if col_sense_resp.secondary_clicked() {
+            // Clear the tile
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                let local_pos = pointer_pos - true_rect.min;
+                let tile_index = local_pos_to_col_index(&local_pos, grid_width);
+                if tile_index as usize >= col.col_tiles.len() {
+                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
+                    return;
+                }
+                // 0x00 is empty
+                let _ = de.loaded_map.set_col_tile(bg_with_col, tile_index as u16, 0x00);
+                de.graphics_update_needed = true;
+                de.unsaved_changes = true;
+            }
+        } else if col_sense_resp.middle_clicked() {
+            // Copy the tile (and show info)
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                let local_pos = pointer_pos - true_rect.min;
+                let tile_index = local_pos_to_col_index(&local_pos, grid_width);
+                if tile_index as usize >= col.col_tiles.len() {
+                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
+                    return;
+                }
+                let tile = &col.col_tiles[tile_index as usize];
+                // Don't copy empty ones, that's for right clicking
+                if *tile != 0x00 {
+                    log_write(format!("Copied tile of type '0x{:X}' at index 0x{:X}",tile,tile_index), LogLevel::LOG);
+                    de.col_tile_to_place = *tile; // Copies it in
+                }
+            }
+        }
+        if col_sense_resp.drag_started() {
+            // Only right click drag
+            if !ui.input(|i| i.pointer.secondary_down()) {
+                return;
+            }
+            de.col_selector_status.dragging = true;
+            let cur_pos: Pos2 = ui.ctx().pointer_interact_pos().expect("Failed to get pointer interaction position");
+            de.col_selector_status.start_pos = cur_pos;
+            de.col_selector_status.end_pos = cur_pos; // Starts as empty square
+        }
+        if col_sense_resp.dragged() {
+            // Only right click drag
+            if !ui.input(|i| i.pointer.secondary_down()) {
+                return;
+            }
+            let cur_pos_res = ui.ctx().pointer_interact_pos();
+            if cur_pos_res.is_none() {
+                log_write("Failed to get pointer_interact_pos in col .dragged", LogLevel::ERROR);
+                return;
+            }
+            de.col_selector_status.end_pos = cur_pos_res.unwrap();
+            // Draw
+            let drag_rect: Rect = Rect::from_two_pos(de.col_selector_status.start_pos, de.col_selector_status.end_pos);
+            ui.painter().rect_filled(drag_rect, 0.0, BG_SELECTION_FILL);
+            // Store
+            de.col_selector_status.selecting_rect = drag_rect;
+        }
+        if col_sense_resp.drag_stopped() {
+            de.col_selector_status.dragging = false;
+            de.col_selector_status.start_pos = Pos2::new(0.0, 0.0);
+            de.col_selector_status.end_pos = Pos2::new(0.0, 0.0);
+            de.col_selector_status.delete_under = true;
+            // Set this once deletion done, so you can do the deletions
+            //de.col_selector_status.selecting_rect = Rect::NOTHING;
+        }
     }
 }
 
@@ -745,157 +922,6 @@ fn draw_background(
                 top_left + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
                 Vec2 { x: TILE_WIDTH_PX * 2.0, y: TILE_HEIGHT_PX * 2.0 });
             ui.painter().rect_stroke(square_rect, 0.0, Stroke::new(1.0, Color32::RED), egui::StrokeKind::Outside);
-        }
-        // COLZ //
-        if let Some(col) = layer.get_colz() {
-            // TODO: Make sure this return doesn't mess with anything else
-            if !de.display_settings.show_col {
-                return;
-            }
-            let mut col_index: u32 = 0;
-            // Include the image cached, and tint it light blue to show it's different
-            let image: Image<'_> = egui::Image::new(egui::include_image!("../../assets/collision_coin.png")).tint(Color32::LIGHT_BLUE);
-            for col_u8 in &col.col_tiles {
-                if *col_u8 != 0 { // 0x0 = Nothing, skip render
-                    let painter: &Painter = ui.painter();
-                    let tile_x: f32 = (col_index % (grid_width/2)) as f32;
-                    let tile_y: f32 = (col_index / (grid_width/2)) as f32;
-                    // Don't render outside the viewport
-                    if tile_x > rightmost_tile/2.0 + RECT_TRIM_PADDING_TILE {
-                        // Skip
-                        col_index += 1;
-                        continue;
-                    }
-                    if tile_x < leftmost_tile/2.0 - RECT_TRIM_PADDING_TILE {
-                        // Skip
-                        col_index += 1;
-                        continue;
-                    }
-                    if tile_y > bottommost_tile/2.0 + RECT_TRIM_PADDING_TILE {
-                        // Skip
-                        col_index += 1;
-                        continue;
-                    }
-                    if tile_y < uppermost_tile/2.0 - RECT_TRIM_PADDING_TILE {
-                        // Skip
-                        col_index += 1;
-                        continue;
-                    }
-                    let tile_x_px: f32 = tile_x * (TILE_WIDTH_PX*2.0);
-                    let tile_y_px: f32 = tile_y * (TILE_HEIGHT_PX*2.0);
-                    let rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_x_px, tile_y_px), COLLISION_SQUARE);
-                    let col_bg_color = COLLISION_BG_COLOR;
-                    if *col_u8 == 0x1 { // Square, 95% of non-empty colliders (I checked)
-                        painter.rect_filled(rect, 0.0, col_bg_color);
-                        painter.rect_stroke(rect, 0.0, Stroke::new(1.0, COLLISION_OUTLINE_COLOR), egui::StrokeKind::Middle);
-                    } else if *col_u8 == 0x1A { // 0x1A is the Collision coin
-                        image.paint_at(ui, rect);
-                    } else {
-                        draw_collision(painter, &rect, *col_u8);
-                    }
-                    // If it overlaps the deletion rectangle... delete it
-                    if
-                        *col_u8 != 0x00
-                        && de.col_selector_status.delete_under
-                        && de.col_selector_status.selecting_rect.intersects(rect)
-                    {
-                        let _ = de.loaded_map.set_col_tile(info.which_bg, col_index as u16, 0x00);
-                        de.graphics_update_needed = true;
-                        de.unsaved_changes = true;
-                    }
-                }
-                col_index += 1;
-            }
-            if de.col_selector_status.delete_under {
-                // Now that it deleted what it should, disable it all
-                de.col_selector_status.delete_under = false;
-                de.col_selector_status.dragging = false;
-                de.col_selector_status.selecting_rect = Rect::NOTHING;
-            }
-            // COLZ Interactivity //
-            if de.display_settings.current_layer == CurrentLayer::COLLISION {
-                let col_sense_resp: Response = ui.interact(true_rect, egui::Id::new("col_tile_click"), egui::Sense::all());
-                // Do it in three separate ones to avoid repeated input checking that won't be used
-                if col_sense_resp.clicked() {
-                    // Add a new tile 
-                    if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-                        let local_pos = pointer_pos - true_rect.min;
-                        let tile_index = local_pos_to_col_index(&local_pos, grid_width);
-                        if tile_index as usize >= col.col_tiles.len() {
-                            log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
-                            return;
-                        }
-                        let _ = de.loaded_map.set_col_tile(info.which_bg, tile_index as u16, de.col_tile_to_place);
-                        de.graphics_update_needed = true;
-                        de.unsaved_changes = true;
-                    }
-                } else if col_sense_resp.secondary_clicked() {
-                    // Clear the tile
-                    if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-                        let local_pos = pointer_pos - true_rect.min;
-                        let tile_index = local_pos_to_col_index(&local_pos, grid_width);
-                        if tile_index as usize >= col.col_tiles.len() {
-                            log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
-                            return;
-                        }
-                        // 0x00 is empty
-                        let _ = de.loaded_map.set_col_tile(info.which_bg, tile_index as u16, 0x00);
-                        de.graphics_update_needed = true;
-                        de.unsaved_changes = true;
-                    }
-                } else if col_sense_resp.middle_clicked() {
-                    // Copy the tile (and show info)
-                    if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-                        let local_pos = pointer_pos - true_rect.min;
-                        let tile_index = local_pos_to_col_index(&local_pos, grid_width);
-                        if tile_index as usize >= col.col_tiles.len() {
-                            log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
-                            return;
-                        }
-                        let tile = &col.col_tiles[tile_index as usize];
-                        // Don't copy empty ones, that's for right clicking
-                        if *tile != 0x00 {
-                            log_write(format!("Copied tile of type '0x{:X}' at index 0x{:X}",tile,tile_index), LogLevel::LOG);
-                            de.col_tile_to_place = *tile; // Copies it in
-                        }
-                    }
-                }
-                if col_sense_resp.drag_started() {
-                    // Only right click drag
-                    if !ui.input(|i| i.pointer.secondary_down()) {
-                        return;
-                    }
-                    de.col_selector_status.dragging = true;
-                    let cur_pos: Pos2 = ui.ctx().pointer_interact_pos().expect("Failed to get pointer interaction position");
-                    de.col_selector_status.start_pos = cur_pos;
-                    de.col_selector_status.end_pos = cur_pos; // Starts as empty square
-                }
-                if col_sense_resp.dragged() {
-                    // Only right click drag
-                    if !ui.input(|i| i.pointer.secondary_down()) {
-                        return;
-                    }
-                    let cur_pos_res = ui.ctx().pointer_interact_pos();
-                    if cur_pos_res.is_none() {
-                        log_write("Failed to get pointer_interact_pos in col .dragged", LogLevel::ERROR);
-                        return;
-                    }
-                    de.col_selector_status.end_pos = cur_pos_res.unwrap();
-                    // Draw
-                    let drag_rect: Rect = Rect::from_two_pos(de.col_selector_status.start_pos, de.col_selector_status.end_pos);
-                    ui.painter().rect_filled(drag_rect, 0.0, BG_SELECTION_FILL);
-                    // Store
-                    de.col_selector_status.selecting_rect = drag_rect;
-                }
-                if col_sense_resp.drag_stopped() {
-                    de.col_selector_status.dragging = false;
-                    de.col_selector_status.start_pos = Pos2::new(0.0, 0.0);
-                    de.col_selector_status.end_pos = Pos2::new(0.0, 0.0);
-                    de.col_selector_status.delete_under = true;
-                    // Set this once deletion done, so you can do the deletions
-                    //de.col_selector_status.selecting_rect = Rect::NOTHING;
-                }
-            }
         }
     }
 }
