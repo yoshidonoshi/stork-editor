@@ -326,7 +326,6 @@ impl SpriteGraphicsSegment {
             }
             painter.image(tex.id(), rect, uvs, tint);
         }
-        return;
     }
 
 }

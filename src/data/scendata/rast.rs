@@ -9,9 +9,9 @@ pub struct RastData {
 impl RastData {
     pub fn new(byte_data: &Vec<u8>) -> Self {
         log_write("RAST is unhandled, storing raw data to enable safe saving", LogLevel::WARN);
-        let mut rast = RastData::default();
-        rast._raw = byte_data.clone();
-        rast
+        Self {
+            _raw: byte_data.clone()
+        }
     }
 }
 

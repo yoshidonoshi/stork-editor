@@ -305,28 +305,13 @@ impl CourseMapInfo {
         Option::None
     }
     pub fn get_exit(&mut self, uuid: &Uuid) -> Option<&mut MapExit> {
-        for exit in &mut self.map_exits {
-            if exit.uuid == *uuid {
-                return Some(exit);
-            }
-        }
-        Option::None
+        self.map_exits.iter_mut().find(|x| x.uuid == *uuid)
     }
     pub fn get_entrance_mut(&mut self, entrance_uuid: &Uuid) -> Option<&mut MapEntrance> {
-        for enter in &mut self.map_entrances {
-            if enter.uuid == *entrance_uuid {
-                return Some(enter);
-            }
-        }
-        Option::None
+        self.map_entrances.iter_mut().find(|e| e.uuid == *entrance_uuid)
     }
     pub fn get_entrance(&self, entrance_uuid: &Uuid) -> Option<&MapEntrance> {
-        for enter in &self.map_entrances {
-            if enter.uuid == *entrance_uuid {
-                return Some(enter);
-            }
-        }
-        Option::None
+        self.map_entrances.iter().find(|e| e.uuid == *entrance_uuid)
     }
     pub fn add_entrance(&mut self) -> Uuid {
         let new_index = self.map_entrances.len(); // Indexes start at 0
@@ -365,7 +350,7 @@ impl CourseMapInfo {
         }
         let pos = pos.unwrap();
         self.map_exits.remove(pos);
-        log_write(format!("Exit data deleted"), LogLevel::DEBUG);
+        log_write("Exit data deleted", LogLevel::DEBUG);
         true
     }
     pub fn delete_entrance(&mut self, entrance_uuid: Uuid) -> bool {
@@ -376,7 +361,7 @@ impl CourseMapInfo {
         }
         let pos = pos.unwrap();
         self.map_entrances.remove(pos);
-        log_write(format!("Entrance data deleted"), LogLevel::DEBUG);
+        log_write("Entrance data deleted", LogLevel::DEBUG);
         true
     }
 }

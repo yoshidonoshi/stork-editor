@@ -117,8 +117,7 @@ impl ScenSegment for MapTileDataSegment {
         let tiles_len: usize = self.tiles.len();
         while index < tiles_len {
             // Needs to be cloned
-            let curtile: MapTileRecordData = self.tiles[index].clone();
-            let tile_compiled = curtile.to_short();
+            let tile_compiled = self.tiles[index].to_short();
             let _ = comp.write_u16::<LittleEndian>(tile_compiled);
             index += 1;
         }

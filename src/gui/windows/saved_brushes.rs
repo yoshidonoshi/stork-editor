@@ -72,7 +72,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
                     let stamp_name = stamp.name.clone().to_lowercase();
                     let cur_search_string = &de.brush_settings.cur_search_string.clone();
-                    if !stamp_name.contains(&cur_search_string.trim()) {
+                    if !stamp_name.contains(cur_search_string.trim()) {
                         return;
                     }
                     
@@ -122,7 +122,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
         let mut store_enabled = true;
         let mut reason_disabled: String = String::from("ERROR");
-        if de.current_brush.tiles.len() == 0 {
+        if de.current_brush.tiles.is_empty() {
             store_enabled = false;
             reason_disabled = String::from("No tiles in current brush");
         }

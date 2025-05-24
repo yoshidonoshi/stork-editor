@@ -15,8 +15,8 @@ use super::{scendata::{anmz::AnmzDataSegment, colz::CollisionData, imbz::ImbzDat
 
 #[derive(Debug,Clone,PartialEq,Default)]
 pub struct BackgroundData {
-    /// INFO (ideally only use this in new)
-    pub info_ro: ScenInfoData, // Only guaranteed thing in each SCEN
+    /// TODO: Get rid of this, only left in constructor
+    pub info_ro: ScenInfoData,
     /// This is used to offset map tile palette values during render
     pub _pal_offset: u8,
     /// Unedited, straight out of the data. Cache it once rendered
@@ -371,6 +371,6 @@ impl TopLevelSegment for BackgroundData {
     }
 
     fn header(&self) -> String {
-        return String::from("SCEN");
+        String::from("SCEN")
     }
 }
