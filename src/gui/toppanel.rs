@@ -114,9 +114,22 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             }
             let button_resize = ui.button("Resize layer");
             if button_resize.clicked() {
-                gui_state.resize_settings.reset_needed = true;
-                gui_state.resize_settings.window_open = true;
-                ui.close_menu();
+                if gui_state.display_engine.display_settings.is_cur_layer_bg() {
+                    gui_state.resize_settings.reset_needed = true;
+                    gui_state.resize_settings.window_open = true;
+                    ui.close_menu();
+                } else if gui_state.display_engine.display_settings.current_layer == CurrentLayer::COLLISION {
+                    let colz_layer = gui_state.display_engine.loaded_map.get_bg_with_colz();
+                    if colz_layer.is_none() {
+                        log_write("Could not get COLZ layer when attempting to open resize modal", LogLevel::DEBUG);
+                    } else {
+                        gui_state.do_alert(&format!("Cannot resize collision, as it is attached to the layer '{}'",colz_layer.unwrap()));
+                    }
+                    ui.close_menu();
+                } else {
+                    let cur_layer = gui_state.display_engine.display_settings.current_layer;
+                    gui_state.do_alert(&format!("Cannot resize on layer '{:?}', dimensions controlled by BG layers",cur_layer));
+                }
             }
         });
         // View Menu //

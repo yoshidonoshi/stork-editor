@@ -38,9 +38,12 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         settings.reset_needed = false;
     }
     ui.heading("Resize Current Layer");
-    ui.label("Set the current layer's new width and height (must be even)");
+    ui.label("Width and height must both be even numbers");
+    ui.label(format!("Current Width and Height: 0x{:X}/0x{:X}",info.layer_width,info.layer_height));
     if settings.new_height < info.layer_height || settings.new_width < info.layer_width {
         ui.label(egui::RichText::new("Warning: this action is highly destructive").color(Color32::RED));
+    } else {
+        ui.label(" ");
     }
     ui.horizontal(|ui| {
         let width = egui::DragValue::new(&mut settings.new_width)
@@ -140,6 +143,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
                 log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::DEBUG);
             }
             // Do things to trigger updates
+            log_write("graphics updated", LogLevel::DEBUG);
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
             settings.reset_needed = true;
