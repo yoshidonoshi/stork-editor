@@ -7,6 +7,8 @@ use super::{info::ScenInfoData, ScenSegment};
 pub const COLLISION_BG_COLOR: Color32 = Color32::from_rgba_premultiplied(0x40, 0x40, 0x60, 0x40);
 pub const COLLISION_BG_COLOR_PASSABLE: Color32 = Color32::from_rgba_premultiplied(0x10, 0x40, 0x10, 0x40);
 pub const COLLISION_BG_COLOR_LAVA: Color32 = Color32::from_rgba_premultiplied(0x80, 0x00, 0x00, 0x40);
+pub const COLLISION_BG_COLOR_WATER_STILL: Color32 = Color32::from_rgba_premultiplied(0x00, 0x00, 0x80, 0x80);
+pub const COLLISION_BG_COLOR_SOFT_ROCK: Color32 = Color32::from_rgba_premultiplied(0x80, 0x80, 0x00, 0x40);
 pub const COLLISION_OUTLINE_COLOR: Color32 = Color32::from_rgba_premultiplied(0x40, 0x40, 0x60, 0xff);
 pub const COLLISION_SQUARE: Vec2 = Vec2::new(16.0, 16.0);
 
@@ -106,10 +108,14 @@ pub fn draw_collision(painter: &Painter, rect: &Rect, col_type: u8) {
         0x06 => draw_collision_polygon(painter, vec![rect.right_top(),rect.right_bottom(),rect.center_bottom()],COLLISION_BG_COLOR),
         0x07 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()],COLLISION_BG_COLOR),
         0x09 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_LAVA),
+        0x12 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_WATER_STILL),
         0x14 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_center(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x15 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x16 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.center_top(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x17 => draw_collision_polygon(painter, vec![rect.center_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x18 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x1A => { /* Coin */ },
+        0x1B => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_SOFT_ROCK),
         0x1F => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x43 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x44 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_center(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
@@ -118,6 +124,8 @@ pub fn draw_collision(painter: &Painter, rect: &Rect, col_type: u8) {
         0x47 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x54 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x55 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_center(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x56 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x57 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x58 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x83 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_center()], COLLISION_BG_COLOR),
         0x84 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_center()], COLLISION_BG_COLOR),

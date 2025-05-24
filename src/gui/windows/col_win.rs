@@ -8,6 +8,9 @@ const COL_TILE_DIM: f32 = 16.0;
 const COLL_RECT: Vec2 = Vec2::new(COL_TILE_DIM, COL_TILE_DIM);
 
 pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    if de.display_settings.current_layer != CurrentLayer::COLLISION {
+        ui.disable();
+    }
     let top_left: Pos2 = ui.min_rect().min;
     let mut col_type_index: usize = 0;
     ui.allocate_space(Vec2 { x:260.0, y: 000.0 });
@@ -35,7 +38,6 @@ pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         }
     }
     ui.add_space(260.0);
-    ui.label("Info on Collision here");
     // Interactivity
     if de.display_settings.current_layer == CurrentLayer::COLLISION {
         let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new("col_window_tile_click"), egui::Sense::click());
