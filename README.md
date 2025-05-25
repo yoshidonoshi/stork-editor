@@ -8,9 +8,9 @@ Stork Editor
 [Build Status]: https://github.com/yoshidonoshi/stork-editor/actions/workflows/rust.yml/badge.svg
 [actions]: https://github.com/LagoLunatic/ooe/actions/workflows/build.yml
 
-Stork is a ROM hacking tool for Yoshi's Island DS. YIDS has an immensely powerful engine, while having the same charming graphics and platforming as the original, and a level editor was begging to be made for it. I had created one previously, but it was written in C++ and Qt, and was developed before I fully understood the file structure of YIDS. Rust provides a dramatically more stable framework, and is somehow faster as well.
+> Stork is a ROM hacking tool for Yoshi's Island DS. YIDS has an immensely powerful engine, while having the same charming graphics and platforming as the original game. It can be used for both minor modifications to the base game, to completely new ROM hack campaigns.
 
-The game version used is **USA 1.0**, please rip legally. Support for other versions is in progress
+The game version used for development is **USA 1.0** (aka r0), please rip legally. Support for other versions is in progress.
 
 ## Features
 
@@ -19,7 +19,7 @@ The game version used is **USA 1.0**, please rip legally. Support for other vers
 - Edit Collision, Tiles, Sprites, Paths, Triggers, and more
 - Interconnect maps within a course via entrances and exits
 - Ease tile creation with Brushes for drawing common items
-- View helpful display engine information such as loaded palettes and tiles
+- View display engine information such as loaded palettes and tiles
 - Helpful documentation and workflows
 
 ## Usage
