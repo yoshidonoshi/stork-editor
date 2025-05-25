@@ -849,7 +849,7 @@ impl Gui {
             self.display_engine.clipboard.sprite_clip.top_left_pos = top_left_most;
             // No needs for any updates, selection remains
             log_write(format!("Copied {} Sprites onto the clipboard",self.display_engine.clipboard.sprite_clip.sprites.len()), LogLevel::LOG);
-        } if self.is_cur_layer_bg() {
+        } else if self.is_cur_layer_bg() {
             if self.display_engine.bg_sel_data.selected_map_indexes.is_empty() {
                 log_write("Cannot copy, no BG data selected", LogLevel::WARN);
                 return;

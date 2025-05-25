@@ -1,6 +1,4 @@
-///
-/// Consider this the NDS' graphical memory and settings, plus helpers
-///
+// Consider this the NDS' graphical memory and settings, plus helpers
 
 use std::{collections::HashMap, fmt::{self, Display}, fs::{self, read_to_string}, io::Cursor, path::PathBuf};
 

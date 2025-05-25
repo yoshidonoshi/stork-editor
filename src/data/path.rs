@@ -42,7 +42,7 @@ impl PathDatabase {
                     break;
                 }
             }
-            ret.lines.push(PathLine { points: points, uuid: Uuid::new_v4() });
+            ret.lines.push(PathLine { points, uuid: Uuid::new_v4() });
             path_index += 1;
         }
         ret

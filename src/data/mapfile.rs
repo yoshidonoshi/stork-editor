@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-/// This is a container for MPDZ files
-/// 
-/// It represents an entire map, primarily including
-/// the backgrounds, but also objects and more
-/// 
-/// It is not read from constantly by the graphics engine,
-/// rather it is copied on demand for performance
+// This is a container for MPDZ files
+// 
+// It represents an entire map, primarily including
+// the backgrounds, but also objects and more
+// 
+// It is not read from constantly by the graphics engine,
+// rather it is copied on demand for performance
 
 use std::fs;
 use std::io::Cursor;
