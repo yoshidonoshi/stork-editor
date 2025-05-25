@@ -15,8 +15,8 @@ use super::{scendata::{anmz::AnmzDataSegment, colz::CollisionData, imbz::ImbzDat
 
 #[derive(Debug,Clone,PartialEq,Default)]
 pub struct BackgroundData {
-    /// INFO (ideally only use this in new)
-    pub info_ro: ScenInfoData, // Only guaranteed thing in each SCEN
+    /// TODO: Get rid of this, only left in constructor
+    pub info_ro: ScenInfoData,
     /// This is used to offset map tile palette values during render
     pub _pal_offset: u8,
     /// Unedited, straight out of the data. Cache it once rendered
@@ -276,13 +276,88 @@ impl BackgroundData {
         }
         Option::None
     }
+
+    pub fn get_info_mut(&mut self) -> Option<&mut ScenInfoData> {
+        for seg in &mut self.scen_segments {
+            if let ScenSegmentWrapper::INFO(info) = seg {
+                return Some(info);
+            }
+        }
+        Option::None
+    }
+
+    pub fn increase_width(&mut self, new_width: u16) -> Result<u16,()> {
+        if new_width % 2 != 0 {
+            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::WARN);
+            return Err(());
+        }
+        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::LOG);
+        let info_c = self.get_info().expect("INFO is always there");
+        let old_width = info_c.layer_width;
+        if new_width <= old_width {
+            log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::ERROR);
+            return Err(());
+        }
+        let how_much_add = new_width - old_width;
+        if let Some(mpbz) = self.get_mpbz_mut() {
+            mpbz.increase_width(old_width, how_much_add as usize);
+        }
+        if let Some(colz) = self.get_colz_mut() {
+            colz.increase_width(old_width, how_much_add as usize);
+        }
+        let info = self.get_info_mut().expect("Done earlier");
+        info.layer_width = new_width;
+        Ok(info.layer_width)
+    }
+
+    pub fn decrease_width(&mut self, new_width: u16) -> Result<u16,()> {
+        if new_width % 2 != 0 {
+            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::WARN);
+            return Err(());
+        }
+        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::LOG);
+        let info_c = self.get_info().expect("INFO is always there");
+        let old_width = info_c.layer_width;
+        if new_width >= old_width {
+            log_write(format!("Cannot decrease, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::ERROR);
+            return Err(());
+        }
+        let how_much_remove = old_width - new_width;
+        if let Some(mpbz) = self.get_mpbz_mut() {
+            mpbz.decrease_width(old_width, how_much_remove as usize);
+        }
+        if let Some(colz) = self.get_colz_mut() {
+            colz.decrease_width(old_width as i32, how_much_remove as i32);
+        }
+        let info = self.get_info_mut().expect("Done earlier");
+        info.layer_width = new_width;
+        Ok(info.layer_width)
+    }
+
+    pub fn change_height(&mut self, new_height: u16) -> Result<u16,()> {
+        let info_c = self.get_info().expect("INFO is always there").clone();
+        if new_height % 2 != 0 {
+            log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::WARN);
+            return Err(());
+        }
+        if let Some(mpbz) = self.get_mpbz_mut() {
+            mpbz.change_height(new_height, info_c.layer_width);
+        }
+        if let Some(colz) = self.get_colz_mut() {
+            colz.change_height(new_height, info_c.layer_width);
+        }
+        let info = self.get_info_mut().expect("Done earlier");
+        info.layer_height = new_height;
+        Ok(info.layer_height)
+    }
 }
 
 impl TopLevelSegment for BackgroundData {
     fn compile(&self) -> Vec<u8> {
         let mut compiled: Vec<u8> = Vec::new();
+        let info_c = self.get_info().expect("There is always INFO");
         for segment in &self.scen_segments {
-            let mut seg_comp = segment.wrap(&Some(self.info_ro.clone()));
+            let mut seg_comp = segment.wrap(&Some(info_c.clone()));
             compiled.append(&mut seg_comp);
         }
 
@@ -296,6 +371,6 @@ impl TopLevelSegment for BackgroundData {
     }
 
     fn header(&self) -> String {
-        return String::from("SCEN");
+        String::from("SCEN")
     }
 }

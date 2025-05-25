@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-/// This is a container for MPDZ files
-/// 
-/// It represents an entire map, primarily including
-/// the backgrounds, but also objects and more
-/// 
-/// It is not read from constantly by the graphics engine,
-/// rather it is copied on demand for performance
+// This is a container for MPDZ files
+// 
+// It represents an entire map, primarily including
+// the backgrounds, but also objects and more
+// 
+// It is not read from constantly by the graphics engine,
+// rather it is copied on demand for performance
 
 use std::fs;
 use std::io::Cursor;
@@ -205,7 +205,7 @@ impl MapData {
     pub fn get_background(&mut self, which_background: u8) -> Option<&mut BackgroundData> {
         for seg in &mut self.segments {
             if let TopLevelSegmentWrapper::SCEN(scen) = seg {
-                if scen.info_ro.which_bg == which_background {
+                if scen.get_info().expect("get_background info").which_bg == which_background {
                     return Some(scen);
                 }
             }
@@ -337,7 +337,7 @@ impl MapData {
     pub fn add_sprite(&mut self, sprite: &LevelSprite) -> Uuid {
         let sprite_set: &mut LevelSpriteSet = self.get_setd().expect("Expected SETD to exist");
         sprite_set.sprites.push(sprite.clone());
-        return sprite.uuid;
+        sprite.uuid
     }
 
     pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16, meta: &HashMap<u16,SpriteMetadata>) -> Uuid {

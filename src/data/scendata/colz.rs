@@ -1,11 +1,14 @@
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
-use crate::engine::compression::{lamezip77_lz10_decomp, lamezip77_lz10_recomp, segment_wrap};
+use crate::{engine::compression::{lamezip77_lz10_decomp, lamezip77_lz10_recomp, segment_wrap}, utils::{log_write, LogLevel}};
 
 use super::{info::ScenInfoData, ScenSegment};
 
 pub const COLLISION_BG_COLOR: Color32 = Color32::from_rgba_premultiplied(0x40, 0x40, 0x60, 0x40);
 pub const COLLISION_BG_COLOR_PASSABLE: Color32 = Color32::from_rgba_premultiplied(0x10, 0x40, 0x10, 0x40);
+pub const COLLISION_BG_COLOR_LAVA: Color32 = Color32::from_rgba_premultiplied(0x80, 0x00, 0x00, 0x40);
+pub const COLLISION_BG_COLOR_WATER_STILL: Color32 = Color32::from_rgba_premultiplied(0x00, 0x00, 0x80, 0x80);
+pub const COLLISION_BG_COLOR_SOFT_ROCK: Color32 = Color32::from_rgba_premultiplied(0x80, 0x80, 0x00, 0x40);
 pub const COLLISION_OUTLINE_COLOR: Color32 = Color32::from_rgba_premultiplied(0x40, 0x40, 0x60, 0xff);
 pub const COLLISION_SQUARE: Vec2 = Vec2::new(16.0, 16.0);
 
@@ -22,6 +25,54 @@ impl CollisionData {
         ret.col_tiles = decomp;
 
         ret
+    }
+    pub fn increase_width(&mut self, old_width: u16, increase_by: usize) {
+        // Tiles are 2x2
+        if increase_by % 2 != 0 {
+            log_write(format!("increase_by was not even: 0x{:X}",increase_by), LogLevel::ERROR);
+            return;
+        }
+        if old_width % 2 != 0 {
+            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::ERROR);
+            return;
+        }
+        let increase_by = increase_by / 2;
+        let old_width = old_width / 2;
+        // Do increase logic
+        let mut idx: usize = old_width as usize;
+        // Do loop here
+        while idx <= self.col_tiles.len() {
+            for _ in 0..increase_by {
+                self.col_tiles.insert(idx, 0x00);
+            }
+            idx = idx + (old_width as usize) + increase_by;
+        }
+    }
+    pub fn decrease_width(&mut self, old_width: i32, decrease_by: i32) {
+        // Tiles are 2x2
+        if decrease_by % 2 != 0 {
+            log_write(format!("decrease_by was not even: 0x{:X}",decrease_by), LogLevel::ERROR);
+            return;
+        }
+        if old_width % 2 != 0 {
+            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::ERROR);
+            return;
+        }
+        let decrease_by = decrease_by / 2;
+        let old_width = old_width / 2;
+        let mut idx: i32 = old_width - 1;
+        while idx < self.col_tiles.len() as i32 {
+            for _ in 0..decrease_by {
+                self.col_tiles.remove(idx as usize);
+                idx -= 1;
+            }
+            idx += old_width;
+        }
+    }
+    pub fn change_height(&mut self, new_height: u16, current_width: u16) {
+        log_write(format!("Changing COLZ height to {:X}",new_height), LogLevel::DEBUG);
+        let new_len = (new_height as u32 / 2) * (current_width as u32 / 2);
+        self.col_tiles.resize(new_len as usize, 0x00);
     }
 }
 
@@ -56,15 +107,35 @@ pub fn draw_collision(painter: &Painter, rect: &Rect, col_type: u8) {
         0x05 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.center_top(),rect.right_top(),rect.right_bottom()],COLLISION_BG_COLOR),
         0x06 => draw_collision_polygon(painter, vec![rect.right_top(),rect.right_bottom(),rect.center_bottom()],COLLISION_BG_COLOR),
         0x07 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()],COLLISION_BG_COLOR),
+        0x09 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_LAVA),
+        0x12 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_WATER_STILL),
+        0x14 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_center(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x15 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x16 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.center_top(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x17 => draw_collision_polygon(painter, vec![rect.center_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x18 => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x1A => { /* Coin */ },
+        0x1B => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_SOFT_ROCK),
+        0x1F => draw_collision_polygon(painter, vec![rect.left_bottom(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR_PASSABLE),
         0x43 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x44 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_center(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x45 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_top(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x46 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
         0x47 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),
+        0x54 => draw_collision_polygon(painter, vec![rect.left_center(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x55 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_center(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x56 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x57 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x58 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_bottom(),rect.left_bottom()], COLLISION_BG_COLOR_PASSABLE),
+        0x83 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_center()], COLLISION_BG_COLOR),
+        0x84 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_center()], COLLISION_BG_COLOR),
+        0x85 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.center_bottom()], COLLISION_BG_COLOR),
+        0x86 => draw_collision_polygon(painter, vec![rect.center_top(),rect.right_top(),rect.right_bottom()], COLLISION_BG_COLOR),
         0x87 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom()],COLLISION_BG_COLOR),
         0xC3 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.left_center()],COLLISION_BG_COLOR),
         0xC4 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_center(),rect.left_bottom()],COLLISION_BG_COLOR),
+        0xC5 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.center_bottom(),rect.left_bottom()], COLLISION_BG_COLOR),
+        0xC6 => draw_collision_polygon(painter, vec![rect.left_top(),rect.center_top(),rect.left_bottom()], COLLISION_BG_COLOR),
         0xC7 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.left_bottom()],COLLISION_BG_COLOR),
         _ => {
             // Unknown, put text

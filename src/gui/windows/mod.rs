@@ -9,3 +9,4 @@ pub mod triggers;
 pub mod paths_win;
 pub mod map_segs;
 pub mod scen_segs;
+pub mod resize;

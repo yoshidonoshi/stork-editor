@@ -1,0 +1,153 @@
+use egui::Color32;
+
+use crate::{engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+
+#[derive(Default)]
+pub struct ResizeSettings {
+    pub new_width: u16,
+    pub new_height: u16,
+    pub reset_needed: bool,
+    pub window_open: bool
+}
+
+pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &mut ResizeSettings) {
+    if !de.display_settings.is_cur_layer_bg() {
+        log_write("Cannot resize, not on BG layer", LogLevel::WARN);
+        settings.window_open = false;
+        return;
+    }
+    // Get BG and INFO read-only
+    let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
+    if bg.is_none() {
+        log_write("Failed to get BG in resize modal", LogLevel::ERROR);
+        settings.window_open = false;
+        return;
+    }
+    let info = bg.unwrap().get_info();
+    if info.is_none() {
+        log_write("Failed to get INFO in resize modal", LogLevel::ERROR);
+        settings.window_open = false;
+        return;
+    }
+    let info = info.unwrap();
+    // Check reset
+    let mut okay_enabled = true;
+    if settings.reset_needed {
+        settings.new_width = info.layer_width;
+        settings.new_height = info.layer_height;
+        settings.reset_needed = false;
+    }
+    ui.heading("Resize Current Layer");
+    ui.label("Width and height must both be even numbers");
+    ui.label(format!("Current Width and Height: 0x{:X}/0x{:X}",info.layer_width,info.layer_height));
+    if settings.new_height < info.layer_height || settings.new_width < info.layer_width {
+        ui.label(egui::RichText::new("Warning: this action is highly destructive").color(Color32::RED));
+    } else {
+        ui.label(" ");
+    }
+    ui.horizontal(|ui| {
+        let width = egui::DragValue::new(&mut settings.new_width)
+            .hexadecimal(4, false, true)
+            .range(0..=0xffff);
+        ui.add(width);
+        ui.label("Width")
+    });
+    ui.horizontal(|ui| {
+        let height = egui::DragValue::new(&mut settings.new_height)
+            .hexadecimal(4, false, true)
+            .range(0..=0xffff);
+        ui.add(height);
+        ui.label("Height");
+    });
+    ui.add_space(5.0);
+    ui.horizontal(|ui| {
+        let button_cancel = ui.button("Cancel");
+        if button_cancel.clicked() {
+            // No update
+            settings.reset_needed = true;
+            settings.window_open = false;
+        }
+        // No odd values
+        if settings.new_height % 2 != 0 {
+            okay_enabled = false;
+        }
+        if settings.new_width % 2 != 0 {
+            okay_enabled = false;
+        }
+        let button_ok = ui.add_enabled(okay_enabled, egui::Button::new("Okay"));
+        if button_ok.clicked() {
+            // Do update with mutable versions
+            let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
+            if bg.is_none() {
+                log_write("Failed to get BG in resize modal resizing", LogLevel::ERROR);
+                settings.window_open = false;
+                return;
+            }
+            let bg = bg.unwrap();
+            let info = bg.get_info_mut();
+            if info.is_none() {
+                log_write("Failed to get INFO in resize modal resizing", LogLevel::ERROR);
+                settings.window_open = false;
+                return;
+            }
+            let info = info.unwrap();
+            log_write(format!("Changing size of layer from 0x{:X}/0x{:X} to 0x{:X}/0x{:X}",
+                info.layer_width,info.layer_height,
+                settings.new_width,settings.new_height), LogLevel::LOG);
+            // Actual resizing calls
+            if settings.new_width > info.layer_width {
+                // Width is greater, increase width //
+                let increase_result = bg.increase_width(settings.new_width);
+                // Handle results
+                if increase_result.is_err() {
+                    log_write("Error increasing size of layer", LogLevel::ERROR);
+                    settings.reset_needed = true;
+                    settings.window_open = false;
+                    return;
+                }
+                if increase_result.unwrap() != settings.new_width {
+                    log_write("Mismatch in result width", LogLevel::ERROR);
+                } else {
+                    log_write("Resize successful, updating", LogLevel::LOG);
+                }
+            } else if settings.new_width < info.layer_width {
+                let decrease_result = bg.decrease_width(settings.new_width);
+                // Handle results
+                if decrease_result.is_err() {
+                    log_write("Error decreasing size of layer", LogLevel::ERROR);
+                    settings.reset_needed = true;
+                    settings.window_open = false;
+                    return;
+                }
+                if decrease_result.unwrap() != settings.new_width {
+                    log_write("Mismatch in result width", LogLevel::ERROR);
+                } else {
+                    log_write("Resize successful, updating", LogLevel::LOG);
+                }
+            } else {
+                log_write("No change in layer width", LogLevel::DEBUG);
+            }
+            let change_height_result = bg.change_height(settings.new_height);
+            if change_height_result.is_err() {
+                log_write("Error changing height of layer", LogLevel::ERROR);
+                settings.reset_needed = true;
+                settings.window_open = false;
+                return;
+            }
+            // Trim sprites
+            let spr_res = de.loaded_map.get_setd();
+            if spr_res.is_none() {
+                log_write("Failed to get SETD when resizing", LogLevel::ERROR);
+            } else {
+                let trimmed = spr_res.unwrap().trim(settings.new_width, settings.new_height);
+                log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::DEBUG);
+            }
+            // Do things to trigger updates
+            log_write("graphics updated", LogLevel::DEBUG);
+            de.unsaved_changes = true;
+            de.graphics_update_needed = true;
+            settings.reset_needed = true;
+            settings.window_open = false;
+        }
+    });
+}

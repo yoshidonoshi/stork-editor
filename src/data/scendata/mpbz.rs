@@ -67,6 +67,34 @@ impl MapTileDataSegment {
         let comp = self.compile(info);
         compare_vector_u8s(&comp, raw_decomp);
     }
+
+    pub fn increase_width(&mut self, old_width: u16, increase_by: usize) {
+        let mut idx: usize = old_width as usize;
+        // Do loop here
+        while idx <= self.tiles.len() {
+            for _ in 0..increase_by {
+                self.tiles.insert(idx, MapTileRecordData::new(&0x0000));
+            }
+            idx = idx + (old_width as usize) + increase_by;
+        }
+    }
+
+    pub fn decrease_width(&mut self, old_width: u16, decrease_by: usize) {
+        let mut idx: i32 = old_width as i32 -1;
+
+        while idx < self.tiles.len() as i32 {
+            for _ in 0..decrease_by {
+                self.tiles.remove(idx as usize);
+                idx -= 1;
+            }
+            idx += old_width as i32;
+        }
+    }
+
+    pub fn change_height(&mut self, new_height: u16, width: u16) {
+        let new_len = (new_height as u32) * (width as u32);
+        self.tiles.resize(new_len as usize, MapTileRecordData::new(&0x0000));
+    }
 }
 
 impl ScenSegment for MapTileDataSegment {
@@ -89,8 +117,7 @@ impl ScenSegment for MapTileDataSegment {
         let tiles_len: usize = self.tiles.len();
         while index < tiles_len {
             // Needs to be cloned
-            let curtile: MapTileRecordData = self.tiles[index].clone();
-            let tile_compiled = curtile.to_short();
+            let tile_compiled = self.tiles[index].to_short();
             let _ = comp.write_u16::<LittleEndian>(tile_compiled);
             index += 1;
         }

@@ -9,13 +9,10 @@ pub struct BrakData {
 
 impl BrakData {
     pub fn new(byte_data: &Vec<u8>) -> Self {
-        let mut brak = BrakData::default();
-        brak.raw_bytes = byte_data.clone();
-        brak
+        Self {
+            raw_bytes: byte_data.clone()
+        }
     }
-    // pub fn test_vs_raw(&self,byte_data: &Vec<u8>) {
-    //     compare_vector_u8s(&self.raw_bytes, byte_data);
-    // }
 }
 
 impl TopLevelSegment for BrakData {

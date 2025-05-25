@@ -7,15 +7,10 @@ use crate::{engine::compression::segment_wrap, utils::{log_write, LogLevel}};
 
 use super::{Compilable, TopLevelSegment};
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 pub struct PathDatabase {
     pub path_count: u32,
     pub lines: Vec<PathLine>
-}
-impl Default for PathDatabase {
-    fn default() -> Self {
-        Self { path_count: 0xffff, lines: Vec::new() }
-    }
 }
 impl PathDatabase {
     pub fn new(byte_data: &Vec<u8>) -> Self {
@@ -29,22 +24,58 @@ impl PathDatabase {
         ret.path_count = path_count.unwrap();
         let mut path_index: u32 = 0;
         while path_index < ret.path_count { // Build the line
-            let mut line = PathLine::default();
+            // Don't use default, it adds a blank point
+            let mut points: Vec<PathPoint> = Vec::new();
             loop { // Build the points
-                let angle = rdr.read_i16::<LittleEndian>().expect("angle i16 in PathDatabase");
+                let angle = rdr.read_i16::<LittleEndian>();
+                if angle.is_err() {
+                    log_write(format!("Failed to read Path angle: '{}'",angle.unwrap_err()), LogLevel::ERROR);
+                    return ret;
+                }
+                let angle = angle.unwrap();
                 let distance = rdr.read_i16::<LittleEndian>().expect("distance i16 in PathDatabase");
                 let x_fine = rdr.read_u32::<LittleEndian>().expect("x_fine u32 in PathDatabase");
                 let y_fine = rdr.read_u32::<LittleEndian>().expect("y_fine u32 in PathDatabase");
                 let point = PathPoint::new(angle, distance, x_fine, y_fine);
-                line.points.push(point);
+                points.push(point);
                 if distance == 0x0000 {
                     break;
                 }
             }
-            ret.lines.push(line);
+            ret.lines.push(PathLine { points, uuid: Uuid::new_v4() });
             path_index += 1;
         }
         ret
+    }
+
+    pub fn delete_line(&mut self, line_uuid: Uuid) -> Result<(),()> {
+        log_write("Deleting Line", LogLevel::DEBUG);
+        let line_pos = self.lines.iter().position(|x| x.uuid == line_uuid);
+        if line_pos.is_none() {
+            return Err(());
+        }
+        let line_pos = line_pos.unwrap();
+        self.lines.remove(line_pos);
+        log_write("Line data deleted", LogLevel::DEBUG);
+        Ok(())
+    }
+    pub fn fix_term(&mut self) {
+        for line in &mut self.lines {
+            if line.points.is_empty() {
+                // No empty Lines
+                line.points.push(PathPoint::default());
+            } else {
+                // Don't let any be zero... except the last
+                for p in &mut line.points {
+                    if p.distance == 0 {
+                        p.distance = 1;
+                    }
+                }
+                // End must have distance 0
+                let line_len = line.points.len();
+                line.points[line_len-1].distance = 0;
+            }
+        }
     }
 }
 impl TopLevelSegment for PathDatabase {
@@ -109,6 +140,15 @@ impl PathPoint {
     pub fn new(angle: i16, distance: i16, x_fine: u32, y_fine: u32) -> Self {
         Self {
             angle, distance, x_fine, y_fine, uuid: Uuid::new_v4()
+        }
+    }
+}
+impl Default for PathPoint {
+    fn default() -> Self {
+        Self {
+            angle: 0, distance: 0x0000,
+            x_fine: 0, y_fine: 0,
+            uuid: Uuid::new_v4()
         }
     }
 }

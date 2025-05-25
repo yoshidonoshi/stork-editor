@@ -144,8 +144,8 @@ impl CourseInfo {
         segment_wrap(&uncomped_bytes, "CRSB".to_owned())
     }
 
-    /// Update UUID lists from indexes, only do right after load
-    fn update_exit_uuids(&mut self) -> Result<(),()> {
+    /// Update UUID lists from indexes
+    pub fn update_exit_uuids(&mut self) -> Result<(),()> {
         log_write(format!("Updating Exit UUIDs for {}",self.src_filename), LogLevel::DEBUG);
         let maps_ro = self.level_map_data.clone();
         for map in &mut self.level_map_data {
@@ -202,6 +202,44 @@ impl CourseInfo {
                 }
             }
         }
+    }
+
+    pub fn fix_exits(&mut self) {
+        // First, we fix from UUIDs
+        // Those are what we use most, and what will be broken
+        let map_data_ro = self.level_map_data.clone();
+        for map in &mut self.level_map_data {
+            for exit in &mut map.map_exits {
+                // Fix target maps
+                let try_exit_map_pos = map_data_ro.iter().position(|x| x.uuid == exit.target_map);
+                if try_exit_map_pos.is_none() {
+                    // The map must no longer exist
+                    exit.target_map_raw = 0;
+                    // The only guaranteed entrance on index 0 map
+                    exit.target_map_entrance_raw = 0;
+                    // No need to fix entrance, we already set it to , go to next
+                    log_write(format!("Target map was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::DEBUG);
+                    continue;
+                } else {
+                    // Set the raw to correct
+                    exit.target_map_raw = try_exit_map_pos.unwrap() as u8;
+                    // Entrance MIGHT still be good
+                }
+                // Fix target entrances
+                let target_map_data_ro = &map_data_ro[exit.target_map_raw as usize];
+                let try_entrance_pos = target_map_data_ro.map_entrances.iter().position(|y| y.uuid == exit.target_map_entrance);
+                if try_entrance_pos.is_none() {
+                    // Entrance no longer exists, set it to guarantee
+                    exit.target_map_entrance_raw = 0;
+                    log_write(format!("Target entrance was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::DEBUG);
+                } else {
+                    // Update raw to correct
+                    exit.target_map_entrance_raw = try_entrance_pos.unwrap() as u8;
+                }
+            }
+        }
+        // All of the Raw values are valid now
+        let _ = self.update_exit_uuids();
     }
 }
 
@@ -267,28 +305,64 @@ impl CourseMapInfo {
         Option::None
     }
     pub fn get_exit(&mut self, uuid: &Uuid) -> Option<&mut MapExit> {
-        for exit in &mut self.map_exits {
-            if exit.uuid == *uuid {
-                return Some(exit);
-            }
-        }
-        Option::None
+        self.map_exits.iter_mut().find(|x| x.uuid == *uuid)
     }
     pub fn get_entrance_mut(&mut self, entrance_uuid: &Uuid) -> Option<&mut MapEntrance> {
-        for enter in &mut self.map_entrances {
-            if enter.uuid == *entrance_uuid {
-                return Some(enter);
-            }
-        }
-        Option::None
+        self.map_entrances.iter_mut().find(|e| e.uuid == *entrance_uuid)
     }
     pub fn get_entrance(&self, entrance_uuid: &Uuid) -> Option<&MapEntrance> {
-        for enter in &self.map_entrances {
-            if enter.uuid == *entrance_uuid {
-                return Some(enter);
-            }
+        self.map_entrances.iter().find(|e| e.uuid == *entrance_uuid)
+    }
+    pub fn add_entrance(&mut self) -> Uuid {
+        let new_index = self.map_entrances.len(); // Indexes start at 0
+        let label = format!("Entrance 0x{:X}",new_index);
+        let new_ent = MapEntrance {
+            entrance_x: 0, entrance_y: 0,
+            entrance_flags: 0x8009, // TODO: Better default?
+            label, uuid: Uuid::new_v4()
+        };
+        let ret_uuid = new_ent.uuid;
+        self.map_entrances.push(new_ent);
+        ret_uuid
+    }
+    pub fn add_exit(&mut self) -> Uuid {
+        let new_index = self.map_exits.len(); // So this is the next index
+        let new_exit = MapExit {
+            exit_x: 0,
+            exit_y: 0,
+            exit_type: 0,
+            target_map_raw: 0xff,
+            target_map: Uuid::nil(), // Fix this from course
+            target_map_entrance_raw: 0xff,
+            target_map_entrance: Uuid::nil(),
+            label: format!("Exit 0x{:X}",new_index),
+            uuid: Uuid::new_v4()
+        };
+        let ret_uuid = new_exit.uuid;
+        self.map_exits.push(new_exit);
+        ret_uuid
+    }
+    pub fn delete_exit(&mut self, exit_uuid: Uuid) -> bool {
+        let pos = self.map_exits.iter().position(|x| x.uuid == exit_uuid);
+        if pos.is_none() {
+            log_write(format!("Failed to delete MapExit with UUID {}",exit_uuid), LogLevel::ERROR);
+            return false;
         }
-        Option::None
+        let pos = pos.unwrap();
+        self.map_exits.remove(pos);
+        log_write("Exit data deleted", LogLevel::DEBUG);
+        true
+    }
+    pub fn delete_entrance(&mut self, entrance_uuid: Uuid) -> bool {
+        let pos = self.map_entrances.iter().position(|x| x.uuid == entrance_uuid);
+        if pos.is_none() {
+            log_write(format!("Failed to delete MapEntrance with UUID {}",entrance_uuid), LogLevel::ERROR);
+            return false;
+        }
+        let pos = pos.unwrap();
+        self.map_entrances.remove(pos);
+        log_write("Entrance data deleted", LogLevel::DEBUG);
+        true
     }
 }
 

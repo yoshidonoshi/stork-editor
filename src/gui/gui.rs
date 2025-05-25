@@ -1,13 +1,13 @@
-use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, path::PathBuf};
+use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
 
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
-use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
+use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -172,6 +172,7 @@ pub struct Gui {
     pub display_engine: DisplayEngine,
     pub project_open: bool,
     pub export_directory: PathBuf, // Not yet fully mutable
+    pub resize_settings: ResizeSettings,
     // Tile preview caching
     pub needs_bg_tile_refresh: bool,
     pub tile_preview_pal: usize,
@@ -200,6 +201,7 @@ impl Default for Gui {
             scen_window_open: false,
             project_open: false,
             export_directory: PathBuf::new(), // Not yet fully mutable
+            resize_settings: ResizeSettings::default(),
             display_engine: DisplayEngine::default(),
             needs_bg_tile_refresh: false,
             tile_preview_pal: 0,
@@ -401,8 +403,9 @@ impl Gui {
         }
     }
     fn save_map(&mut self) {
-        let file_name_ext: &String = &self.display_engine.loaded_map.src_file;
-        log_write(format!("Saving Map file '{}'",file_name_ext), LogLevel::LOG);
+        log_write("Saving Map file", LogLevel::DEBUG);
+        let file_name_ext: String = self.display_engine.loaded_map.src_file.clone();
+        let _backup_res = self.backup_map();
         // Create Map file
         let file_data = self.display_engine.loaded_map.package();
         let file_result = File::create(&file_name_ext);
@@ -420,6 +423,25 @@ impl Gui {
             self.display_engine.unsaved_changes = false;
         }
     }
+
+    fn backup_map(&mut self) -> Result<PathBuf,()> {
+        log_write("Backing up current map file...", LogLevel::DEBUG);
+        let backup_folder = get_backup_folder(&self.export_directory);
+        if backup_folder.is_err() {
+            // Already logs
+            return Err(());
+        }
+        let mut backup_folder = backup_folder.unwrap();
+        let filename_path = Path::new(&self.display_engine.loaded_map.src_file);
+        let file_name = filename_path.file_name().expect("Should be a file name for the path");
+        let file_name = file_name.to_string_lossy().to_string();
+        let time = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time Travel").as_secs();
+        backup_folder.push(format!("{}.{:?}.bak",file_name,time));
+        let _copy_res = fs::copy(&mut self.display_engine.loaded_map.src_file.clone(), &mut backup_folder);
+        log_write(format!("Backed up {} to {}",&self.display_engine.loaded_map.src_file,backup_folder.display()), LogLevel::LOG);
+        Ok(backup_folder)
+    }
+
     fn save_course(&mut self) {
         let file_name_ext = self.display_engine.loaded_course.src_filename.clone();
         log_write(format!("Saving Course file '{}'",&file_name_ext), LogLevel::LOG);
@@ -440,17 +462,16 @@ impl Gui {
         }
     }
     pub fn generate_bg_cache(&self, ctx: &egui::Context, which_bg: u8, bg_pal: &Palette) -> Vec<TextureHandle> {
-        #[allow(unused_assignments)] // It blatantly is used wtf
-        let mut layer: &Option<BackgroundData> = &Option::None;
-        if which_bg == 0x1 { // TODO: match-ify
-            layer = &self.display_engine.bg_layer_1;
-        } else if which_bg == 0x2 {
-            layer = &self.display_engine.bg_layer_2;
-        } else if which_bg == 0x3 {
-            layer = &self.display_engine.bg_layer_3;
-        } else {
-            log_write("Something is very wrong in generate_bg_cache", LogLevel::FATAL);
-        }
+        let layer: &Option<BackgroundData> = match which_bg {
+            0x1 => &self.display_engine.bg_layer_1,
+            0x2 => &self.display_engine.bg_layer_2,
+            0x3 => &self.display_engine.bg_layer_3,
+            _ => {
+                // This should be impossible
+                log_write("Invalid bg index in generate_bg_cache", LogLevel::FATAL);
+                &Option::None
+            }
+        };
         if let Some(layer_data) = &layer {
             let info = layer_data.get_info().expect("INFO exists in bg cache generator");
             if let Some(pix_tiles) = &layer_data.pixel_tiles_preview {
@@ -793,6 +814,8 @@ impl Gui {
     pub fn is_copy_possible(&self) -> bool {
         if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
             !self.display_engine.selected_sprite_uuids.is_empty()
+        } else if self.display_engine.display_settings.is_cur_layer_bg() {
+            !self.display_engine.bg_sel_data.selected_map_indexes.is_empty()
         } else {
             false
         }
@@ -826,7 +849,7 @@ impl Gui {
             self.display_engine.clipboard.sprite_clip.top_left_pos = top_left_most;
             // No needs for any updates, selection remains
             log_write(format!("Copied {} Sprites onto the clipboard",self.display_engine.clipboard.sprite_clip.sprites.len()), LogLevel::LOG);
-        } if self.is_cur_layer_bg() {
+        } else if self.is_cur_layer_bg() {
             if self.display_engine.bg_sel_data.selected_map_indexes.is_empty() {
                 log_write("Cannot copy, no BG data selected", LogLevel::WARN);
                 return;
@@ -855,6 +878,8 @@ impl Gui {
     pub fn is_cut_possible(&self) -> bool {
         if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
             !self.display_engine.selected_sprite_uuids.is_empty()
+        } else if self.display_engine.display_settings.is_cur_layer_bg() {
+            !self.display_engine.bg_sel_data.selected_map_indexes.is_empty()
         } else {
             false
         }
@@ -972,11 +997,19 @@ impl Gui {
             let cursor_level_y = self.display_engine.latest_square_pos_level_space.y as i32;
             //let mut tile_index: u32 = 0;
             let which_bg = self.display_engine.display_settings.current_layer as u8;
-            let layer_width = self.display_engine.loaded_map.get_background(which_bg)
-                .expect("BG should exist").get_info().expect("Info guar.").layer_width;
+            let info_ro = self.display_engine.loaded_map.get_background(which_bg)
+                .expect("BG should exist").get_info().expect("Info guar.");
+            let layer_width = info_ro.layer_width;
+            let layer_height = info_ro.layer_height;
             for tile_data in &self.display_engine.clipboard.bg_clip.tiles {
                 let true_x = cursor_level_x + tile_data.x_offset;
+                if true_x >= layer_width as i32 {
+                    continue;
+                }
                 let true_y = cursor_level_y + tile_data.y_offset;
+                if true_y >= layer_height as i32 {
+                    continue;
+                }
                 let where_to_place_in_layer = xy_to_index(true_x as u32, true_y as u32, &(layer_width as u32));
                 if tile_data.tile.to_short() != 0x0000 { // Dont paste blank tiles
                     self.display_engine.loaded_map.place_bg_tile_at_map_index(
@@ -1261,6 +1294,12 @@ impl eframe::App for Gui {
                     });
             });
         // Modals //
+        if self.resize_settings.window_open {
+            let _resize_modal = Modal::new(Id::new("resize_modal"))
+                .show(ctx, |ui| {
+                    show_resize_modal(ui, &mut self.display_engine, &mut self.resize_settings);
+                });
+        }
         if self.general_alert_popup.is_some() {
             let _alert_modal = Modal::new(Id::new("alert_modal"))
                 .show(ctx, |ui| {

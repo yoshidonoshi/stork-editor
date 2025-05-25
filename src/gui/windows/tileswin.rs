@@ -14,12 +14,10 @@ const TOP_MARGIN: f32 = 1.0;
 pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &Vec<TextureHandle>) {
     let painter: &egui::Painter = ui.painter();
     let top_left: Pos2 = ui.min_rect().min + Vec2::new(0.0, TOP_MARGIN);
-    let mut tile_index = 0;
-    for tile in preview_tile_cache {
+    for (tile_index,tile) in preview_tile_cache.iter().enumerate() {
         let tex_id = &tile.id();
         let tile_col_offset = (tile_index % TILES_ARRAY_WIDTH) as f32 * TILE_WIDTH;
         let tile_row_offset = (tile_index / TILES_ARRAY_WIDTH) as f32 * TILE_HEIGHT;
-        tile_index += 1;
         // Do the render
         let rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_col_offset, tile_row_offset), TILE_RECT);
         painter.image(*tex_id, rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);

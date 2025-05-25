@@ -1,3 +1,4 @@
+use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
@@ -119,6 +120,36 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     // ENTRANCES //
     ui.heading("Entrances");
     ui.horizontal(|ui| {
+        let add = ui.add(egui::Button::new("New"));
+        if add.clicked() {
+            let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
+            let new_uuid = selected_map_data.add_entrance();
+            de.course_settings.selected_entrance = Some(new_uuid);
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+            // This won't mess with anything
+            log_write("New Entrance created", LogLevel::LOG);
+        }
+        ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
+        // Don't let it delete the last one, should always be at least 1
+        let entrance_count = de.loaded_course.level_map_data[selected_map_index].map_entrances.len();
+        let del = ui.add_enabled(de.course_settings.selected_entrance.is_some() && entrance_count > 1,
+            egui::Button::new("Delete"));
+        if del.clicked() {
+            log_write("Deleting Entrance", LogLevel::DEBUG);
+            let deld = de.loaded_course.level_map_data[selected_map_index]
+                .delete_entrance(de.course_settings.selected_entrance.expect("selected entrance checked earlier"));
+            // Deselect regardless of result
+            de.course_settings.selected_entrance = Option::None;
+            if !deld {
+                return;
+            }
+            de.loaded_course.fix_exits();
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+        }
+    });
+    ui.horizontal(|ui| {
         let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
         let _table_entrances = TableBuilder::new(ui)
         .id_salt("entrances")
@@ -171,6 +202,37 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.separator();
     // EXITS //
     ui.heading("Exits");
+    ui.horizontal(|ui| {
+        let add = ui.add(egui::Button::new("New"));
+        if add.clicked() {
+            let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
+            let new_uuid = selected_map_data.add_exit();
+            // New exits have error ids
+            de.loaded_course.fix_exits();
+            de.course_settings.selected_exit = Some(new_uuid);
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+            log_write("New exit created", LogLevel::LOG);
+        }
+        ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
+        // Don't let it delete the last one, should always be at least 1
+        let exit_count = de.loaded_course.level_map_data[selected_map_index].map_exits.len();
+        let del = ui.add_enabled(de.course_settings.selected_exit.is_some() && exit_count > 1,
+            egui::Button::new("Delete"));
+        if del.clicked() {
+            log_write("Deleting Exit", LogLevel::DEBUG);
+            let deld = de.loaded_course.level_map_data[selected_map_index]
+                .delete_exit(de.course_settings.selected_exit.expect("selected exit checked earlier"));
+            // Deselect regardless of result
+            de.course_settings.selected_exit = Option::None;
+            if !deld {
+                return;
+            }
+            // Nothing links to an exit, no need to check anything
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+        }
+    });
     ui.horizontal(|ui| {
         let _table_exits = TableBuilder::new(ui)
         .id_salt("exits")

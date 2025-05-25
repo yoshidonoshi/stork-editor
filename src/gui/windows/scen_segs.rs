@@ -1,6 +1,9 @@
+use egui::Color32;
+
 use crate::{data::{scendata::{info::ScenInfoData, ScenSegment, ScenSegmentWrapper}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, layer: &CurrentLayer) {
+    let mut do_del: Option<usize> = Option::None;
     egui::ScrollArea::vertical()
     .auto_shrink(false)
     .min_scrolled_height(1.0)
@@ -11,8 +14,9 @@ pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, laye
             return;
         }
         let bg = bg.unwrap();
-        for seg in &mut bg.scen_segments {
-            match seg.header().as_str() {
+        for (i,seg) in &mut bg.scen_segments.iter_mut().enumerate() {
+            let header = seg.header().clone();
+            match header.as_str() {
                 "INFO" => {
                     ui.heading("INFO");
                     if let ScenSegmentWrapper::INFO(info) = seg {
@@ -113,9 +117,24 @@ pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, laye
                     ui.label(format!("Unhandled segment: '{}'",&seg.header()));
                 }
             }
+            ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
+            // Most SCEN segments are just too important to delete; all connected
+            let is_deletable = header.eq("SCRL"); // So far this is the only easy one to handle
+            let del_button = ui.add_enabled(is_deletable, egui::Button::new("Delete"));
+            if del_button.clicked() {
+                do_del = Some(i);
+            }
             ui.separator();
         }
     });
+    if let Some(to_del) = do_del {
+        let bg = de.loaded_map.get_background(*layer as u8).expect("BG missing canceled earlier");
+        let header = bg.scen_segments[to_del].header();
+        log_write(format!("Deleting segment '{}' at index {}",header,to_del), LogLevel::LOG);
+        bg.scen_segments.remove(to_del);
+        de.graphics_update_needed = true;
+        de.unsaved_changes = true;
+    }
 }
 
 fn show_info_segment(ui: &mut egui::Ui, info: &mut ScenInfoData) -> bool {
