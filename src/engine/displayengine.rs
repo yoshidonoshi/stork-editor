@@ -212,7 +212,8 @@ pub struct DisplayEngine {
     pub latest_square_pos_level_space: Pos2,
     pub course_settings: CourseSettings,
     pub trigger_settings: TriggerSettings,
-    pub bg_sel_data: BgSelectData
+    pub bg_sel_data: BgSelectData,
+    pub tile_hover_pos: Pos2
 }
 
 impl Default for DisplayEngine {
@@ -252,7 +253,8 @@ impl Default for DisplayEngine {
             latest_square_pos_level_space: Pos2::new(0.0, 0.0),
             course_settings: CourseSettings::default(),
             trigger_settings: TriggerSettings::default(),
-            bg_sel_data: BgSelectData::default()
+            bg_sel_data: BgSelectData::default(),
+            tile_hover_pos: Pos2::ZERO
         }
     }
 }

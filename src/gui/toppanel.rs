@@ -198,5 +198,8 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_exits, "Exits");
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_breakable_rock, "Soft Rock Back");
             });
+        let x = gui_state.display_engine.tile_hover_pos.x as u16;
+        let y = gui_state.display_engine.tile_hover_pos.y as u16;
+        ui.label(format!("Tile x/y: {:04X}/{:04X}",x,y));
     });
 }

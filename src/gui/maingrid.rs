@@ -909,6 +909,8 @@ fn draw_background(
             let local_pos = pointer_pos - true_rect.min;
             let mut tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
             let mut tile_y: u32 = (local_pos.y/TILE_HEIGHT_PX) as u32;
+            de.tile_hover_pos.x = tile_x as f32;
+            de.tile_hover_pos.y = tile_y as f32;
             // Ensure its position is even
             if tile_x % 2 != 0 {
                 tile_x -= 1;
