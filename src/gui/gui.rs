@@ -28,18 +28,6 @@ impl fmt::Display for StorkTheme {
     }
 }
 
-pub struct StorkSettings {
-    pub theme: StorkTheme
-}
-
-impl Default for StorkSettings {
-    fn default() -> Self {
-        Self {
-            theme: StorkTheme::AUTO
-        }
-    }
-}
-
 /// Controls selection on BG tiles
 pub struct BgSelectData {
     pub dragging: bool,
@@ -202,7 +190,6 @@ pub struct Gui {
     pub project_open: bool,
     pub export_directory: PathBuf, // Not yet fully mutable
     pub resize_settings: ResizeSettings,
-    pub stork_settings: StorkSettings,
     pub settings_open: bool,
     // Tile preview caching
     pub needs_bg_tile_refresh: bool,
@@ -233,7 +220,6 @@ impl Default for Gui {
             project_open: false,
             export_directory: PathBuf::new(), // Not yet fully mutable
             resize_settings: ResizeSettings::default(),
-            stork_settings: StorkSettings::default(),
             settings_open: false,
             display_engine: DisplayEngine::default(),
             needs_bg_tile_refresh: false,
@@ -1238,7 +1224,7 @@ impl eframe::App for Gui {
             .open(&mut self.settings_open)
             .resizable(false)
             .show(ctx,|ui| {
-                stork_settings_window(ui, &mut self.display_engine, &mut self.stork_settings);
+                stork_settings_window(ui, &mut self.display_engine);
             });
         egui::Window::new("BG Brush")
             .open(&mut self.brush_window_open)

@@ -489,19 +489,22 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
             ui, &rect, &level_sprite, de,8.0,
             de.selected_sprite_uuids.contains(&level_sprite.uuid)
         );
-        // We want the source rect to be clickable too
-        drawn_rects.push(rect.clone());
+        // No render for it, do square (or do it anyway)
+        if drawn_rects.is_empty() || de.display_settings.show_box_for_rendered {
+            // We want the source rect to be clickable too
+            drawn_rects.push(rect.clone());
 
-        if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
-            ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR_SELECTED);
-        } else {
-            ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR);
+            if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
+                ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR_SELECTED);
+            } else {
+                ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR);
+            }
+            ui.painter().text(
+                true_pos, Align2::LEFT_TOP,
+                format!("{:02X}",level_sprite.object_id),
+                FONT.clone(), Color32::WHITE
+            );
         }
-        ui.painter().text(
-            true_pos, Align2::LEFT_TOP,
-            format!("{:02X}",level_sprite.object_id),
-            FONT.clone(), Color32::WHITE
-        );
 
         // Interactivity
         if de.display_settings.current_layer == CurrentLayer::SPRITES {
