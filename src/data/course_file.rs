@@ -40,19 +40,21 @@ impl Compilable for CourseInfo {
 impl CourseInfo {
     pub fn new(abs_path: &PathBuf, label: &String) -> Self {
         // It is uncompressed
-        let file_bytes = fs::read(abs_path);
-        if file_bytes.is_err() {
-            utils::log_write(format!("Failed to read Course file: '{}'",file_bytes.unwrap_err()), utils::LogLevel::ERROR);
-            return CourseInfo::default();
-        }
-        let file_bytes: Vec<u8> = file_bytes.unwrap();
+        let file_bytes = match fs::read(abs_path) {
+            Err(error) => {
+                utils::log_write(format!("Failed to read Course file: '{}'", error), utils::LogLevel::ERROR);
+                return CourseInfo::default();
+            }
+            Ok(b) => b,
+        };
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&file_bytes);
-        let file_header = rdr.read_u32::<LittleEndian>();
-        if file_header.is_err() {
-            utils::log_write(format!("Failed to read file header: '{}'",file_header.unwrap_err()), utils::LogLevel::ERROR);
-            return CourseInfo::default();
-        }
-        let file_header = file_header.unwrap();
+        let file_header = match rdr.read_u32::<LittleEndian>() {
+            Err(error) => {
+                utils::log_write(format!("Failed to read file header: '{}'", error), utils::LogLevel::ERROR);
+                return CourseInfo::default();
+            }
+            Ok(h) => h,
+        };
         if header_to_string(&file_header) != "CRSB" {
             utils::log_write("Course data header was not CRSB", utils::LogLevel::WARN);
         }
@@ -187,18 +189,16 @@ impl CourseInfo {
                 exit.target_map_raw = map_index;
                 // Get Entrance Index
                 let target_map = &maps_ro[map_index as usize];
-                let ent_index = target_map.get_entrance_index(&exit.target_map_entrance);
-                if ent_index.is_none() {
-                    log_write(format!("No index found for entrance with uuid {}, setting to first",exit.target_map_entrance.to_string()), LogLevel::ERROR);
-                    exit.target_map_entrance_raw = 0;
-                } else {
-                    let ent_index = ent_index.unwrap();
+                if let Some(ent_index) = target_map.get_entrance_index(&exit.target_map_entrance) {
                     if ent_index as usize >= target_map.map_entrances.len() {
                         log_write("ent_index out of bounds, setting to first", LogLevel::ERROR);
                         exit.target_map_entrance_raw = 0;
                     } else {
                         exit.target_map_entrance_raw = ent_index;
                     }
+                } else {
+                    log_write(format!("No index found for entrance with uuid {}, setting to first",exit.target_map_entrance.to_string()), LogLevel::ERROR);
+                    exit.target_map_entrance_raw = 0;
                 }
             }
         }
@@ -211,8 +211,11 @@ impl CourseInfo {
         for map in &mut self.level_map_data {
             for exit in &mut map.map_exits {
                 // Fix target maps
-                let try_exit_map_pos = map_data_ro.iter().position(|x| x.uuid == exit.target_map);
-                if try_exit_map_pos.is_none() {
+                if let Some(try_exit_map_pos) = map_data_ro.iter().position(|x| x.uuid == exit.target_map) {
+                    // Set the raw to correct
+                    exit.target_map_raw = try_exit_map_pos as u8;
+                    // Entrance MIGHT still be good
+                } else {
                     // The map must no longer exist
                     exit.target_map_raw = 0;
                     // The only guaranteed entrance on index 0 map
@@ -220,21 +223,17 @@ impl CourseInfo {
                     // No need to fix entrance, we already set it to , go to next
                     log_write(format!("Target map was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::DEBUG);
                     continue;
-                } else {
-                    // Set the raw to correct
-                    exit.target_map_raw = try_exit_map_pos.unwrap() as u8;
-                    // Entrance MIGHT still be good
                 }
+
                 // Fix target entrances
                 let target_map_data_ro = &map_data_ro[exit.target_map_raw as usize];
-                let try_entrance_pos = target_map_data_ro.map_entrances.iter().position(|y| y.uuid == exit.target_map_entrance);
-                if try_entrance_pos.is_none() {
+                if let Some(try_entrance_pos) = target_map_data_ro.map_entrances.iter().position(|y| y.uuid == exit.target_map_entrance) {
+                    // Update raw to correct
+                    exit.target_map_entrance_raw = try_entrance_pos as u8;
+                } else {
                     // Entrance no longer exists, set it to guarantee
                     exit.target_map_entrance_raw = 0;
                     log_write(format!("Target entrance was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::DEBUG);
-                } else {
-                    // Update raw to correct
-                    exit.target_map_entrance_raw = try_entrance_pos.unwrap() as u8;
                 }
             }
         }
@@ -343,26 +342,24 @@ impl CourseMapInfo {
         ret_uuid
     }
     pub fn delete_exit(&mut self, exit_uuid: Uuid) -> bool {
-        let pos = self.map_exits.iter().position(|x| x.uuid == exit_uuid);
-        if pos.is_none() {
+        if let Some(pos) = self.map_exits.iter().position(|x| x.uuid == exit_uuid) {
+            self.map_exits.remove(pos);
+            log_write("Exit data deleted", LogLevel::DEBUG);
+            true
+        } else {
             log_write(format!("Failed to delete MapExit with UUID {}",exit_uuid), LogLevel::ERROR);
-            return false;
+            false
         }
-        let pos = pos.unwrap();
-        self.map_exits.remove(pos);
-        log_write("Exit data deleted", LogLevel::DEBUG);
-        true
     }
     pub fn delete_entrance(&mut self, entrance_uuid: Uuid) -> bool {
-        let pos = self.map_entrances.iter().position(|x| x.uuid == entrance_uuid);
-        if pos.is_none() {
+        if let Some(pos) = self.map_entrances.iter().position(|x| x.uuid == entrance_uuid) {
+            self.map_entrances.remove(pos);
+            log_write("Entrance data deleted", LogLevel::DEBUG);
+            true
+        } else {
             log_write(format!("Failed to delete MapEntrance with UUID {}",entrance_uuid), LogLevel::ERROR);
-            return false;
+            false
         }
-        let pos = pos.unwrap();
-        self.map_entrances.remove(pos);
-        log_write("Entrance data deleted", LogLevel::DEBUG);
-        true
     }
 }
 

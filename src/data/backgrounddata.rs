@@ -56,14 +56,12 @@ impl BackgroundData {
                     // Is there IMBZ data to retrieve?
                     if info.imbz_filename_noext.is_some() {
                         // There is IMBZ data to retrieve. Fetch!
-                        let pixels_decomped = info.get_imbz_pixels(project_directory);
-                        if pixels_decomped.is_none() {
-                            // It already checked if it exists. If not, MAJOR error
-                            log_write(format!("Failed to get IMBZ from INFO on BG layer {}",info.which_bg), LogLevel::ERROR);
+                        if let Some(pixels_decomped) = info.get_imbz_pixels(project_directory) {
+                            ret.pixel_tiles_preview = Some(pixels_decomped);
+                        } else {
+                            log_write(format!("Failed to get IMBZ from INFO on BG layer {}", info.which_bg), LogLevel::ERROR);
                             continue;
                         }
-                        let pixels_decomped = pixels_decomped.unwrap();
-                        ret.pixel_tiles_preview = Some(pixels_decomped);
                     }
                     ret.info_ro = info;
                 }

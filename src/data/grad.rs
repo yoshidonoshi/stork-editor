@@ -89,12 +89,13 @@ impl GradientData {
         }
         let mut i: usize = 0;
         while i < ret.color_count as usize {
-            let cur_short_result = rdr.read_u16::<LittleEndian>();
-            if cur_short_result.is_err() {
-                log_write(format!("Error reading GCOL shorts: '{}'",cur_short_result.err().unwrap()), LogLevel::ERROR);
-                return ret;
-            }
-            ret.color_shorts.push(cur_short_result.unwrap());
+            match rdr.read_u16::<LittleEndian>() {
+                Err(error) => {
+                    log_write(format!("Error reading GCOL shorts: '{error}'"), LogLevel::ERROR);
+                    return ret;
+                }
+                Ok(cur_short_result) => ret.color_shorts.push(cur_short_result),
+            };
             i += 1;
         }
         let final_position: usize = rdr.position() as usize;

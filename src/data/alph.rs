@@ -24,12 +24,14 @@ impl AlphaData {
     pub fn new(byte_data: &Vec<u8>) -> Self {
         let mut ret = AlphaData::default();
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
-        let cnt_res = rdr.read_u16::<LittleEndian>();
-        if cnt_res.is_err() {
-            log_write(format!("Failed to get BLDCNT: '{}'",cnt_res.unwrap_err()), LogLevel::ERROR);
-            return ret;
-        }
-        ret.bldcnt = cnt_res.unwrap();
+        let cnt_res = match rdr.read_u16::<LittleEndian>() {
+            Err(error) => {
+                log_write(format!("Failed to get BLDCNT: '{error}'"), LogLevel::ERROR);
+                return ret;
+            }
+            Ok(cnt_res) => cnt_res,
+        };
+        ret.bldcnt = cnt_res;
         ret.bldalpha = rdr.read_u16::<LittleEndian>().expect("Should read ALPH second u16");
         ret
     }

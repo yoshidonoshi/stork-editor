@@ -21,12 +21,14 @@ impl SoftRockBackdrop {
         let mut ret = SoftRockBackdrop::default();
         let byte_data = &lamezip77_lz10_decomp(byte_data);
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
-        let first_res = rdr.read_u16::<LittleEndian>();
-        if first_res.is_err() {
-            log_write(format!("Failed to get first result in SoftRockBackdrop: '{}'",first_res.unwrap_err()), LogLevel::ERROR);
-            return ret;
-        }
-        ret.x_offset = first_res.unwrap();
+        let first_res = match rdr.read_u16::<LittleEndian>() {
+            Err(error) => {
+                log_write(format!("Failed to get first result in SoftRockBackdrop: '{}'", error), LogLevel::ERROR);
+                return ret;
+            }
+            Ok(fr) => fr,
+        };
+        ret.x_offset = first_res;
         ret.y_offset = rdr.read_u16::<LittleEndian>().expect("BLKZ yOffset");
         ret.width = rdr.read_u16::<LittleEndian>().expect("BLKZ width");
         ret.height = rdr.read_u16::<LittleEndian>().expect("BLKZ height");
