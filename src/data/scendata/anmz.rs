@@ -1,8 +1,8 @@
 use std::io::Cursor;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::ReadBytesExt;
 
-use crate::engine::compression::{lamezip77_lz10_recomp, segment_wrap};
+use crate::{engine::compression::{lamezip77_lz10_recomp, segment_wrap}, utils};
 
 use super::{info::ScenInfoData, ScenSegment};
 
@@ -32,21 +32,21 @@ impl Default for AnmzDataSegment {
 }
 
 impl AnmzDataSegment {
-    pub fn from_decomp(an_decomp: &Vec<u8>) -> AnmzDataSegment {
+    pub fn from_decomp(an_decomp: &Vec<u8>) -> Option<AnmzDataSegment> {
         let decomp_len: usize = an_decomp.len();
         //println!("Creating ANMZ from decomp with size of 0x'{:X}' bytes",decomp_len);
         let mut anmz = AnmzDataSegment::default();
         anmz._raw_decomp = an_decomp.clone();
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(an_decomp);
-        anmz.frame_count = rdr.read_u8().unwrap();
-        anmz.unk1 = rdr.read_u8().unwrap();
-        anmz.unk2 = rdr.read_u16::<LittleEndian>().unwrap();
-        anmz.vram_offset = rdr.read_u16::<LittleEndian>().unwrap();
+        anmz.frame_count = utils::read_u8(&mut rdr)?;
+        anmz.unk1 = utils::read_u8(&mut rdr)?;
+        anmz.unk2 = utils::read_u16(&mut rdr)?;
+        anmz.vram_offset = utils::read_u16(&mut rdr)?;
         let _ = rdr.read_u8(); // Padding most likely
         let _ = rdr.read_u8();
         let mut frame_index: usize = 0;
         while frame_index < anmz.frame_count as usize {
-            anmz.frame_holds.push(rdr.read_u8().unwrap());
+            anmz.frame_holds.push(utils::read_u8(&mut rdr)?);
             frame_index += 1;
         }
         // Pad to 4 bytes
@@ -56,14 +56,10 @@ impl AnmzDataSegment {
 
         // Ends once is it EQUAL to length
         while (rdr.position() as usize) < decomp_len {
-            let val = rdr.read_u8();
-            if val.is_err() {
-                println!("Error encountered when reading u8s for ANMZ");
-                return anmz;
-            }
-            anmz.pixeltiles.push(val.unwrap());
+            let val = utils::read_u8(&mut rdr)?;
+            anmz.pixeltiles.push(val);
         }
-        anmz
+        Some(anmz)
     }
 }
 

@@ -139,7 +139,13 @@ impl BackgroundData {
                     let _read_res = rdr.read_exact(&mut buffer);
                     let anmz_decomped = lamezip77_lz10_decomp(&buffer);
                     // The real one to use for previews
-                    let anmz_data = AnmzDataSegment::from_decomp(&anmz_decomped);
+                    let anmz_data = match AnmzDataSegment::from_decomp(&anmz_decomped) {
+                        Some(a) => a,
+                        None => {
+                            log_write("Error reading ANMZ data", LogLevel::ERROR);
+                            continue;// Already did read, so it should be good to continue
+                        },
+                    };
                     ret.scen_segments.push(ScenSegmentWrapper::ANMZ(anmz_data.clone()));
                 }
                 "SCRL" => {
