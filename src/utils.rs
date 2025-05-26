@@ -370,6 +370,16 @@ pub fn distance(p1: Pos2, p2: Pos2) -> f32 {
     (p2.x - p1.x).hypot(p2.y - p1.y)
 }
 
+pub fn read_u16(rdr: &mut Cursor<&Vec<u8>>) -> Option<u16> {
+    match rdr.read_u16::<LittleEndian>() {
+        Ok(i) => Some(i),
+        Err(e) => {
+            log_write(format!("Failed to read u16: '{}'",e), LogLevel::ERROR);
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests_utils {
     use super::*;

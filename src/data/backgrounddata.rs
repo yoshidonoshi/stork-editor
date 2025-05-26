@@ -46,7 +46,12 @@ impl BackgroundData {
 
             match seg_header_str.as_str() {
                 "INFO" => {
-                    let info = ScenInfoData::new(&mut rdr, seg_internal_length);
+                    let info = match ScenInfoData::new(&mut rdr, seg_internal_length) {
+                        Some(i) => i,
+                        None => {
+                            return Err("Failed to create INFO".to_owned());
+                        }
+                    };
                     ret.scen_segments.push(ScenSegmentWrapper::INFO(info.clone()));
                     // Is there IMBZ data to retrieve?
                     if info.imbz_filename_noext.is_some() {

@@ -45,13 +45,13 @@ impl Default for ScenInfoData {
     }
 }
 impl ScenInfoData {
-    pub fn new(rdr: &mut Cursor<&Vec<u8>>, internal_length: u32) -> ScenInfoData {
+    pub fn new(rdr: &mut Cursor<&Vec<u8>>, internal_length: u32) -> Option<ScenInfoData> {
         // 24, 32, 36 are the only three sizes found with pytools
         if internal_length != 0x18 && internal_length != 0x20 && internal_length != 0x24 {
             log_write(format!("Unusual INFO size: 0x{:X}",internal_length), LogLevel::WARN);
         }
         let initial_position: u64 = rdr.position();
-        let layer_width: u16 = rdr.read_u16::<LittleEndian>().unwrap();
+        let layer_width: u16 = utils::read_u16(rdr)?;
         let layer_height: u16 = rdr.read_u16::<LittleEndian>().unwrap();
         let height_offset: u32 = rdr.read_u32::<LittleEndian>().unwrap();
         let x_scroll: u32 = rdr.read_u32::<LittleEndian>().unwrap();
@@ -74,7 +74,7 @@ impl ScenInfoData {
                 read_length = rdr.position() - initial_position;
             }
         }
-        ScenInfoData {
+        Some(ScenInfoData {
             layer_width,
             layer_height,
             height_offset,
@@ -86,7 +86,7 @@ impl ScenInfoData {
             screen_base_block,
             color_mode,
             imbz_filename_noext
-        }
+        })
     }
 
     pub fn get_imbz_pixels(&self, proj_dir: &PathBuf) -> Option<Vec<u8>> {
