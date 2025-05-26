@@ -478,7 +478,6 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
             // Cancel the update drawing
             return;
         }
-        let painter: &Painter = ui.painter();
         let placement_vec: Vec2 = Vec2::new(
             (level_sprite.x_position as f32) * TILE_WIDTH_PX,
             (level_sprite.y_position as f32) * TILE_HEIGHT_PX
@@ -486,107 +485,109 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
         let true_pos: Pos2 = top_left + placement_vec;
         let rect = Rect::from_min_size(true_pos, SPRITE_RECT);
 
-        let _did_draw = draw_sprite(
-            painter,ui.ctx(), &rect, &level_sprite, de,8.0,
+        let mut drawn_rects = draw_sprite(
+            ui, &rect, &level_sprite, de,8.0,
             de.selected_sprite_uuids.contains(&level_sprite.uuid)
         );
+        // No render for it, do square (or do it anyway)
+        if drawn_rects.is_empty() || de.display_settings.show_box_for_rendered {
+            // We want the source rect to be clickable too
+            drawn_rects.push(rect.clone());
 
-        if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
-            painter.rect_filled(rect, 0.0, SPRITE_BG_COLOR_SELECTED);
-        } else {
-            painter.rect_filled(rect, 0.0, SPRITE_BG_COLOR);
+            if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
+                ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR_SELECTED);
+            } else {
+                ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR);
+            }
+            ui.painter().text(
+                true_pos, Align2::LEFT_TOP,
+                format!("{:02X}",level_sprite.object_id),
+                FONT.clone(), Color32::WHITE
+            );
         }
-        painter.text(
-            true_pos, Align2::LEFT_TOP,
-            format!("{:02X}",level_sprite.object_id),
-            FONT.clone(), Color32::WHITE
-        );
 
         // Interactivity
         if de.display_settings.current_layer == CurrentLayer::SPRITES {
-            let click_response = ui.interact(rect, egui::Id::new(format!("sprite_click_{}",level_sprite.uuid)), egui::Sense::click());
-            if click_response.clicked() {
-                // Debug //
-                println!("=== Mouse clicked on Sprite ===");
-                println!("{}",level_sprite);
-                let sprite_meta = de.sprite_metadata_copy.get(&level_sprite.object_id);
-                if sprite_meta.is_none() {
-                    println!("No Sprite metadata found");
-                } else {
-                    println!("{}",sprite_meta.unwrap());
-                }
-                println!("=== End Click Debug ===");
-                // Logic //
-                if ui.ctx().input(|i| i.modifiers.shift) {
-                    de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
-                } else {
-                    de.selected_sprite_uuids.clear();
-                    de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
-                }
-                if de.selected_sprite_uuids.len() == 1 {
-                    de.latest_sprite_settings = settings_to_string(&level_sprite.settings);
-                }
-            }
-            if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
-                let drag_id = egui::Id::new(format!("sprite_drag_{}",level_sprite.uuid));
-                let drag_response = ui.interact(rect, drag_id, egui::Sense::click_and_drag());
-                let hover_id = egui::Id::new(format!("sprite_hover_{}",level_sprite.uuid));
-                let hover_response = ui.interact(rect, hover_id, egui::Sense::hover());
-                if hover_response.hovered() {
-                    ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Grab);
-                }
-                if drag_response.drag_started() {
-                    //println!("Started dragging");
-                    de.sprite_drag_status.dragging_uuid = level_sprite.uuid; // Implements copy
-                    ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
-                    let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get pointer interaction position");
-                    de.sprite_drag_status.start_x = cur_pos.x;
-                    de.sprite_drag_status.start_y = cur_pos.y;
-                }
-                if drag_response.dragged() {
-                    //println!("Drag moving");
-                    ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
-                    let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get dragged cursor");
-                    let preview_rect = Rect::from_min_size(cur_pos, SPRITE_RECT);
-                    painter.rect_filled(preview_rect, 0.0, SPRITE_BG_COLOR_SELECTED);
-                }
-                if drag_response.drag_stopped() {
-                    //println!("Drag stopped");
-                    de.sprite_drag_status.dragging_uuid = Uuid::nil();
-                    let latest_pos: Pos2 = ui.ctx().pointer_interact_pos().expect("CTX should hold pointer interaction position");
-                    let drag_stop_pos: Vec2 = latest_pos.to_vec2() - top_left.to_vec2();
-                    // 0.5 makes it round to nearest when slicing off the precision
-                    let true_new_x: u16 = ((drag_stop_pos.x + 0.5) / TILE_WIDTH_PX) as u16;
-                    let true_new_y: u16 = ((drag_stop_pos.y + 0.5) / TILE_HEIGHT_PX) as u16;
-                    de.sprite_drag_status.start_x = 0.0;
-                    de.sprite_drag_status.start_y = 0.0;
-                    let og_sprite_tile_x = level_sprite.x_position as i32;
-                    let og_sprite_tile_y = level_sprite.y_position as i32;
-                    let x_tile_movement = (true_new_x as i32) - og_sprite_tile_x;
-                    let y_tile_movement = (true_new_y as i32) - og_sprite_tile_y;
-                    for selspr in &de.selected_sprite_uuids {
-                        let og_sprite_data = de.get_loaded_sprite_by_uuid(selspr);
-                        if og_sprite_data.is_none() {
-                            log_write(format!("Sprite Uuid '{}' not found when moving",selspr), LogLevel::ERROR);
-                            continue;
-                        }
-                        let og_sprite_data = og_sprite_data.unwrap();
-                        let mut move_to_x = og_sprite_data.x_position as i32 + x_tile_movement;
-                        if move_to_x < 0 {
-                            move_to_x = 0;
-                        }
-                        let mut move_to_y = og_sprite_data.y_position as i32 + y_tile_movement;
-                        if move_to_y < 0 {
-                            move_to_y = 0;
-                        }
-                        de.loaded_map.move_sprite(*selspr, move_to_x as u16, move_to_y as u16);
+            let is_shift = ui.ctx().input(|i| i.modifiers.shift);
+            for (i,r) in drawn_rects.iter().enumerate() {
+                let click_response = ui.interact(*r, egui::Id::new(format!("sprite_click_{}_{}",level_sprite.uuid,i)), egui::Sense::click());
+                if click_response.clicked() {
+                    if is_shift {
+                        de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
+                    } else {
+                        de.selected_sprite_uuids.clear();
+                        de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
                     }
-                    de.unsaved_changes = true;
-                    update_map = true;
+                    // Remove duplicates
+                    de.selected_sprite_uuids.dedup();
+                    // If length is one, handle gui
+                    if de.selected_sprite_uuids.len() == 1 {
+                        de.latest_sprite_settings = settings_to_string(&level_sprite.settings);
+                    }
+                }
+                // If selected
+                if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
+                    // Hover is a grab icon
+                    let interaction_id = egui::Id::new(format!("sprite_hover_{}_{}",level_sprite.uuid,i));
+                    let interaction = ui.interact(*r, interaction_id, egui::Sense::all());
+                    if interaction.hovered() {
+                        ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Grab);
+                    }
+                    // Drag logic
+                    if interaction.drag_started() {
+                        log_write("Started dragging sprite", LogLevel::DEBUG);
+                        de.sprite_drag_status.dragging_uuid = level_sprite.uuid; // Implements copy
+                        ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
+                        let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get pointer interaction position");
+                        de.sprite_drag_status.start_x = cur_pos.x;
+                        de.sprite_drag_status.start_y = cur_pos.y;
+                    }
+                    if interaction.dragged() {
+                        //println!("Drag moving");
+                        ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
+                        let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get dragged cursor");
+                        let preview_rect = Rect::from_min_size(cur_pos, SPRITE_RECT);
+                        ui.painter().rect_filled(preview_rect, 0.0, SPRITE_BG_COLOR_SELECTED);
+                    }
+                    if interaction.drag_stopped() {
+                        //println!("Drag stopped");
+                        de.sprite_drag_status.dragging_uuid = Uuid::nil();
+                        let latest_pos: Pos2 = ui.ctx().pointer_interact_pos().expect("CTX should hold pointer interaction position");
+                        let drag_stop_pos: Vec2 = latest_pos.to_vec2() - top_left.to_vec2();
+                        // 0.5 makes it round to nearest when slicing off the precision
+                        let true_new_x: u16 = ((drag_stop_pos.x + 0.5) / TILE_WIDTH_PX) as u16;
+                        let true_new_y: u16 = ((drag_stop_pos.y + 0.5) / TILE_HEIGHT_PX) as u16;
+                        de.sprite_drag_status.start_x = 0.0;
+                        de.sprite_drag_status.start_y = 0.0;
+                        let og_sprite_tile_x = level_sprite.x_position as i32;
+                        let og_sprite_tile_y = level_sprite.y_position as i32;
+                        let x_tile_movement = (true_new_x as i32) - og_sprite_tile_x;
+                        let y_tile_movement = (true_new_y as i32) - og_sprite_tile_y;
+                        for selspr in &de.selected_sprite_uuids {
+                            let og_sprite_data = de.get_loaded_sprite_by_uuid(selspr);
+                            if og_sprite_data.is_none() {
+                                log_write(format!("Sprite Uuid '{}' not found when moving",selspr), LogLevel::ERROR);
+                                continue;
+                            }
+                            let og_sprite_data = og_sprite_data.unwrap();
+                            let mut move_to_x = og_sprite_data.x_position as i32 + x_tile_movement;
+                            if move_to_x < 0 {
+                                move_to_x = 0;
+                            }
+                            let mut move_to_y = og_sprite_data.y_position as i32 + y_tile_movement;
+                            if move_to_y < 0 {
+                                move_to_y = 0;
+                            }
+                            de.loaded_map.move_sprite(*selspr, move_to_x as u16, move_to_y as u16);
+                        }
+                        de.unsaved_changes = true;
+                        update_map = true;
+                    }
                 }
             }
         }
     }
+    // Fallback/background/placement (not existing)
     if de.display_settings.current_layer == CurrentLayer::SPRITES {
         if let Some(cfr) = &click_fallback_response {
             if cfr.clicked() { // Clicked on empty background

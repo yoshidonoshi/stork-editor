@@ -34,6 +34,10 @@ fn main() -> eframe::Result {
             egui_extras::install_image_loaders(&cc.egui_ctx);
             // Pre-ROM-load setup
             let mut gui = Box::<Gui>::default();
+            if cc.egui_ctx.system_theme().is_none() {
+                log_write("No default system theme found, defaulting to Dark", LogLevel::WARN);
+                cc.egui_ctx.set_theme(egui::Theme::Dark);
+            }
             let sprite_load_result = gui.load_sprite_csv();
             if sprite_load_result.is_err() {
                 // The software simply won't work without this. It shouldn't be possible

@@ -10,3 +10,4 @@ pub mod paths_win;
 pub mod map_segs;
 pub mod scen_segs;
 pub mod resize;
+pub mod settings;

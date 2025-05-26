@@ -6,7 +6,7 @@ use egui::{Pos2, Rect};
 use serde_yml::Value;
 use uuid::Uuid;
 
-use crate::{data::{area::TriggerSettings, backgrounddata::BackgroundData, course_file::{CourseInfo, MapExit}, grad::GradientData, mapfile::MapData, path::{PathDatabase, PathSettings}, rarc::RenderArchive, sprites::{LevelSprite, SpriteMetadata}, types::{CurrentLayer, MapTileRecordData, Palette, TileCache}, TopLevelSegment}, gui::{gui::BgSelectData, windows::{brushes::{Brush, BrushSettings}, course_win::CourseSettings}}, utils::{self, log_write, nitrofs_abs}};
+use crate::{data::{area::TriggerSettings, backgrounddata::BackgroundData, course_file::{CourseInfo, MapExit}, grad::GradientData, mapfile::MapData, path::{PathDatabase, PathSettings}, rarc::RenderArchive, sprites::{LevelSprite, SpriteMetadata}, types::{CurrentLayer, MapTileRecordData, Palette, TileCache}, TopLevelSegment}, gui::{gui::{BgSelectData, StorkTheme}, windows::{brushes::{Brush, BrushSettings}, course_win::CourseSettings}}, utils::{self, log_write, nitrofs_abs}};
 
 use crate::utils::LogLevel;
 
@@ -22,7 +22,9 @@ pub struct DisplaySettings {
     pub show_entrances: bool,
     pub show_exits: bool,
     pub show_breakable_rock: bool,
-    pub show_triggers: bool
+    pub show_triggers: bool,
+    pub stork_theme: StorkTheme,
+    pub show_box_for_rendered: bool
 }
 
 impl Default for DisplaySettings {
@@ -40,7 +42,9 @@ impl Default for DisplaySettings {
             show_exits: true,
             // Since it's just a copy overlay
             show_breakable_rock: false,
-            show_triggers: true
+            show_triggers: true,
+            stork_theme: StorkTheme::AUTO,
+            show_box_for_rendered: true
         }
     }
 }

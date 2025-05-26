@@ -49,6 +49,11 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 gui_state.do_export();
             }
             ui.separator();
+            let button_project_settings = ui.add_enabled(gui_state.project_open, Button::new("Settings"));
+            if button_project_settings.clicked() {
+                ui.close_menu();
+                gui_state.settings_open = true;
+            }
             let button_close_project = ui.add_enabled(gui_state.project_open, Button::new("Close Project"));
             if button_close_project.clicked() {
                 ui.close_menu();

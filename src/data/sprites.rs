@@ -1,7 +1,7 @@
 use std::{fmt, io::{Cursor, Read, Write}};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use egui::{emath, pos2, Color32, ColorImage, Context, Painter, Pos2, Rect, TextureHandle};
+use egui::{emath, pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
 use uuid::Uuid;
 
 use crate::{engine::{compression::segment_wrap, displayengine::DisplayEngine}, utils::{color_image_from_pal, log_write, pixel_byte_array_to_nibbles, LogLevel}};
@@ -184,37 +184,33 @@ fn get_palette_from_segment(
 }
 
 pub fn draw_sprite(
-    painter: &Painter, ctx: &Context,
+    ui: &mut egui::Ui,
     rect: &Rect, sprite: &LevelSprite,
     de: &mut DisplayEngine,
     tile_dim: f32, selected: bool
-) -> bool {
+) -> Vec<Rect> {
     match sprite.object_id {
         0x00 => { // Yellow Coin
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
-            gra.render_sprite_frame(painter,ctx,0,&pal,&rect.left_top(),tile_dim,selected);
-            true
+            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
         },
         0x28 => { // Flower Collectible
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x16);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x9b, 0, 16);
-            gra.render_sprite_frame(painter,ctx,0,&pal,&rect.left_top(),tile_dim,selected);
-            true
+            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
         }
         0x3b => { // Red Coin
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
-            gra.render_sprite_frame(painter,ctx,6,&pal,&rect.left_top(),tile_dim,selected);
-            true
+            return gra.render_sprite_frame(ui,6,&pal,&rect.left_top(),tile_dim,selected);
         }
         0x9F => { // Hint Block
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x5d);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0xa9, 0, 16);
-            gra.render_sprite_frame(painter,ctx,0,&pal,&rect.left_top(),tile_dim,selected);
-            true
+            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
         }
-        _ => true
+        _ => vec![]
     }
 }
 
@@ -278,10 +274,10 @@ impl SpriteGraphicsSegment {
     }
 
     pub fn render_sprite_frame(&self,
-        painter: &Painter, ctx: &Context, frame_index: usize,
+        ui: &mut egui::Ui, frame_index: usize,
         pal: &Palette, top_left: &Pos2, tile_dim: f32,
         selected: bool
-    ) {
+    ) -> Vec<Rect> {
         let sprite_frame = &self.sprite_frames[frame_index];
         let uvs: Rect = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
 
@@ -290,7 +286,7 @@ impl SpriteGraphicsSegment {
         let tile_offset_res = rdr.read_u16::<LittleEndian>();
         if tile_offset_res.is_err() {
             log_write(format!("Failed to read tile_offset in render_sprite_frame: '{}'",tile_offset_res.unwrap_err()), LogLevel::ERROR);
-            return;
+            return Vec::new();
         }
         let tile_offset: u16 = tile_offset_res.unwrap();
         let x_offset: i16 = rdr.read_i16::<LittleEndian>().expect("render_sprite_frame: x_offset i16");
@@ -301,13 +297,14 @@ impl SpriteGraphicsSegment {
         rdr.set_position(pixels_start_position as u64);
         let dims = get_sprite_dims_from_flag_value(bframe.flags & 0b11111);
         let tiles_count: u32 = (dims.x * dims.y) as u32;
+        let mut rect_vec: Vec<Rect> = Vec::new();
         // We must get 32 bytes to get 64 tiles
         for n in 0..tiles_count { // In this example, 4 tiles are drawn because 2*2
             let mut buffer: Vec<u8> = vec![0;32];
             let _ = rdr.read_exact(&mut buffer);
             let nibbles_64: Vec<u8> = pixel_byte_array_to_nibbles(&buffer);
             let color_image: ColorImage = color_image_from_pal(pal, &nibbles_64);
-            let tex: TextureHandle = ctx.load_texture("sprite_tex", color_image, egui::TextureOptions::NEAREST);
+            let tex: TextureHandle = ui.ctx().load_texture("sprite_tex", color_image, egui::TextureOptions::NEAREST);
             // Generate Rect from top_left
             let mut position: Pos2 = top_left.clone();
             // First do the per-position ones
@@ -324,8 +321,10 @@ impl SpriteGraphicsSegment {
             if selected {
                 tint = Color32::GRAY;
             }
-            painter.image(tex.id(), rect, uvs, tint);
+            ui.painter().image(tex.id(), rect, uvs, tint);
+            rect_vec.push(rect);
         }
+        rect_vec
     }
 
 }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, fs::{self, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
+use std::{collections::HashMap, error::Error, fmt, fs::{self, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
 
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
@@ -7,9 +7,26 @@ use uuid::Uuid;
 
 use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
-use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
+use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(PartialEq,Eq)]
+pub enum StorkTheme {
+    DARK,
+    LIGHT,
+    AUTO
+}
+impl fmt::Display for StorkTheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let text = match self {
+            StorkTheme::DARK => "Dark",
+            StorkTheme::LIGHT => "Light",
+            StorkTheme::AUTO => "System",
+        };
+        write!(f,"{}",text)
+    }
+}
 
 /// Controls selection on BG tiles
 pub struct BgSelectData {
@@ -173,6 +190,7 @@ pub struct Gui {
     pub project_open: bool,
     pub export_directory: PathBuf, // Not yet fully mutable
     pub resize_settings: ResizeSettings,
+    pub settings_open: bool,
     // Tile preview caching
     pub needs_bg_tile_refresh: bool,
     pub tile_preview_pal: usize,
@@ -202,6 +220,7 @@ impl Default for Gui {
             project_open: false,
             export_directory: PathBuf::new(), // Not yet fully mutable
             resize_settings: ResizeSettings::default(),
+            settings_open: false,
             display_engine: DisplayEngine::default(),
             needs_bg_tile_refresh: false,
             tile_preview_pal: 0,
@@ -1200,6 +1219,12 @@ impl eframe::App for Gui {
             .resizable(false)
             .show(ctx,|ui| {
                 collision_tiles_window(ui, &mut self.display_engine);
+            });
+        egui::Window::new("Stork Settings")
+            .open(&mut self.settings_open)
+            .resizable(false)
+            .show(ctx,|ui| {
+                stork_settings_window(ui, &mut self.display_engine);
             });
         egui::Window::new("BG Brush")
             .open(&mut self.brush_window_open)
