@@ -185,11 +185,23 @@ impl MapData {
                     ret.segments.push(TopLevelSegmentWrapper::PATH(path));
                 }
                 "ALPH" => {
-                    let alph = AlphaData::new(&segment.internal_data);
+                    let alph = match AlphaData::new(&segment.internal_data) {
+                        Some(a) => a,
+                        None => {
+                            log_write("Failed to load ALPH", LogLevel::ERROR);
+                            continue;
+                        },
+                    };
                     ret.segments.push(TopLevelSegmentWrapper::ALPH(alph));
                 }
                 "BLKZ" => {
-                    let blkz = SoftRockBackdrop::new(&segment.internal_data);
+                    let blkz = match SoftRockBackdrop::new(&segment.internal_data) {
+                        Some(b) => b,
+                        None => {
+                            log_write("failed to load BLKZ", LogLevel::ERROR);
+                            continue;
+                        },
+                    };
                     ret.segments.push(TopLevelSegmentWrapper::BLKZ(blkz));
                 }
                 "BRAK" => {

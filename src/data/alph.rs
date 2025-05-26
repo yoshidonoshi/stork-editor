@@ -5,7 +5,7 @@ use std::io::Cursor;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{engine::compression::segment_wrap, utils::{log_write, LogLevel}};
+use crate::{engine::compression::segment_wrap, utils::{self, log_write, LogLevel}};
 
 use super::TopLevelSegment;
 
@@ -21,19 +21,19 @@ impl Default for AlphaData {
 }
 
 impl AlphaData {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
-        let mut ret = AlphaData::default();
+    pub fn new(byte_data: &Vec<u8>) -> Option<Self> {
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
         let cnt_res = match rdr.read_u16::<LittleEndian>() {
             Err(error) => {
                 log_write(format!("Failed to get BLDCNT: '{error}'"), LogLevel::ERROR);
-                return ret;
+                return None;
             }
             Ok(cnt_res) => cnt_res,
         };
-        ret.bldcnt = cnt_res;
-        ret.bldalpha = rdr.read_u16::<LittleEndian>().expect("Should read ALPH second u16");
-        ret
+        Some(Self {
+            bldcnt: cnt_res,
+            bldalpha: utils::read_u16(&mut rdr)?
+        })
     }
 }
 
