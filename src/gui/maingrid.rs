@@ -518,71 +518,71 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                         de.selected_sprite_uuids.clear();
                         de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
                     }
+                    // Remove duplicates
+                    de.selected_sprite_uuids.dedup();
                     // If length is one, handle gui
                     if de.selected_sprite_uuids.len() == 1 {
                         de.latest_sprite_settings = settings_to_string(&level_sprite.settings);
                     }
                 }
-            }
-            // Remove duplicates
-            de.selected_sprite_uuids.dedup();
-
-            if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
-                let drag_id = egui::Id::new(format!("sprite_drag_{}",level_sprite.uuid));
-                let drag_response = ui.interact(rect, drag_id, egui::Sense::click_and_drag());
-                let hover_id = egui::Id::new(format!("sprite_hover_{}",level_sprite.uuid));
-                let hover_response = ui.interact(rect, hover_id, egui::Sense::hover());
-                if hover_response.hovered() {
-                    ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Grab);
-                }
-                if drag_response.drag_started() {
-                    //println!("Started dragging");
-                    de.sprite_drag_status.dragging_uuid = level_sprite.uuid; // Implements copy
-                    ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
-                    let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get pointer interaction position");
-                    de.sprite_drag_status.start_x = cur_pos.x;
-                    de.sprite_drag_status.start_y = cur_pos.y;
-                }
-                if drag_response.dragged() {
-                    //println!("Drag moving");
-                    ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
-                    let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get dragged cursor");
-                    let preview_rect = Rect::from_min_size(cur_pos, SPRITE_RECT);
-                    ui.painter().rect_filled(preview_rect, 0.0, SPRITE_BG_COLOR_SELECTED);
-                }
-                if drag_response.drag_stopped() {
-                    //println!("Drag stopped");
-                    de.sprite_drag_status.dragging_uuid = Uuid::nil();
-                    let latest_pos: Pos2 = ui.ctx().pointer_interact_pos().expect("CTX should hold pointer interaction position");
-                    let drag_stop_pos: Vec2 = latest_pos.to_vec2() - top_left.to_vec2();
-                    // 0.5 makes it round to nearest when slicing off the precision
-                    let true_new_x: u16 = ((drag_stop_pos.x + 0.5) / TILE_WIDTH_PX) as u16;
-                    let true_new_y: u16 = ((drag_stop_pos.y + 0.5) / TILE_HEIGHT_PX) as u16;
-                    de.sprite_drag_status.start_x = 0.0;
-                    de.sprite_drag_status.start_y = 0.0;
-                    let og_sprite_tile_x = level_sprite.x_position as i32;
-                    let og_sprite_tile_y = level_sprite.y_position as i32;
-                    let x_tile_movement = (true_new_x as i32) - og_sprite_tile_x;
-                    let y_tile_movement = (true_new_y as i32) - og_sprite_tile_y;
-                    for selspr in &de.selected_sprite_uuids {
-                        let og_sprite_data = de.get_loaded_sprite_by_uuid(selspr);
-                        if og_sprite_data.is_none() {
-                            log_write(format!("Sprite Uuid '{}' not found when moving",selspr), LogLevel::ERROR);
-                            continue;
-                        }
-                        let og_sprite_data = og_sprite_data.unwrap();
-                        let mut move_to_x = og_sprite_data.x_position as i32 + x_tile_movement;
-                        if move_to_x < 0 {
-                            move_to_x = 0;
-                        }
-                        let mut move_to_y = og_sprite_data.y_position as i32 + y_tile_movement;
-                        if move_to_y < 0 {
-                            move_to_y = 0;
-                        }
-                        de.loaded_map.move_sprite(*selspr, move_to_x as u16, move_to_y as u16);
+                // If selected
+                if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
+                    // Hover is a grab icon
+                    let interaction_id = egui::Id::new(format!("sprite_hover_{}_{}",level_sprite.uuid,i));
+                    let interaction = ui.interact(*r, interaction_id, egui::Sense::all());
+                    if interaction.hovered() {
+                        ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Grab);
                     }
-                    de.unsaved_changes = true;
-                    update_map = true;
+                    // Drag logic
+                    if interaction.drag_started() {
+                        log_write("Started dragging sprite", LogLevel::DEBUG);
+                        de.sprite_drag_status.dragging_uuid = level_sprite.uuid; // Implements copy
+                        ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
+                        let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get pointer interaction position");
+                        de.sprite_drag_status.start_x = cur_pos.x;
+                        de.sprite_drag_status.start_y = cur_pos.y;
+                    }
+                    if interaction.dragged() {
+                        //println!("Drag moving");
+                        ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
+                        let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get dragged cursor");
+                        let preview_rect = Rect::from_min_size(cur_pos, SPRITE_RECT);
+                        ui.painter().rect_filled(preview_rect, 0.0, SPRITE_BG_COLOR_SELECTED);
+                    }
+                    if interaction.drag_stopped() {
+                        //println!("Drag stopped");
+                        de.sprite_drag_status.dragging_uuid = Uuid::nil();
+                        let latest_pos: Pos2 = ui.ctx().pointer_interact_pos().expect("CTX should hold pointer interaction position");
+                        let drag_stop_pos: Vec2 = latest_pos.to_vec2() - top_left.to_vec2();
+                        // 0.5 makes it round to nearest when slicing off the precision
+                        let true_new_x: u16 = ((drag_stop_pos.x + 0.5) / TILE_WIDTH_PX) as u16;
+                        let true_new_y: u16 = ((drag_stop_pos.y + 0.5) / TILE_HEIGHT_PX) as u16;
+                        de.sprite_drag_status.start_x = 0.0;
+                        de.sprite_drag_status.start_y = 0.0;
+                        let og_sprite_tile_x = level_sprite.x_position as i32;
+                        let og_sprite_tile_y = level_sprite.y_position as i32;
+                        let x_tile_movement = (true_new_x as i32) - og_sprite_tile_x;
+                        let y_tile_movement = (true_new_y as i32) - og_sprite_tile_y;
+                        for selspr in &de.selected_sprite_uuids {
+                            let og_sprite_data = de.get_loaded_sprite_by_uuid(selspr);
+                            if og_sprite_data.is_none() {
+                                log_write(format!("Sprite Uuid '{}' not found when moving",selspr), LogLevel::ERROR);
+                                continue;
+                            }
+                            let og_sprite_data = og_sprite_data.unwrap();
+                            let mut move_to_x = og_sprite_data.x_position as i32 + x_tile_movement;
+                            if move_to_x < 0 {
+                                move_to_x = 0;
+                            }
+                            let mut move_to_y = og_sprite_data.y_position as i32 + y_tile_movement;
+                            if move_to_y < 0 {
+                                move_to_y = 0;
+                            }
+                            de.loaded_map.move_sprite(*selspr, move_to_x as u16, move_to_y as u16);
+                        }
+                        de.unsaved_changes = true;
+                        update_map = true;
+                    }
                 }
             }
         }
