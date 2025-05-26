@@ -478,7 +478,6 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
             // Cancel the update drawing
             return;
         }
-        let painter: &Painter = ui.painter();
         let placement_vec: Vec2 = Vec2::new(
             (level_sprite.x_position as f32) * TILE_WIDTH_PX,
             (level_sprite.y_position as f32) * TILE_HEIGHT_PX
@@ -486,17 +485,19 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
         let true_pos: Pos2 = top_left + placement_vec;
         let rect = Rect::from_min_size(true_pos, SPRITE_RECT);
 
-        let _did_draw = draw_sprite(
-            painter,ui.ctx(), &rect, &level_sprite, de,8.0,
+        let mut drawn_rects = draw_sprite(
+            ui, &rect, &level_sprite, de,8.0,
             de.selected_sprite_uuids.contains(&level_sprite.uuid)
         );
+        // We want the source rect to be clickable too
+        drawn_rects.push(rect.clone());
 
         if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
-            painter.rect_filled(rect, 0.0, SPRITE_BG_COLOR_SELECTED);
+            ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR_SELECTED);
         } else {
-            painter.rect_filled(rect, 0.0, SPRITE_BG_COLOR);
+            ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR);
         }
-        painter.text(
+        ui.painter().text(
             true_pos, Align2::LEFT_TOP,
             format!("{:02X}",level_sprite.object_id),
             FONT.clone(), Color32::WHITE
@@ -504,29 +505,25 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
 
         // Interactivity
         if de.display_settings.current_layer == CurrentLayer::SPRITES {
-            let click_response = ui.interact(rect, egui::Id::new(format!("sprite_click_{}",level_sprite.uuid)), egui::Sense::click());
-            if click_response.clicked() {
-                // Debug //
-                println!("=== Mouse clicked on Sprite ===");
-                println!("{}",level_sprite);
-                let sprite_meta = de.sprite_metadata_copy.get(&level_sprite.object_id);
-                if sprite_meta.is_none() {
-                    println!("No Sprite metadata found");
-                } else {
-                    println!("{}",sprite_meta.unwrap());
-                }
-                println!("=== End Click Debug ===");
-                // Logic //
-                if ui.ctx().input(|i| i.modifiers.shift) {
-                    de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
-                } else {
-                    de.selected_sprite_uuids.clear();
-                    de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
-                }
-                if de.selected_sprite_uuids.len() == 1 {
-                    de.latest_sprite_settings = settings_to_string(&level_sprite.settings);
+            let is_shift = ui.ctx().input(|i| i.modifiers.shift);
+            for (i,r) in drawn_rects.iter().enumerate() {
+                let click_response = ui.interact(*r, egui::Id::new(format!("sprite_click_{}_{}",level_sprite.uuid,i)), egui::Sense::click());
+                if click_response.clicked() {
+                    if is_shift {
+                        de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
+                    } else {
+                        de.selected_sprite_uuids.clear();
+                        de.selected_sprite_uuids.push(level_sprite.uuid); // UUID derives Copy
+                    }
+                    // If length is one, handle gui
+                    if de.selected_sprite_uuids.len() == 1 {
+                        de.latest_sprite_settings = settings_to_string(&level_sprite.settings);
+                    }
                 }
             }
+            // Remove duplicates
+            de.selected_sprite_uuids.dedup();
+
             if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
                 let drag_id = egui::Id::new(format!("sprite_drag_{}",level_sprite.uuid));
                 let drag_response = ui.interact(rect, drag_id, egui::Sense::click_and_drag());
@@ -548,7 +545,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
                     let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get dragged cursor");
                     let preview_rect = Rect::from_min_size(cur_pos, SPRITE_RECT);
-                    painter.rect_filled(preview_rect, 0.0, SPRITE_BG_COLOR_SELECTED);
+                    ui.painter().rect_filled(preview_rect, 0.0, SPRITE_BG_COLOR_SELECTED);
                 }
                 if drag_response.drag_stopped() {
                     //println!("Drag stopped");
@@ -587,6 +584,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
             }
         }
     }
+    // Fallback/background/placement (not existing)
     if de.display_settings.current_layer == CurrentLayer::SPRITES {
         if let Some(cfr) = &click_fallback_response {
             if cfr.clicked() { // Clicked on empty background
