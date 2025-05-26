@@ -500,7 +500,14 @@ impl DisplayEngine {
         if let Some(arm9_binary) = &self.loaded_arm9 {
             let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9_binary);
             rdr.set_position(array_internal_address as u64);
-            let string_address: u32 = utils::read_address(&mut rdr); //rdr.read_u32::<LittleEndian>().unwrap();
+            let string_address: u32 = match utils::read_address(&mut rdr) {
+                Some(s) => s,
+                None => {
+                    let err_msg = "Failed to get string address in level name retrieval".to_owned();
+                    log_write(err_msg.clone(), LogLevel::ERROR);
+                    return Err(err_msg)
+                },
+            };
             rdr.set_position(string_address as u64);
             let level_name = utils::read_c_string(&mut rdr);
             Ok(level_name)
@@ -510,7 +517,7 @@ impl DisplayEngine {
     }
 
     #[allow(dead_code)]
-    fn get_level_filename_eur_11(&self, world_index: &u32, level_index: &u32) -> String {
+    fn get_level_filename_eur_11(&self, world_index: &u32, level_index: &u32) -> Result<String,String> {
         // 1-1 filename location: 0xe21ae
         let level_id: u32 = world_index * 10 + level_index;// + 1 maybe not here?
         if (level_id < 0x7b) || (0x7e < level_id) {
@@ -522,26 +529,26 @@ impl DisplayEngine {
         //     }
         // }
         if level_id == 0 {
-            return "0-1_D3".to_owned();
+            return Ok("0-1_D3".to_owned());
         } else {
             if level_id == 0x7a {
                 // FUN_020173c0(0xd,1);
                 // Enemy Check, aka Museum
-                return "ene_check_".to_owned();
+                return Ok("ene_check_".to_owned());
             } else if level_id == 0x7b {
-                return "koopa3".to_owned();
+                return Ok("koopa3".to_owned());
             } else if level_id == 0x7c {
-                return "koopa2".to_owned();
+                return Ok("koopa2".to_owned());
             } else if level_id == 0x7d {
-                return "kuppa".to_owned();
+                return Ok("kuppa".to_owned());
             } else if level_id == 0x7e {
-                return "lastback".to_owned();
+                return Ok("lastback".to_owned());
             } else if level_id == 0x7f {
-                return "0x7f unknown multi".to_owned();
+                return Ok("0x7f unknown multi".to_owned());
             }
         }
         if level_id > 100 {
-            return ">99 unknown multi".to_owned();
+            return Ok(">99 unknown multi".to_owned());
         }
         const LEVEL_ARRAY_ADDR: u32 = 0x0d8e58; //0x020d8e58
         let offset = level_id * 4; // u32 = 4 bytes
@@ -549,12 +556,19 @@ impl DisplayEngine {
         if let Some(arm9_binary) = &self.loaded_arm9 {
             let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9_binary);
             rdr.set_position(array_internal_address as u64);
-            let string_address: u32 = utils::read_address(&mut rdr); //rdr.read_u32::<LittleEndian>().unwrap();
+            let string_address: u32 = match utils::read_address(&mut rdr) {
+                Some(s) => s,
+                None => {
+                    let err_msg = "Failed to get string address in level name retrieval".to_owned();
+                    log_write(err_msg.clone(), LogLevel::ERROR);
+                    return Err(err_msg)
+                },
+            };
             rdr.set_position(string_address as u64);
             let level_name = utils::read_c_string(&mut rdr);
-            level_name
+            Ok(level_name)
         } else {
-            "ERROR, NO BINARY".to_owned()
+            Err("ERROR, NO BINARY".to_owned())
         }
     }
     

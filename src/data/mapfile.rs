@@ -167,7 +167,13 @@ impl MapData {
                     ret.segments.push(TopLevelSegmentWrapper::SETD(setd));
                 }
                 "GRAD" => {
-                    let grad = GradientData::new(&segment.internal_data);
+                    let grad = match GradientData::new(&segment.internal_data) {
+                        Some(g) => g,
+                        None => {
+                            log_write("Failed to load GRAD", LogLevel::ERROR);
+                            continue;
+                        },
+                    };
                     ret.segments.push(TopLevelSegmentWrapper::GRAD(grad));
                 }
                 "AREA" => {

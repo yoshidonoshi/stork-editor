@@ -179,10 +179,10 @@ pub fn read_c_string(rdr: &mut Cursor<&Vec<u8>>) -> String {
     }
 }
 
-pub fn read_address(rdr: &mut Cursor<&Vec<u8>>) -> u32 {
-    let mut address: u32 = rdr.read_u32::<LittleEndian>().unwrap();
+pub fn read_address(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
+    let mut address: u32 = read_u32(rdr)?;
     address -= 0x2000000;
-    address
+    Some(address)
 }
 
 pub fn read_fixed_string(vec_data: &Vec<u8>, position: u64, length: u32) -> String {
@@ -386,6 +386,16 @@ pub fn read_u16(rdr: &mut Cursor<&Vec<u8>>) -> Option<u16> {
         Ok(i) => Some(i),
         Err(e) => {
             log_write(format!("Failed to read u16: '{}'",e), LogLevel::ERROR);
+            None
+        }
+    }
+}
+
+pub fn read_i16(rdr: &mut Cursor<&Vec<u8>>) -> Option<i16> {
+    match rdr.read_i16::<LittleEndian>() {
+        Ok(i) => Some(i),
+        Err(e) => {
+            log_write(format!("Failed to read i16: '{}'",e), LogLevel::ERROR);
             None
         }
     }
