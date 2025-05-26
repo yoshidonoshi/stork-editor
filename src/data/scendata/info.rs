@@ -52,15 +52,15 @@ impl ScenInfoData {
         }
         let initial_position: u64 = rdr.position();
         let layer_width: u16 = utils::read_u16(rdr)?;
-        let layer_height: u16 = rdr.read_u16::<LittleEndian>().unwrap();
-        let height_offset: u32 = rdr.read_u32::<LittleEndian>().unwrap();
-        let x_scroll: u32 = rdr.read_u32::<LittleEndian>().unwrap();
-        let y_scroll: u32 = rdr.read_u32::<LittleEndian>().unwrap();
-        let which_bg: u8 = rdr.read_u8().unwrap();
-        let layer_order: u8 = rdr.read_u8().unwrap();
-        let char_base_block: u8 = rdr.read_u8().unwrap();
-        let screen_base_block: u8 = rdr.read_u8().unwrap();
-        let color_mode: u32 = rdr.read_u32::<LittleEndian>().unwrap();
+        let layer_height: u16 = utils::read_u16(rdr)?;
+        let height_offset: u32 = utils::read_u32(rdr)?;
+        let x_scroll: u32 = utils::read_u32(rdr)?;
+        let y_scroll: u32 = utils::read_u32(rdr)?;
+        let which_bg: u8 = utils::read_u8(rdr)?;
+        let layer_order: u8 = utils::read_u8(rdr)?;
+        let char_base_block: u8 = utils::read_u8(rdr)?;
+        let screen_base_block: u8 = utils::read_u8(rdr)?;
+        let color_mode: u32 = utils::read_u32(rdr)?;
         let mut imbz_filename_noext: Option<String> = Option::None;
         if internal_length > 0x18 {
             imbz_filename_noext = Some(utils::read_c_string(rdr));
