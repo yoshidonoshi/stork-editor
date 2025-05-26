@@ -55,7 +55,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         .drag_to_scroll(false)
         .max_scroll_height(400.0)
         .body(|mut body| {
-            for stamp in &de.saved_brushes {
+            for (i,stamp) in de.saved_brushes.iter().enumerate() {
                 if de.brush_settings.only_show_same_tileset {
                     if tileset_name != stamp.tileset {
                         continue;
@@ -63,7 +63,6 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 }
                 let tileset_match = tileset_name == stamp.tileset;
                 body.row(20.0, |mut row| {
-                    let row_index = row.index(); // Copies
                     if let Some(sel_stamp) = &de.brush_settings.cur_selected_brush {
                         if tileset_match { // Don't let them select the wrong one
                             row.set_selected(*sel_stamp == row.index());
@@ -83,8 +82,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         let label_name = ui.label(&stamp.name);
                         if label_name.clicked() {
                             if tileset_match {
-                                de.brush_settings.cur_selected_brush = Some(row_index);
-                                let got_brush = get_selected_brush_data(&de.saved_brushes, row_index);
+                                de.brush_settings.cur_selected_brush = Some(i);
+                                let got_brush = get_selected_brush_data(&de.saved_brushes, i);
                                 if got_brush.is_ok() {
                                     de.current_brush = got_brush.unwrap();
                                 }
@@ -98,8 +97,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         let tileset_label = ui.label(&stamp.tileset);
                         if tileset_label.clicked() {
                             if tileset_match {
-                                de.brush_settings.cur_selected_brush = Some(row_index);
-                                let got_brush = get_selected_brush_data(&de.saved_brushes, row_index);
+                                de.brush_settings.cur_selected_brush = Some(i);
+                                let got_brush = get_selected_brush_data(&de.saved_brushes, i);
                                 if got_brush.is_ok() {
                                     de.current_brush = got_brush.unwrap();
                                 }
@@ -109,8 +108,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
                     if row.response().clicked() {
                         if tileset_match {
-                            de.brush_settings.cur_selected_brush = Some(row_index);
-                            let got_brush = get_selected_brush_data(&de.saved_brushes, row_index);
+                            de.brush_settings.cur_selected_brush = Some(i);
+                            let got_brush = get_selected_brush_data(&de.saved_brushes, i);
                             if got_brush.is_ok() {
                                 de.current_brush = got_brush.unwrap();
                             }
