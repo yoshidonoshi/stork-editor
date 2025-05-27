@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
 use egui::{pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
 
-use crate::{data::types::{MapTileRecordData, Palette}, gui::windows::paths_win::PathAngle};
+use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, gui::windows::paths_win::PathAngle};
 
 #[derive(PartialEq)]
 pub enum LogLevel {
@@ -135,6 +135,65 @@ pub fn string_to_settings(settings_string: &String) -> Result<Vec<u8>,String> {
         }
     }
     Ok(new_settings)
+}
+
+pub fn get_curve_fine(cur_point: &PathPoint, next_point: &PathPoint, bez: bool) -> (Pos2,u32) {
+    #[allow(unused_assignments)] // Glitch
+    let mut radius_fine: u32 = 1 << 12;
+    let is_next_above = next_point.y_fine < cur_point.y_fine;
+    let is_next_rightwards = next_point.x_fine > cur_point.x_fine;
+    let mut is_turning_right = cur_point.angle >= 0;
+    if bez {
+        is_turning_right = !is_turning_right;
+    }
+    let mut circle_point_fine: Pos2 = Pos2::ZERO;
+    // Yes, it's this weirdly complex in the source code too...
+    if is_turning_right { // Inverted if Bezier
+        if is_next_above && is_next_rightwards {
+            // Up and to the right
+            circle_point_fine.x = next_point.x_fine as f32;
+            circle_point_fine.y = cur_point.y_fine as f32;
+            radius_fine = cur_point.y_fine - next_point.y_fine;
+        } else if is_next_above && !is_next_rightwards {
+            // Up and to the left
+            circle_point_fine.x = cur_point.x_fine as f32;
+            circle_point_fine.y = next_point.y_fine as f32;
+            radius_fine = cur_point.y_fine - next_point.y_fine;
+        } else if !is_next_above && is_next_rightwards {
+            // Below and to the right
+            circle_point_fine.x = cur_point.x_fine as f32;
+            circle_point_fine.y = next_point.y_fine as f32;
+            radius_fine = next_point.y_fine - cur_point.y_fine;
+        } else { // !is_next_above && !is_next_rightwards
+            // Below and to the left
+            circle_point_fine.x = next_point.x_fine as f32;
+            circle_point_fine.y = next_point.y_fine as f32;
+            radius_fine = next_point.y_fine - cur_point.y_fine;
+        }
+    } else {
+        if is_next_above && is_next_rightwards {
+            // Up and to the right
+            circle_point_fine.x = cur_point.x_fine as f32;
+            circle_point_fine.y = next_point.y_fine as f32;
+            radius_fine = cur_point.y_fine - next_point.y_fine;
+        } else if is_next_above && !is_next_rightwards {
+            // Up and to the left
+            circle_point_fine.x = next_point.x_fine as f32;
+            circle_point_fine.y = cur_point.y_fine as f32;
+            radius_fine = cur_point.y_fine - next_point.y_fine;
+        } else if !is_next_above && is_next_rightwards {
+            // Below and to the right
+            circle_point_fine.x = next_point.x_fine as f32;
+            circle_point_fine.y = cur_point.y_fine as f32;
+            radius_fine = next_point.y_fine - cur_point.y_fine;
+        } else {
+            // Below and to the left
+            circle_point_fine.x = next_point.x_fine as f32;
+            circle_point_fine.y = next_point.y_fine as f32;
+            radius_fine = next_point.y_fine - cur_point.y_fine;
+        }
+    }
+    (circle_point_fine,radius_fine as u32)
 }
 
 pub fn string_to_header(header: String) -> u32 {
