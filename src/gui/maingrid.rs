@@ -1,7 +1,7 @@
 use egui::{Align2, Color32, Context, FontId, Image, Painter, Pos2, Rect, Response, Stroke, TextureHandle, Vec2};
 use uuid::Uuid;
 
-use crate::{data::{area::{TriggerData, AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, scendata::colz::{draw_collision, COLLISION_BG_COLOR, COLLISION_OUTLINE_COLOR, COLLISION_SQUARE}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, distance, get_pixel_bytes_16, get_pixel_bytes_256, get_sin_cos_table_value, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, print_vector_u8, settings_to_string, LogLevel}};
+use crate::{data::{area::{TriggerData, AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, path::PathPoint, scendata::colz::{draw_collision, COLLISION_BG_COLOR, COLLISION_OUTLINE_COLOR, COLLISION_SQUARE}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, distance, get_pixel_bytes_16, get_pixel_bytes_256, get_sin_cos_table_value, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, print_vector_u8, settings_to_string, LogLevel}};
 
 const TILE_WIDTH_PX: f32 = 8.0;
 const TILE_HEIGHT_PX: f32 = 8.0;
@@ -408,12 +408,86 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     let x_offset = ((test_val.x as i32) * (point.distance as i32)) >> 12; // Note: this includes the tile width
                     let y_offset = ((test_val.y as i32) * (point.distance as i32)) >> 12; // This will need changing once zoom is added
                     //println!("test_val: {:?}", test_val);
-                    let end_pos: Pos2 = Pos2::new(true_pos.x + (x_offset as f32), true_pos.y + (y_offset as f32));
-                    ui.painter().line(vec![true_pos,end_pos], Stroke::new(1.0,  if point_selected {Color32::GREEN} else { Color32::RED } ));
+                    let end_pos: Pos2 = Pos2::new(true_pos.x + (x_offset as f32), true_pos.y + (y_offset as f32));//
+                    let stroke = Stroke::new(
+                        if point_selected { 2.0 } else { 1.0 },
+                        if point_selected {Color32::GREEN} else { Color32::RED }
+                    );
+                    ui.painter().line(vec![true_pos,end_pos], stroke);
                 } else {
                     // Point distance is negative
                     // Calculations done here: 02054b34
                 }
+            }
+            // Circles
+            for (i, cur_point) in line.points.iter().enumerate() {
+                if i == line.points.len() - 1 {
+                    // Skip the last one
+                    break;
+                }
+                if cur_point.distance >= 0 {
+                    // It's a straight line, skip
+                    continue;
+                }
+                // Copy
+                let next_point: PathPoint = line.points[i+1];
+                // TODO: Put this all in a utility function
+                let is_next_above = next_point.y_fine < cur_point.y_fine;
+                let is_next_rightwards = next_point.x_fine > cur_point.x_fine;
+                let is_turning_right = cur_point.angle >= 0;
+                let mut circle_point_fine: Pos2 = Pos2::ZERO;
+                // Yes, it's this weirdly complex in the source code too...
+                if is_turning_right {
+                    if is_next_above && is_next_rightwards {
+                        // Up and to the right
+                        circle_point_fine.x = next_point.x_fine as f32;
+                        circle_point_fine.y = cur_point.y_fine as f32;
+                    } else if is_next_above && !is_next_rightwards {
+                        // Up and to the left
+                        circle_point_fine.x = cur_point.x_fine as f32;
+                        circle_point_fine.y = next_point.y_fine as f32;
+                    } else if !is_next_above && is_next_rightwards {
+                        // Below and to the right
+                        circle_point_fine.x = cur_point.x_fine as f32;
+                        circle_point_fine.y = next_point.y_fine as f32;
+                    } else { // !is_next_above && !is_next_rightwards
+                        // Below and to the left
+                        circle_point_fine.x = next_point.x_fine as f32;
+                        circle_point_fine.y = next_point.y_fine as f32;
+                    }
+                } else {
+                    if is_next_above && is_next_rightwards {
+                        // Up and to the right
+                        circle_point_fine.x = cur_point.x_fine as f32;
+                        circle_point_fine.y = next_point.y_fine as f32;
+                    } else if is_next_above && !is_next_rightwards {
+                        // Up and to the left
+                        circle_point_fine.x = next_point.x_fine as f32;
+                        circle_point_fine.y = cur_point.y_fine as f32;
+                    } else if !is_next_above && is_next_rightwards {
+                        // Below and to the right
+                        circle_point_fine.x = next_point.x_fine as f32;
+                        circle_point_fine.y = cur_point.y_fine as f32;
+                    } else {
+                        // Below and to the left
+                        circle_point_fine.x = next_point.x_fine as f32;
+                        circle_point_fine.y = next_point.y_fine as f32;
+                    }
+                }
+                let placement_vec: Vec2 = Vec2::new(
+                    ((circle_point_fine.x as u32 >> 15) as f32) * TILE_WIDTH_PX,
+                    ((circle_point_fine.y as u32 >> 15) as f32) * TILE_HEIGHT_PX
+                );
+                let true_pos: Pos2 = top_left + placement_vec;
+                let point_selected = de.path_settings.selected_point == cur_point.uuid;
+                let circle_stroke = egui::Stroke::new(if point_selected { 2.0 } else { 1.0 },
+                if point_selected {
+                    Color32::GREEN
+                } else {
+                    Color32::from_rgba_unmultiplied(0xff, 0, 0, 0x05)
+                });
+                let pre_radius = ((cur_point.distance * -1)) as f32;
+                ui.painter().circle_stroke(true_pos, pre_radius * 0.63, circle_stroke);
             }
         }
         // Interactivity
