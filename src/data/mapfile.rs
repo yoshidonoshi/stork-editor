@@ -109,21 +109,21 @@ impl MapData {
     pub fn new(filename_abs: &PathBuf, project_folder: &PathBuf) -> Result<Self,String> {
         let mut ret: MapData = MapData::default();
         ret.src_file = filename_abs.clone().to_str().unwrap().to_owned();
-        let existence_check = fs::exists(&filename_abs);
-        if existence_check.is_err() || !existence_check.unwrap() {
+        if matches!(fs::exists(&filename_abs), Err(_) | Ok(false)) {
             let file_exists_err = format!("File does not exist: '{}'",&filename_abs.display());
             log_write(file_exists_err.clone(), LogLevel::ERROR);
             return Err(file_exists_err);
         }
         let file_bytes: Vec<u8> = compression::decompress_file(filename_abs);
         let mut rdr = Cursor::new(&file_bytes);
-        let file_header = rdr.read_u32::<LittleEndian>();
-        if file_header.is_err() {
-            let master_header_err = "Error getting master header from MapData".to_owned();
-            log_write(master_header_err.clone(), LogLevel::ERROR);
-            return Err(master_header_err);
-        }
-        let file_header = file_header.unwrap();
+        let file_header = match rdr.read_u32::<LittleEndian>() {
+            Err(_) => {
+                let master_header_err = "Error getting master header from MapData".to_owned();
+                log_write(&master_header_err, LogLevel::ERROR);
+                return Err(master_header_err);
+            }
+            Ok(h) => h,
+        };
         // It's 3 characters long, not 4
         let header_string = &header_to_string(&file_header)[0..3];
         if header_string != "SET" {
@@ -133,7 +133,7 @@ impl MapData {
         }
         let _ = rdr.read_u32::<LittleEndian>().unwrap();
         let mut segments: Vec<DataSegment> = vec![];
-        let file_end_pos: u64 = file_bytes.len().try_into().unwrap();
+        let file_end_pos: u64 = file_bytes.len() as u64;
         while rdr.position() < file_end_pos {
             let section_head: u32 = rdr.read_u32::<LittleEndian>().unwrap();
             let section_size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;
@@ -151,14 +151,13 @@ impl MapData {
             log_write(format!("Parsing top level Segment '{}' with size 0x{:X}",seg_header,segment.internal_data.len()), LogLevel::DEBUG);
             match seg_header.as_str() {
                 "SCEN" => {
-                    let bg_res = BackgroundData::new(&segment.internal_data,project_folder);
-                    if bg_res.is_err() {
+                    if let Ok(bg) = BackgroundData::new(&segment.internal_data,project_folder) {
+                        ret.segments.push(TopLevelSegmentWrapper::SCEN(bg));
+                    } else {
                         let bg_fail_msg = "Failed to generate BackgroundData in MapData".to_string();
                         log_write(bg_fail_msg.clone(), LogLevel::ERROR);
                         return Err(bg_fail_msg);
                     }
-                    let bg: BackgroundData = bg_res.unwrap();
-                    ret.segments.push(TopLevelSegmentWrapper::SCEN(bg));
                 }
                 "SETD" => {
                     let setd = LevelSpriteSet::new(&segment.internal_data);
@@ -359,19 +358,15 @@ impl MapData {
     }
 
     pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16, meta: &HashMap<u16,SpriteMetadata>) -> Uuid {
-        let sprite_set_res = self.get_setd();
-        if sprite_set_res.is_none() {
+        let Some(sprite_set) = self.get_setd() else {
             // This really shouldn't be possible
             log_write("SETD not loaded when placing sprite".to_owned(),LogLevel::ERROR);
             return Uuid::nil();
-        }
-        let sprite_meta = meta.get(&sprite_id);
-        if sprite_meta.is_none() {
-            log_write(format!("No Sprite metadata found for 0x{:X}",sprite_id),LogLevel::ERROR);
+        };
+        let Some(sprite_meta) = meta.get(&sprite_id) else {
+            log_write(format!("No Sprite metadata found for 0x{sprite_id:X}"),LogLevel::ERROR);
             return Uuid::nil();
-        }
-        let sprite_meta = sprite_meta.unwrap();
-        let sprite_set: &mut LevelSpriteSet = sprite_set_res.unwrap();
+        };
         let new_sprite = LevelSprite::new(sprite_id, x, y, vec![0;sprite_meta.default_settings_len as usize]);
         let ret = new_sprite.uuid;
         sprite_set.sprites.push(new_sprite);
@@ -407,12 +402,10 @@ impl MapData {
             log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::ERROR);
             return Err(())
         }
-        let bg: Option<&mut BackgroundData> = self.get_background(which_background);
-        if bg.is_none() {
+        let Some(bg) = self.get_background(which_background) else {
             log_write(format!("Failed to get_background '{}' in delete_bg_tile_by_map_index",which_background), LogLevel::ERROR);
             return Err(())
-        }
-        let bg: &mut BackgroundData = bg.unwrap();
+        };
         if let Some(col) = bg.get_colz_mut() {
             col.col_tiles[tile_index as usize] = new_type;
             Ok(())
@@ -426,12 +419,10 @@ impl MapData {
             log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::ERROR);
             return false;
         }
-        let bg: Option<&mut BackgroundData> = self.get_background(which_background);
-        if bg.is_none() {
+        let Some(bg) = self.get_background(which_background) else {
             log_write(format!("Failed to get_background '{}' in delete_bg_tile_by_map_index",which_background), LogLevel::ERROR);
             return false;
-        }
-        let bg: &mut BackgroundData = bg.unwrap();
+        };
         if let Some(tiles_segment) = bg.get_mpbz_mut() {
             if (map_index as usize) > tiles_segment.tiles.len() {
                 log_write(format!("Overflow in delete_bg_tile_by_map_index: {} >= {}",&map_index,&tiles_segment.tiles.len()), LogLevel::ERROR);
@@ -449,12 +440,10 @@ impl MapData {
             log_write(format!("Extremely unusual which_background value in place_bg_tile_at_map_index: '{}'",which_background), LogLevel::ERROR);
             return false;
         }
-        let bg: Option<&mut BackgroundData> = self.get_background(which_background);
-        if bg.is_none() {
+        let Some(bg) = self.get_background(which_background) else {
             log_write(format!("Failed to get_background '{}' in place_bg_tile_at_map_index",which_background), LogLevel::ERROR);
             return false;
-        }
-        let bg: &mut BackgroundData = bg.unwrap();
+        };
         if let Some(tiles_segment) = bg.get_mpbz_mut() {
             if (map_index as usize) > tiles_segment.tiles.len() {
                 // May be pasted out of bounds

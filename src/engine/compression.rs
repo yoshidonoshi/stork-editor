@@ -5,15 +5,15 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use lamezip77::{self, nintendo_lz::Compress, VecBuf};
 
 pub fn decompress_file(file_path: &PathBuf) -> Vec<u8> {
-    let data_res = fs::read(file_path);
-    if data_res.is_err() {
-        // TODO: DEFINITELY do Err here
-        log_write(format!("Could not decompress file at path: '{}', reason: '{}'",file_path.display(),data_res.unwrap_err()), LogLevel::FATAL);
-        return Vec::new();
-    }
-    let data: Vec<u8> = data_res.unwrap();
-    let first_byte = data[0];
-    if first_byte != 0x10 {
+    let data = match fs::read(file_path) {
+        Err(error) => {
+            log_write(format!("Could not decompress file at path: '{}', reason: '{error}'", file_path.display()), LogLevel::FATAL);
+            return Vec::new();
+        }
+        Ok(b) => b
+    };
+    let first_byte = data.first();
+    if first_byte != Some(&0x10) {
         log_write("First byte was not 0x10".to_owned(), LogLevel::WARN);
     }
     let res: Vec<u8> = lamezip77_lz10_decomp(&data);

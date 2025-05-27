@@ -14,25 +14,28 @@ pub struct PathDatabase {
 }
 impl PathDatabase {
     pub fn new(byte_data: &Vec<u8>) -> Self {
-        let mut ret = PathDatabase::default();
+        let mut ret: PathDatabase = PathDatabase::default();
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
-        let path_count = rdr.read_u32::<LittleEndian>();
-        if path_count.is_err() {
-            log_write(format!("Failed to get path_count from PathDatabase: '{}'",path_count.unwrap_err()), LogLevel::ERROR);
-            return ret;
-        }
-        ret.path_count = path_count.unwrap();
+        let path_count = match rdr.read_u32::<LittleEndian>() {
+            Err(error) => {
+                log_write(format!("Failed to get path_count from PathDatabase: '{error}'"), LogLevel::ERROR);
+                return ret;
+            }
+            Ok(c) => c,
+        };
+        ret.path_count = path_count;
         let mut path_index: u32 = 0;
         while path_index < ret.path_count { // Build the line
             // Don't use default, it adds a blank point
             let mut points: Vec<PathPoint> = Vec::new();
             loop { // Build the points
-                let angle = rdr.read_i16::<LittleEndian>();
-                if angle.is_err() {
-                    log_write(format!("Failed to read Path angle: '{}'",angle.unwrap_err()), LogLevel::ERROR);
-                    return ret;
-                }
-                let angle = angle.unwrap();
+                let angle = match rdr.read_i16::<LittleEndian>() {
+                    Err(error) => {
+                        log_write(format!("Failed to read Path angle: '{error}'"), LogLevel::ERROR);
+                        return ret;
+                    },
+                    Ok(a) => a,
+                };
                 let distance = rdr.read_i16::<LittleEndian>().expect("distance i16 in PathDatabase");
                 let x_fine = rdr.read_u32::<LittleEndian>().expect("x_fine u32 in PathDatabase");
                 let y_fine = rdr.read_u32::<LittleEndian>().expect("y_fine u32 in PathDatabase");
@@ -50,11 +53,9 @@ impl PathDatabase {
 
     pub fn delete_line(&mut self, line_uuid: Uuid) -> Result<(),()> {
         log_write("Deleting Line", LogLevel::DEBUG);
-        let line_pos = self.lines.iter().position(|x| x.uuid == line_uuid);
-        if line_pos.is_none() {
+        let Some(line_pos) = self.lines.iter().position(|x| x.uuid == line_uuid) else {
             return Err(());
-        }
-        let line_pos = line_pos.unwrap();
+        };
         self.lines.remove(line_pos);
         log_write("Line data deleted", LogLevel::DEBUG);
         Ok(())

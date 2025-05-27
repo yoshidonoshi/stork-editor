@@ -99,12 +99,11 @@ impl MapTileDataSegment {
 
 impl ScenSegment for MapTileDataSegment {
     fn compile(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
-        if info.is_none() {
+        let Some(info) = info else {
             // Probably do Err for this in the future, but this is basically fatal
             log_write("Missing info parameter in MapTileDataSegment compiler", LogLevel::FATAL);
             return Vec::new();
-        }
-        let info = info.clone().unwrap();
+        };
         let mut comp: Vec<u8> = vec![];
         let mut index: usize = 0;
         if self.bottom_trim > 0 || self.tile_offset > 0 {
