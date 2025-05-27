@@ -199,6 +199,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_bg2, "BG 2");
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_bg3, "BG 3");
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_paths, "Paths");
+                ui.checkbox(&mut gui_state.display_engine.display_settings.show_triggers, "Triggers");
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_entrances, "Entrances");
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_exits, "Exits");
                 ui.checkbox(&mut gui_state.display_engine.display_settings.show_breakable_rock, "Soft Rock Back");

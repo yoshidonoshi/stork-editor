@@ -1,3 +1,5 @@
+use std::fmt;
+
 use egui::{Color32, Painter, Pos2, Rect, Response, RichText, Stroke, Vec2};
 use serde::{Deserialize, Serialize};
 
@@ -25,6 +27,12 @@ impl Default for Brush {
         }
     }
 }
+impl fmt::Display for Brush {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"Brush [ name='{}', tileset={}, width/height=0x{:X}/0x{:X}, first_tile={:04X} ]",
+            self.name,self.tileset,self.width,self.height,self.tiles[0])
+    }
+}
 impl Brush {
     pub fn clear(&mut self) {
         self.tiles.clear();
@@ -46,7 +54,7 @@ impl Default for BrushSettings {
             cur_selected_brush: Option::None,
             pos_brush_name: String::from("Untitled Brush"),
             cur_search_string: String::from(""),
-            only_show_same_tileset: false
+            only_show_same_tileset: true
         }
     }
 }
@@ -196,6 +204,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 de.current_brush.width = de.bg_sel_data.selection_width as u8;
                 let height = de.bg_sel_data.selected_map_indexes.len() as f32 / de.current_brush.width as f32;
                 de.current_brush.height = height as u8;
+                de.current_brush.tileset = info.imbz_filename_noext.clone().unwrap_or("N/A".to_string());
                 for selected_index in &de.bg_sel_data.selected_map_indexes {
                     let tile_data = &maptiles.tiles[*selected_index as usize];
                     de.current_brush.tiles.push(tile_data.to_short());
