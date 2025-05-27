@@ -54,7 +54,7 @@ impl Default for BrushSettings {
             cur_selected_brush: Option::None,
             pos_brush_name: String::from("Untitled Brush"),
             cur_search_string: String::from(""),
-            only_show_same_tileset: false
+            only_show_same_tileset: true
         }
     }
 }
