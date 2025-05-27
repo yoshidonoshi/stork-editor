@@ -40,4 +40,8 @@ rustup target add x86_64-pc-windows-gnu
 cross build --release --target x86_64-pc-windows-gnu
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](https://github.com/yoshidonoshi/stork-editor/blob/main/CONTRIBUTING.md)
+
 ©YoshiDonoshi

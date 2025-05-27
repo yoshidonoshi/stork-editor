@@ -3,6 +3,9 @@
   - For example, release 0.3.0 is triggered by completion of the new map feature (plus others)
 - Minor releases are determined by bug fixes and minor UX updates, and are versioned by X.Y.Z++
   - For example, release 0.2.1 is triggered by a bug fix for 0.2.0
+- Release branches are created once a certain set of new features are implemented. It is then tested
+  - No new features are added, and bug fixes are cherry picked during the stabilization process
+  - Each set of bug fixes triggers a minor release 
  
 ## Making a bug report
 1. Create the Issue here: https://github.com/yoshidonoshi/stork-editor/issues/new
@@ -27,8 +30,8 @@
 - Create the issue and apply the "enhancement" label
 
 ## Contributing features
-- **There must be a new feature issue created beforehand to ensure compatibility with the project**
-- If you haven't already, fork the repository
-- If there isn't already a branch, create one and name it "feature/feature-name"
-- Make a PR to the Main branch
-- Wait for approval or change requests
+0. **There must be a new feature issue created beforehand to ensure compatibility with the project**
+1. If you haven't already, fork the repository
+2. If there isn't already a branch, create one and name it "feature/feature-name"
+3. Make a PR to the Main branch
+4. Wait for approval or change requests
