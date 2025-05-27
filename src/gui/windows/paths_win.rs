@@ -232,6 +232,7 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             //ui.label("Warning: This section is WIP, red connecting line is not accurate");
             ui.horizontal(|ui| {
                 let angle = egui::DragValue::new(&mut point.angle)
+                    .speed(0x10)
                     .hexadecimal(5, false, true);
                 ui.add(angle);
                 ui.label("Angle");
