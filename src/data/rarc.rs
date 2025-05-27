@@ -29,12 +29,10 @@ impl RenderArchive {
         let true_path: PathBuf = nitrofs_abs(project_directory,&filename_local);
         let file_bytes: Vec<u8> = compression::decompress_file(&true_path);
         let mut rdr = Cursor::new(&file_bytes);
-        let file_header = rdr.read_u32::<LittleEndian>();
-        if file_header.is_err() {
+        let Ok(file_header) = rdr.read_u32::<LittleEndian>() else {
             utils::log_write("Error getting master header from RenderArchive".to_owned(), LogLevel::ERROR);
             return Self::default();
-        }
-        let file_header = file_header.unwrap();
+        };
         let header_string = utils::header_to_string(&file_header);
         if header_string != "OBAR" {
             utils::log_write(format!("RenderArchive master header was not OBAR, was instead '{}'",header_string), LogLevel::ERROR);
@@ -42,7 +40,7 @@ impl RenderArchive {
         }
         let _ = rdr.read_u32::<LittleEndian>().unwrap();
         let mut segments: Vec<DataSegment> = vec![];
-        let file_end_pos: u64 = file_bytes.len().try_into().unwrap();
+        let file_end_pos: u64 = file_bytes.len() as u64;
         while rdr.position() < file_end_pos {
             let section_head: u32 = rdr.read_u32::<LittleEndian>().unwrap();
             let section_size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;

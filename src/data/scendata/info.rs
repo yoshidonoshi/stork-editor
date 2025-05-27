@@ -93,12 +93,13 @@ impl ScenInfoData {
         let mut imbz_withext: String = self.imbz_filename_noext.clone().expect("imbz filename exists");
         imbz_withext.push_str(".imbz");
         let p: PathBuf = nitrofs_abs(proj_dir, &imbz_withext);
-        let imbz_bytes = fs::read(&p);
-        if imbz_bytes.is_err() {
-            log_write(format!("Failed to read IMBZ '{}' from INFO: '{}'",p.display(),imbz_bytes.unwrap_err()), LogLevel::ERROR);
-            return Option::None;
-        }
-        let file_bytes: Vec<u8> = imbz_bytes.unwrap();
+        let file_bytes = match fs::read(&p) {
+            Err(error) => {
+                log_write(format!("Failed to read IMBZ '{}' from INFO: '{error}'", p.display()), LogLevel::ERROR);
+                return Option::None;
+            }
+            Ok(b) => b,
+        };
         let pixels_decomped = lamezip77_lz10_decomp(&file_bytes);
         Some(pixels_decomped)
     }
@@ -128,12 +129,13 @@ impl ScenSegment for ScenInfoData {
         let _ = comp.write_u8(self.char_base_block);
         let _ = comp.write_u8(self.screen_base_block);
         let _ = comp.write_u32::<LittleEndian>(self.color_mode);
-        if self.imbz_filename_noext.is_none() {
+        let Some(imbz_filename_noext) = &self.imbz_filename_noext else {
             // Already 4 padded, just return
             return comp;
-        }
-        // Moving, so needs clone
-        let mut str_vec = self.imbz_filename_noext.clone().unwrap().into_bytes();
+        };
+
+        // not Moving, so no need to clone
+        let mut str_vec = imbz_filename_noext.bytes().collect();
         comp.append(&mut str_vec);
         comp.push(0x00); // Null terminator
         while comp.len() % 4 != 0 {
