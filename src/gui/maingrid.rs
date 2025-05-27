@@ -385,7 +385,6 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let mut _line_index: usize = 0;
         for line in &path_database.lines {
             let mut line_points: Vec<Pos2> = Vec::new();
-            let mut _point_index: usize = 0;
             let path_selected = de.path_settings.selected_line == line.uuid;
             for point in &line.points {
                 let placement_vec: Vec2 = Vec2::new(
@@ -405,24 +404,21 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     ),
                     egui::StrokeKind::Outside
                 );
-                // let text_to_draw = format!("{}-{}",&line_index,&point_index);
-                // ui.painter().text(
-                //     rect.left_top(), Align2::LEFT_TOP,
-                //     text_to_draw,
-                //     FontId { size: 12.0, family: egui::FontFamily::Monospace },
-                //     Color32::WHITE
-                // );
                 if point.distance >= 0 {
                     let test_val = get_sin_cos_table_value(&arm9, point.angle as u16);
                     //println!("test_val: {:?}", test_val);
-                    let _end_pos: Pos2 = Pos2::new(true_pos.x + (test_val.x as f32), true_pos.y + (test_val.y as f32));
-                    //ui.painter().line(vec![true_pos,end_pos], Stroke::new(3.0,  if point_selected {Color32::GREEN} else { Color32::PURPLE } ));
+                    let end_pos: Pos2 = Pos2::new(true_pos.x + ((test_val.x >> 5) as f32), true_pos.y + ((test_val.y >> 5) as f32));
+                    ui.painter().line(vec![true_pos,end_pos], Stroke::new(3.0,  if point_selected {Color32::GREEN} else { Color32::PURPLE } ));
                 }
-                _point_index += 1;
             }
             _line_index += 1;
+            // This line is for debug
             ui.painter().line(line_points, Stroke::new(1.0,
-                if path_selected { Color32::LIGHT_RED } else { Color32::RED }
+                if path_selected {
+                    Color32::from_rgba_premultiplied(255, 128, 128, 40)
+                } else {
+                    Color32::from_rgba_premultiplied(255, 0, 0, 40)
+                }
             ));
         }
         // Interactivity
