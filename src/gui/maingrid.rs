@@ -382,7 +382,6 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let arm9 = de.loaded_arm9.clone().expect("ARM9 must exist");
     let top_left: Pos2 = ui.min_rect().min;
     if let Some(path_database) = &de.path_data {
-        let mut _line_index: usize = 0;
         for line in &path_database.lines {
             let mut line_points: Vec<Pos2> = Vec::new();
             let path_selected = de.path_settings.selected_line == line.uuid;
@@ -404,22 +403,23 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     ),
                     egui::StrokeKind::Outside
                 );
-                if point.distance >= 0 {
+                if point.distance >= 0 && point.distance != 0 {
                     let test_val = get_sin_cos_table_value(&arm9, point.angle as u16);
+                    let x_offset = ((test_val.x as i32) * (point.distance as i32)) >> 12; // Note: this includes the tile width
+                    let y_offset = ((test_val.y as i32) * (point.distance as i32)) >> 12; // This will need changing once zoom is added
                     //println!("test_val: {:?}", test_val);
-                    let end_pos: Pos2 = Pos2::new(true_pos.x + ((test_val.x >> 5) as f32), true_pos.y + ((test_val.y >> 5) as f32));
-                    ui.painter().line(vec![true_pos,end_pos], Stroke::new(3.0,  if point_selected {Color32::GREEN} else { Color32::PURPLE } ));
+                    let end_pos: Pos2 = Pos2::new(true_pos.x + (x_offset as f32), true_pos.y + (y_offset as f32));
+                    ui.painter().line(vec![true_pos,end_pos], Stroke::new(1.0,  if point_selected {Color32::GREEN} else { Color32::RED } ));
                 }
             }
-            _line_index += 1;
             // This line is for debug
-            ui.painter().line(line_points, Stroke::new(1.0,
-                if path_selected {
-                    Color32::from_rgba_premultiplied(255, 128, 128, 40)
-                } else {
-                    Color32::from_rgba_premultiplied(255, 0, 0, 40)
-                }
-            ));
+            // ui.painter().line(line_points, Stroke::new(1.0,
+            //     if path_selected {
+            //         Color32::from_rgba_premultiplied(255, 128, 128, 40)
+            //     } else {
+            //         Color32::from_rgba_premultiplied(255, 0, 0, 40)
+            //     }
+            // ));
         }
         // Interactivity
         if de.display_settings.current_layer == CurrentLayer::PATHS {

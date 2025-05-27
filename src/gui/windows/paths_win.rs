@@ -229,7 +229,7 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     if let Some(path) = paths.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) {
         if let Some(point) = path.points.iter_mut().find(|y| y.uuid == de.path_settings.selected_point) {
             let point_before = point.clone();
-            ui.label("Warning: This section is WIP, red connecting line is not accurate");
+            //ui.label("Warning: This section is WIP, red connecting line is not accurate");
             ui.horizontal(|ui| {
                 let angle = egui::DragValue::new(&mut point.angle)
                     .hexadecimal(5, false, true);
