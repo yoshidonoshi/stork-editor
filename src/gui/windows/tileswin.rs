@@ -24,7 +24,7 @@ pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &Vec<TextureHand
     }
     // Add more clickable space
     ui.allocate_space(Vec2::new(300.0, 0.0));
-    let click_response = ui.interact(ui.min_rect(), egui::Id::new("PATH_click"), egui::Sense::click());
+    let click_response = ui.interact(ui.min_rect(), egui::Id::new("Tiles_Window_Click"), egui::Sense::click());
     if click_response.clicked() {
         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
             let local_pos = pointer_pos - ui.min_rect().min;
