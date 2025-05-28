@@ -477,6 +477,31 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     }
                 }
             }
+            if click_response.secondary_clicked() {
+                if !de.path_settings.selected_line.is_nil(){
+                    if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                        let local_pos = pointer_pos - ui.min_rect().min;
+                        let x_fine = ((local_pos.x / TILE_WIDTH_PX) as u32) << 15;
+                        let y_fine = ((local_pos.y / TILE_HEIGHT_PX) as u32) << 15;
+                        // You are adding it on the end, therefore distance defaults to 0
+                        let p = PathPoint::new(0, 0, x_fine, y_fine);
+                        let puuid = p.uuid; // Copies
+                        let Some(path_data) = de.loaded_map.get_path() else {
+                            log_write("Failed to get PathDatabase", LogLevel::ERROR);
+                            return;
+                        };
+                        let line = path_data.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
+                        if let Some(l) = line {
+                            l.points.push(p);
+                            de.path_settings.selected_point = puuid;
+                            de.graphics_update_needed = true;
+                            de.unsaved_changes = true;
+                        } else {
+                            log_write("Failed to get PathLine for new PathPoint", LogLevel::ERROR);
+                        }
+                    }
+                }
+            }
         }
     }
 }
