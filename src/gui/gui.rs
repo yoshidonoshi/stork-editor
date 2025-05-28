@@ -116,12 +116,10 @@ impl BgSelectData {
             log_write("Attempted to convert to clipboard tiles while empty", LogLevel::WARN);
             return ret;
         }
-        let top_left = self.get_top_left(map_width);
-        if top_left.is_none() {
+        let Some(top_left) = self.get_top_left(map_width) else {
             log_write("Could not get top left", LogLevel::ERROR);
             return Vec::new();
-        }
-        let top_left = top_left.unwrap();
+        };
         let top_abs_x = top_left.x as i32;
         let top_abs_y = top_left.y as i32;
         for selected_map_index in &self.selected_map_indexes {
@@ -281,9 +279,9 @@ impl Gui {
         self.export_directory = path.clone();
         // Handle extracted contents
         let de: Result<DisplayEngine, DisplayEngineError> = DisplayEngine::new(path.clone());
-        match &de {
-            Ok(_) => {
-                self.display_engine = de.unwrap(); // Move it on in!
+        match de {
+            Ok(de) => {
+                self.display_engine = de; // Move it on in!
             }
             Err(e) => {
                 self.do_alert(&e.cause);
@@ -291,9 +289,10 @@ impl Gui {
             }
         }
         
-        if self.display_engine.game_version.expect("Game version cannot be not set here") != GameVersion::USA10 {
-            let unsupported_alert = format!("You are using an unsupported version '{}', saves will likely break. Supported versions: USA 1.0",
-                get_gameversion_prettyname(&self.display_engine.game_version.unwrap()));
+        let game_version = self.display_engine.game_version.expect("Game version cannot be not set here");
+        if game_version != GameVersion::USA10 {
+            let game_version_pretty = get_gameversion_prettyname(&game_version);
+            let unsupported_alert = format!("You are using an unsupported version '{game_version_pretty}', saves will likely break. Supported versions: USA 1.0");
             self.do_alert(&unsupported_alert);
         }
         self.display_engine.export_folder = self.export_directory.clone();
@@ -310,14 +309,16 @@ impl Gui {
         self.needs_bg_tile_refresh = true;
         self.project_open = true;
         // Load brushes
-        let brushes_load_result = self.load_brushes_json();
-        if brushes_load_result.is_err() {
-            let brush_db_err = format!("Brush database load error: '{}'",brushes_load_result.unwrap_err());
-            log_write(brush_db_err.clone(), LogLevel::ERROR);
-            self.do_alert(&brush_db_err);
-        } else {
-            log_write("Brush database loaded successfully", LogLevel::LOG);
-            self.display_engine.saved_brushes = brushes_load_result.unwrap();
+        match self.load_brushes_json() {
+            Err(error) => {
+                let brush_db_err = format!("Brush database load error: '{error}'");
+                log_write(brush_db_err.clone(), LogLevel::ERROR);
+                self.do_alert(&brush_db_err);
+            }
+            Ok(brushes) => {
+                log_write("Brush database loaded successfully", LogLevel::LOG);
+                self.display_engine.saved_brushes = brushes;
+            }
         }
     }
     pub fn export_rom_file(&mut self, path: String) {
@@ -427,30 +428,28 @@ impl Gui {
         let _backup_res = self.backup_map();
         // Create Map file
         let file_data = self.display_engine.loaded_map.package();
-        let file_result = File::create(&file_name_ext);
-        if file_result.is_err() {
-            log_write(format!("Failed to create Map file: '{}'",file_result.unwrap_err()), LogLevel::ERROR);
-            return;
-        }
-        let mut file: File = file_result.unwrap();
+        let mut file = match File::create(&file_name_ext) {
+            Err(error) => {
+                log_write(format!("Failed to create Map file: '{error}'"), LogLevel::ERROR);
+                return;
+            }
+            Ok(f) => f,
+        };
         // Write file
-        let file_write_result = file.write_all(&file_data);
-        if file_write_result.is_err() {
-            log_write(format!("Failed to write Map file: '{}'",file_write_result.unwrap_err()), LogLevel::ERROR);
-        } else {
-            log_write(format!("Map file saved to '{}'",&file_name_ext), LogLevel::LOG);
-            self.display_engine.unsaved_changes = false;
-        }
+        match file.write_all(&file_data) {
+            Err(error) => {
+                log_write(format!("Failed to write Map file: '{error}'"), LogLevel::ERROR);
+            }
+            Ok(_) => {
+                log_write(format!("Map file saved to '{}'",&file_name_ext), LogLevel::LOG);
+                self.display_engine.unsaved_changes = false;
+            }
+        };
     }
 
     fn backup_map(&mut self) -> Result<PathBuf,()> {
         log_write("Backing up current map file...", LogLevel::DEBUG);
-        let backup_folder = get_backup_folder(&self.export_directory);
-        if backup_folder.is_err() {
-            // Already logs
-            return Err(());
-        }
-        let mut backup_folder = backup_folder.unwrap();
+        let mut backup_folder = get_backup_folder(&self.export_directory)?;
         let filename_path = Path::new(&self.display_engine.loaded_map.src_file);
         let file_name = filename_path.file_name().expect("Should be a file name for the path");
         let file_name = file_name.to_string_lossy().to_string();
@@ -465,12 +464,13 @@ impl Gui {
         let file_name_ext = self.display_engine.loaded_course.src_filename.clone();
         log_write(format!("Saving Course file '{}'",&file_name_ext), LogLevel::LOG);
         let packed_level_file = self.display_engine.loaded_course.wrap();
-        let file_result = File::create(&file_name_ext);
-        if file_result.is_err() {
-            log_write(format!("Failed to create Course file: '{}'",file_result.unwrap_err()), LogLevel::ERROR);
-            return;
-        }
-        let mut file: File = file_result.unwrap();
+        let mut file = match File::create(&file_name_ext) {
+            Err(error) => {
+                log_write(format!("Failed to create Course file: '{error}'"), LogLevel::ERROR);
+                return;
+            }
+            Ok(f) => f,
+        };
         // Write file
         let file_write_result = file.write_all(&packed_level_file);
         if file_write_result.is_err() {
@@ -573,36 +573,37 @@ impl Gui {
         const SPRITE_CSV: &str = include_str!("../../assets/sprites.csv");
         for line in SPRITE_CSV.lines() {
             let record: Vec<&str> = line.split(',').collect();
-            if record[0] == "Sprite ID" {
+            let id = record[0];
+            if id == "Sprite ID" {
                 continue;
             }
-            let id_no_prefix = record[0].trim_start_matches("0x");
-            let true_id_res = u16::from_str_radix(id_no_prefix, 16);
-            if true_id_res.is_err() {
-                log_write(format!("Failure in parsing '{}' as a u16: '{}'",id_no_prefix,true_id_res.unwrap_err()), LogLevel::ERROR);
-                continue;
-            }
-            let true_id = true_id_res.unwrap();
+            let id_no_prefix = id.trim_start_matches("0x");
+            let true_id = match u16::from_str_radix(id_no_prefix, 16) {
+                Err(error) => {
+                    log_write(format!("Failure in parsing '{id_no_prefix}' as a u16: '{error}'"), LogLevel::ERROR);
+                    continue;
+                }
+                Ok(id) => id,
+            };
             let name = record[1];
             let description = record[2];
+            let construction_function = record[3];
             let mut default_settings_len: u16 = 0xffff;
-            if record[3].starts_with("0x") {
-                let setlen_no_prefix = record[3].trim_start_matches("0x");
-                let setlen_result = u16::from_str_radix(setlen_no_prefix, 16);
-                if setlen_result.is_err() {
-                    log_write(format!("Error parsing Settings length string '{}' as hex: '{}'",
-                        &record[3],setlen_result.unwrap_err()), LogLevel::FATAL);
-                } else {
-                    default_settings_len = setlen_result.unwrap();
-                }
+            if construction_function.starts_with("0x") {
+                let setlen_no_prefix = construction_function.trim_start_matches("0x");
+                match u16::from_str_radix(setlen_no_prefix, 16) {
+                    Err(error) => {
+                        log_write(format!("Error parsing Settings length string '{construction_function}' as hex: '{error}'"), LogLevel::FATAL);
+                    }
+                    Ok(func) => default_settings_len = func,
+                };
             } else {
-                let default_settings_length = record[3].parse::<u16>();
-                if default_settings_length.is_err() {
-                    log_write(format!("Error parsing Settings Length string '{}' as decimal: '{}'",
-                        &record[3],default_settings_length.unwrap_err()), LogLevel::FATAL);
-                } else {
-                    default_settings_len = default_settings_length.unwrap();
-                }
+                match construction_function.parse::<u16>() {
+                    Err(error) => {
+                        log_write(format!("Error parsing Settings Length string '{construction_function}' as decimal: '{error}'"), LogLevel::FATAL);
+                    }
+                    Ok(func) => default_settings_len = func,
+                };
             }
             let sprite_meta: SpriteMetadata = SpriteMetadata {
                 sprite_id: true_id,
@@ -688,9 +689,7 @@ impl Gui {
                 let mut should_update: bool = false;
                 let mut should_deselect: bool = false;
                 for s in &self.display_engine.selected_sprite_uuids {
-                    let sprite_data = self.display_engine.loaded_map.get_sprite_by_uuid(*s);
-                    if sprite_data.is_ok() {
-                        let s = &sprite_data.unwrap();
+                    if let Ok(s) = &self.display_engine.loaded_map.get_sprite_by_uuid(*s) {
                         if i.key_pressed(egui::Key::ArrowUp) {
                             self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position, s.y_position - 1);
                             should_update = true;
@@ -791,12 +790,11 @@ impl Gui {
         self.scroll_to = Some(Pos2::new(x_pos, y_pos));
         self.display_engine.selected_sprite_uuids.clear();
         self.display_engine.selected_sprite_uuids.push(*sprite_uuid);
-        let spr_res = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid);
-        if spr_res.is_err() {
+        if let Ok(spr_res) = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid) {
+            self.display_engine.latest_sprite_settings = settings_to_string(&spr_res.settings);
+        } else {
             log_write("Failed to get sprite by UUID in select_sprite_from_list", LogLevel::ERROR);
-            return;
         }
-        self.display_engine.latest_sprite_settings = settings_to_string(&spr_res.unwrap().settings);
     }
 
     pub fn do_select_all(&mut self) {
@@ -850,12 +848,11 @@ impl Gui {
             // This is LevelObject space, not GameFine or GUI Space
             let mut top_left_most: Pos2 = Pos2::new(999999.0, 999999.0);
             for spr_id in &uuids_copy {
-                let lsprite = self.display_engine.get_loaded_sprite_by_uuid(spr_id);
-                if lsprite.is_none() {
+                let Some(lsprite) = self.display_engine.get_loaded_sprite_by_uuid(spr_id) else {
                     log_write(format!("Sprite UUID '{}' did not have an associated loaded Sprite",spr_id), LogLevel::ERROR);
                     continue;
-                }
-                let cur_sprite = lsprite.unwrap().clone();
+                };
+                let cur_sprite = lsprite.clone();
                 if (cur_sprite.x_position as f32) < top_left_most.x {
                     top_left_most = Pos2::new(cur_sprite.x_position as f32, cur_sprite.y_position as f32);
                 }
@@ -914,12 +911,11 @@ impl Gui {
             // This is LevelObject space, not GameFine or GUI Space
             let mut top_left_most: Pos2 = Pos2::new(999999.0, 999999.0);
             for spr_id in &uuids_copy {
-                let lsprite = self.display_engine.get_loaded_sprite_by_uuid(spr_id);
-                if lsprite.is_none() {
+                let Some(lsprite) = self.display_engine.get_loaded_sprite_by_uuid(spr_id) else {
                     log_write(format!("Sprite UUID '{}' did not have an associated loaded Sprite",spr_id), LogLevel::ERROR);
                     continue;
-                }
-                let cur_sprite = lsprite.unwrap().clone();
+                };
+                let cur_sprite = lsprite.clone();
                 if (cur_sprite.x_position as f32) < top_left_most.x {
                     top_left_most = Pos2::new(cur_sprite.x_position as f32, cur_sprite.y_position as f32);
                 }
@@ -1049,23 +1045,18 @@ impl Gui {
             CurrentLayer::BG2 => self.clear_bg_layer(2),
             CurrentLayer::BG3 => self.clear_bg_layer(3),
             CurrentLayer::COLLISION => {
-                let colz_index = self.display_engine.loaded_map.get_bg_with_colz();
-                if colz_index.is_none() {
+                let Some(colz_index) = self.display_engine.loaded_map.get_bg_with_colz() else {
                     log_write("Somehow, there is no layer with COLZ during clear", LogLevel::ERROR);
                     return;
-                }
-                let bg = self.display_engine.loaded_map.get_background(colz_index.unwrap());
-                if bg.is_none() {
+                };
+                let Some(bg) = self.display_engine.loaded_map.get_background(colz_index) else {
                     log_write("COLZ not found in background when clearing", LogLevel::ERROR);
                     return;
-                }
-                let bg = bg.unwrap();
-                let colz_res = bg.get_colz_mut();
-                if colz_res.is_none() {
+                };
+                let Some(colz) = bg.get_colz_mut() else {
                     log_write("Failed to retrieve COLZ from BG during clear", LogLevel::ERROR);
                     return;
-                }
-                let colz = colz_res.unwrap();
+                };
                 colz.col_tiles.clear();
                 log_write("COLZ Layer cleared", LogLevel::DEBUG);
                 self.display_engine.graphics_update_needed = true;
@@ -1081,18 +1072,14 @@ impl Gui {
 
     fn clear_bg_layer(&mut self, which_bg: u8) {
         log_write(format!("Wiping BG layer {}",which_bg), LogLevel::DEBUG);
-        let bg_res = self.display_engine.loaded_map.get_background(which_bg);
-        if bg_res.is_none() {
+        let Some(bg) = self.display_engine.loaded_map.get_background(which_bg) else {
             log_write(format!("No BG {} loaded to clear",which_bg), LogLevel::WARN);
             return;
-        }
-        let bg = bg_res.unwrap();
-        let map_tiles = bg.get_mpbz_mut();
-        if map_tiles.is_none() {
+        };
+        let Some(map_tiles) = bg.get_mpbz_mut() else {
             log_write(format!("No map tiles on layer {} when clearing",which_bg), LogLevel::ERROR);
             return;
-        }
-        let map_tiles = map_tiles.unwrap();
+        };
         map_tiles.tiles.clear();
         log_write(format!("Cleared map tiles for bg {}",which_bg), LogLevel::LOG);
         self.display_engine.unsaved_changes = true;
@@ -1325,17 +1312,17 @@ impl eframe::App for Gui {
                     show_resize_modal(ui, &mut self.display_engine, &mut self.resize_settings);
                 });
         }
-        if self.general_alert_popup.is_some() {
-            let _alert_modal = Modal::new(Id::new("alert_modal"))
+        self.general_alert_popup.take_if(|alert| {
+            let alert_modal = Modal::new(Id::new("alert_modal"))
                 .show(ctx, |ui| {
                     ui.set_width(200.0);
                     ui.heading("Alert");
-                    ui.label(self.general_alert_popup.as_ref().unwrap());
-                    if ui.button("Okay").clicked() {
-                        self.general_alert_popup = Option::None;
-                    }
+                    ui.label(alert.as_str());
+                    let clicked_ok = ui.button("Okay").clicked();
+                    clicked_ok
                 });
-        }
+            alert_modal.inner
+        });
         if self.exit_changes_open {
             let _save_modal = Modal::new(Id::new("close_changes_modal"))
                 .show(ctx, |ui| {
