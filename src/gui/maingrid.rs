@@ -1,9 +1,9 @@
 use std::f32::consts::PI;
 
-use egui::{Align2, Color32, Context, FontId, Image, Painter, Pos2, Rect, Response, Stroke, TextureHandle, Vec2};
+use egui::{Align2, Color32, ColorImage, Context, FontId, Image, Painter, Pos2, Rect, Response, Stroke, Vec2};
 use uuid::Uuid;
 
-use crate::{data::{area::{TriggerData, AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, path::PathPoint, scendata::colz::{draw_collision, COLLISION_BG_COLOR, COLLISION_OUTLINE_COLOR, COLLISION_SQUARE}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, distance, get_curve_fine, get_pixel_bytes_16, get_pixel_bytes_256, get_sin_cos_table_value, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, print_vector_u8, settings_to_string, LogLevel}};
+use crate::{data::{area::{AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, path::PathPoint, scendata::colz::{draw_collision, COLLISION_BG_COLOR, COLLISION_OUTLINE_COLOR, COLLISION_SQUARE}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, distance, get_curve_fine, get_pixel_bytes_16, get_pixel_bytes_256, get_sin_cos_table_value, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, print_vector_u8, settings_to_string, LogLevel}};
 
 const TILE_WIDTH_PX: f32 = 8.0;
 const TILE_HEIGHT_PX: f32 = 8.0;
@@ -50,23 +50,11 @@ pub fn render_primary_grid(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Re
 }
 
 fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) {
-    let bg_with_col = de.loaded_map.get_bg_with_colz();
-    if bg_with_col.is_none() {
-        return;
-    }
-    let bg_with_col = bg_with_col.unwrap();
-    let bg_res = de.loaded_map.get_background(bg_with_col);
-    if bg_res.is_none() {
-        return;
-    }
-    let bg = bg_res.unwrap();
-    let info_c = bg.get_info().unwrap().clone();
+    let Some(bg_with_col) = de.loaded_map.get_bg_with_colz() else { return };
+    let Some(bg) = de.loaded_map.get_background(bg_with_col) else { return };
+    let Some(info_c) = bg.get_info() else { return };
     let grid_width = info_c.layer_width as u32;
-    let colz = bg.get_colz_mut();
-    if colz.is_none() {
-        return;
-    }
-    let col = colz.unwrap();
+    let Some(col) = bg.get_colz_mut() else { return };
     // Precursors
     let true_rect = ui.min_rect();
     let top_left: Pos2 = ui.min_rect().min;
@@ -200,12 +188,11 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
             if !ui.input(|i| i.pointer.secondary_down()) {
                 return;
             }
-            let cur_pos_res = ui.ctx().pointer_interact_pos();
-            if cur_pos_res.is_none() {
+            let Some(cur_pos) = ui.ctx().pointer_interact_pos() else {
                 log_write("Failed to get pointer_interact_pos in col .dragged", LogLevel::ERROR);
                 return;
-            }
-            de.col_selector_status.end_pos = cur_pos_res.unwrap();
+            };
+            de.col_selector_status.end_pos = cur_pos;
             // Draw
             let drag_rect: Rect = Rect::from_two_pos(de.col_selector_status.start_pos, de.col_selector_status.end_pos);
             ui.painter().rect_filled(drag_rect, 0.0, BG_SELECTION_FILL);
@@ -225,11 +212,7 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
 
 fn draw_triggers(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let top_left_screen: Pos2 = ui.min_rect().min;
-    let area_res = de.loaded_map.get_area();
-    if area_res.is_none() {
-        return;
-    }
-    let area: &TriggerData = area_res.unwrap();
+    let Some(area) = de.loaded_map.get_area() else { return };
     for trigger in &area.triggers {
         let rect = trigger.get_rect(top_left_screen, TILE_WIDTH_PX, TILE_HEIGHT_PX);
         if de.trigger_settings.selected_uuid == trigger.uuid {
@@ -263,18 +246,13 @@ fn draw_triggers(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let top_left_screen: Pos2 = ui.min_rect().min;
     // It's read-only, we aren't changing it
-    let blkz_res = de.loaded_map.get_blkz().cloned();
-    if blkz_res.is_none() {
-        return;
-    }
-    let blkz_data = blkz_res.unwrap();
+    let Some(blkz_data) = de.loaded_map.get_blkz().cloned() else { return };
 
-    let colz_layer = de.loaded_map.get_bg_with_colz();
-    if colz_layer.is_none() {
+    let Some(colz_layer) = de.loaded_map.get_bg_with_colz() else {
         log_write("There is no layer with COLZ", LogLevel::ERROR);
         return;
-    }
-    let bg = de.loaded_map.get_background(colz_layer.unwrap()).expect("Already confirmed COLZ");
+    };
+    let bg = de.loaded_map.get_background(colz_layer).expect("Already confirmed COLZ");
     let info = bg.get_info().expect("Info guaranteed on BGs for rock");
 
     let mut tile_index: i32 = 0;
@@ -317,11 +295,7 @@ fn draw_blkz_tile(
 
 fn draw_entrances(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let top_left: Pos2 = ui.min_rect().min;
-    if de.map_index.is_none() {
-        // Just don't do anything
-        return;
-    }
-    let map_index = de.map_index.unwrap();
+    let Some(map_index) = de.map_index else { return };
     let maps_count = de.loaded_course.level_map_data.len();
     if map_index >= maps_count {
         // This will cause an overflow panic
@@ -349,11 +323,7 @@ fn draw_entrances(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_exits(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let top_left: Pos2 = ui.min_rect().min;
-    if de.map_index.is_none() {
-        // Just don't do anything
-        return;
-    }
-    let map_index = de.map_index.unwrap();
+    let Some(map_index) = de.map_index else { return };
     let maps_count = de.loaded_course.level_map_data.len();
     if map_index >= maps_count {
         // This will cause an overflow panic if not stopped
@@ -627,12 +597,10 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                         let x_tile_movement = (true_new_x as i32) - og_sprite_tile_x;
                         let y_tile_movement = (true_new_y as i32) - og_sprite_tile_y;
                         for selspr in &de.selected_sprite_uuids {
-                            let og_sprite_data = de.get_loaded_sprite_by_uuid(selspr);
-                            if og_sprite_data.is_none() {
+                            let Some(og_sprite_data) = de.get_loaded_sprite_by_uuid(selspr) else {
                                 log_write(format!("Sprite Uuid '{}' not found when moving",selspr), LogLevel::ERROR);
                                 continue;
-                            }
-                            let og_sprite_data = og_sprite_data.unwrap();
+                            };
                             let mut move_to_x = og_sprite_data.x_position as i32 + x_tile_movement;
                             if move_to_x < 0 {
                                 move_to_x = 0;
@@ -658,12 +626,11 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
             }
             if cfr.secondary_clicked() { // Right clicked on empty background = place
                 log_write("Placing new sprite from right click...", LogLevel::DEBUG);
-                if de.selected_sprite_to_place.is_none() {
+                // Retrieve the base sprite ID to create, usually set by Add Sprite
+                let Some(new_sprite_id) = de.selected_sprite_to_place else {
                     log_write("Could not place sprite, none selected to add", LogLevel::DEBUG);
                     return;
-                }
-                // Retrieve the base sprite ID to create, usually set by Add Sprite
-                let new_sprite_id = de.selected_sprite_to_place.unwrap();
+                };
                 if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                     let local_pos = pointer_pos - ui.min_rect().min;
                     let base_tile_x: u16 = (local_pos.x/TILE_WIDTH_PX) as u16;
@@ -831,23 +798,20 @@ fn draw_background(
                     if bg_interaction.drag_started() {
                         log_write("Started dragging in BG render function", LogLevel::DEBUG);
                         de.bg_sel_data.dragging = true;
-                        let cur_pos_res = ui.ctx().pointer_interact_pos();
-                        if cur_pos_res.is_none() {
+                        let Some(cur_pos) = ui.ctx().pointer_interact_pos() else {
                             // This has failed before, somehow, so don't panic
                             log_write("Failed to get pointer_interact_pos in BG .drag_started", LogLevel::ERROR);
                             return;
-                        }
-                        let cur_pos: Pos2 = cur_pos_res.unwrap();
+                        };
                         de.bg_sel_data.start_pos = cur_pos;
                         de.bg_sel_data.end_pos = cur_pos; // Starts as empty square
                     }
                     if bg_interaction.dragged() {
-                        let cur_pos_res = ui.ctx().pointer_interact_pos();
-                        if cur_pos_res.is_none() {
+                        let Some(cur_pos) = ui.ctx().pointer_interact_pos() else {
                             log_write("Failed to get pointer_interact_pos in BG .dragged", LogLevel::ERROR);
                             return;
-                        }
-                        de.bg_sel_data.end_pos = cur_pos_res.unwrap();
+                        };
+                        de.bg_sel_data.end_pos = cur_pos;
                         let drag_rect: Rect = Rect::from_two_pos(de.bg_sel_data.start_pos, de.bg_sel_data.end_pos);
                         // Selection rectangle should look different if Control is held
                         if ui.input(|i| i.modifiers.ctrl) {

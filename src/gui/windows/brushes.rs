@@ -127,12 +127,10 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             let sel_height: u16 = de.bg_sel_data.selection_height;
             let odd_size = sel_width % 2 != 0 || sel_height % 2 != 0;
             let raw_text = format!("Selection width/height: {}/{}",sel_width,sel_height);
-            let top_left = de.bg_sel_data.get_top_left(layer.get_info().expect("Layer has INFO").layer_width);
-            if top_left.is_none() {
+            let Some(top_left) = de.bg_sel_data.get_top_left(layer.get_info().expect("Layer has INFO").layer_width) else {
                 log_write("Unable to get top left from bg selection in brushes", LogLevel::ERROR);
                 return;
-            }
-            let top_left = top_left.unwrap();
+            };
             let odd_pos = (top_left.x as u32) % 2 != 0 || (top_left.y as u32) % 2 != 0;
             let mut rich_text = RichText::new(raw_text);
             if odd_pos {
