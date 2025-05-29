@@ -1,4 +1,4 @@
-use std::{env, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
+use std::{env, f32::consts::PI, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
@@ -137,15 +137,12 @@ pub fn string_to_settings(settings_string: &String) -> Result<Vec<u8>,String> {
     Ok(new_settings)
 }
 
-pub fn get_curve_fine(cur_point: &PathPoint, next_point: &PathPoint, bez: bool) -> (Pos2,u32) {
-    #[allow(unused_assignments)] // Glitch
-    let mut radius_fine: u32 = 1 << 12;
+pub fn get_curve_fine(cur_point: &PathPoint, next_point: &PathPoint) -> (Pos2,i32,f32) {
+    const RAD_UNIT: f32 = PI / 2.0;
+    let rads: f32;
     let is_next_above = next_point.y_fine < cur_point.y_fine;
     let is_next_rightwards = next_point.x_fine > cur_point.x_fine;
-    let mut is_turning_right = cur_point.angle >= 0;
-    if bez {
-        is_turning_right = !is_turning_right;
-    }
+    let is_turning_right = cur_point.angle >= 0;
     let mut circle_point_fine: Pos2 = Pos2::ZERO;
     // Yes, it's this weirdly complex in the source code too...
     if is_turning_right { // Inverted if Bezier
@@ -153,47 +150,48 @@ pub fn get_curve_fine(cur_point: &PathPoint, next_point: &PathPoint, bez: bool) 
             // Up and to the right
             circle_point_fine.x = next_point.x_fine as f32;
             circle_point_fine.y = cur_point.y_fine as f32;
-            radius_fine = cur_point.y_fine - next_point.y_fine;
+            rads = RAD_UNIT * 1.0; // top left curve
         } else if is_next_above && !is_next_rightwards {
             // Up and to the left
             circle_point_fine.x = cur_point.x_fine as f32;
             circle_point_fine.y = next_point.y_fine as f32;
-            radius_fine = cur_point.y_fine - next_point.y_fine;
+            rads = RAD_UNIT * 2.0; // ?
         } else if !is_next_above && is_next_rightwards {
             // Below and to the right
             circle_point_fine.x = cur_point.x_fine as f32;
             circle_point_fine.y = next_point.y_fine as f32;
-            radius_fine = next_point.y_fine - cur_point.y_fine;
+            rads = RAD_UNIT * 0.0;
         } else { // !is_next_above && !is_next_rightwards
             // Below and to the left
             circle_point_fine.x = next_point.x_fine as f32;
-            circle_point_fine.y = next_point.y_fine as f32;
-            radius_fine = next_point.y_fine - cur_point.y_fine;
+            circle_point_fine.y = cur_point.y_fine as f32;
+            rads = RAD_UNIT * 3.0; // bottom right
         }
-    } else {
+    } else { // Turning left
         if is_next_above && is_next_rightwards {
             // Up and to the right
             circle_point_fine.x = cur_point.x_fine as f32;
             circle_point_fine.y = next_point.y_fine as f32;
-            radius_fine = cur_point.y_fine - next_point.y_fine;
+            rads = RAD_UNIT * 3.0; // bottom right
         } else if is_next_above && !is_next_rightwards {
             // Up and to the left
             circle_point_fine.x = next_point.x_fine as f32;
             circle_point_fine.y = cur_point.y_fine as f32;
-            radius_fine = cur_point.y_fine - next_point.y_fine;
+            rads = RAD_UNIT * 0.0; // Top right
         } else if !is_next_above && is_next_rightwards {
             // Below and to the right
             circle_point_fine.x = next_point.x_fine as f32;
             circle_point_fine.y = cur_point.y_fine as f32;
-            radius_fine = next_point.y_fine - cur_point.y_fine;
+            rads = RAD_UNIT * 2.0; // Bottom left
         } else {
             // Below and to the left
-            circle_point_fine.x = next_point.x_fine as f32;
+            circle_point_fine.x = cur_point.x_fine as f32;
             circle_point_fine.y = next_point.y_fine as f32;
-            radius_fine = next_point.y_fine - cur_point.y_fine;
+            rads = RAD_UNIT * 1.0; // Top left
         }
     }
-    (circle_point_fine,radius_fine as u32)
+    let radius_fine: i32 = (cur_point.y_fine as i32) - (next_point.y_fine as i32);
+    (circle_point_fine,radius_fine.abs(),rads)
 }
 
 pub fn string_to_header(header: String) -> u32 {

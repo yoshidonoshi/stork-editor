@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use egui::{Align2, Color32, Context, FontId, Image, Painter, Pos2, Rect, Response, Stroke, TextureHandle, Vec2};
 use uuid::Uuid;
 
@@ -431,7 +433,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 }
                 // Copy
                 let next_point: PathPoint = line.points[i+1];
-                let (circle_point_fine,radius) = get_curve_fine(cur_point, &next_point, false);
+                let (circle_point_fine,radius,rads) = get_curve_fine(cur_point, &next_point);
                 let circle_radius = (radius >> 12) as f32;
                 let circle_vec: Vec2 = Vec2::new(
                     ((circle_point_fine.x as u32 >> 15) as f32) * TILE_WIDTH_PX,
@@ -439,13 +441,26 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 );
                 let circle_pos: Pos2 = top_left + circle_vec;
                 let point_selected = de.path_settings.selected_point == cur_point.uuid;
+                // This is the general circle
+                //ui.painter().circle_stroke(circle_pos, circle_radius, egui::Stroke::new(1.0, Color32::from_rgba_unmultiplied(0xff, 0, 0, 0x05)));
+                
                 let circle_stroke = egui::Stroke::new(if point_selected { 2.0 } else { 1.0 },
                 if point_selected {
                     Color32::GREEN
                 } else {
-                    Color32::from_rgba_unmultiplied(0xff, 0, 0, 0x05)
+                    Color32::from_rgba_unmultiplied(0xff, 0, 0, 0x55)
                 });
-                ui.painter().circle_stroke(circle_pos, circle_radius, circle_stroke);
+                let segments: usize = 5;
+                let mut points: Vec<Pos2> = vec![];
+                const RAD_UNIT: f32 = PI / 2.0; // 90 degrees in Radians
+                for i in 0..=segments {
+                    // Divide into segments, then do radian offset
+                    let angle = ((i as f32) / (segments as f32) * RAD_UNIT)+rads;
+                    let x = circle_pos.x + circle_radius * angle.cos();
+                    let y = circle_pos.y - circle_radius * angle.sin();
+                    points.push(Pos2 { x, y });
+                }
+                ui.painter().add(egui::Shape::line(points, circle_stroke));
             }
         }
         // Interactivity
