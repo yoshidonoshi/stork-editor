@@ -1,11 +1,11 @@
-use std::{collections::HashMap, error::Error, fmt, fs::{self, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
+use std::{collections::HashMap, error::Error, fmt, fs::{self, DirEntry, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
 
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -776,10 +776,52 @@ impl Gui {
                     return Err(RomExtractError::new(&fail_msg));
                 }
                 self.open_project(self.export_directory.clone());
+                self.create_map_templates();
                 return Ok(());
             }
         }
         Err(RomExtractError::new(&"Open ROM failed".to_string()))
+    }
+
+    fn create_map_templates(&mut self) {
+        log_write("Creating Map templates", LogLevel::LOG);
+        let mut templates: HashMap<String,String> = HashMap::new();
+        templates.insert("Flower Garden 1".to_string(), "01k3380.mpdz".to_string());
+        templates.insert("Spawn Pipe Interior".to_string(), "15k0382.mpdz".to_string());
+        templates.insert("Generic Pipe Interior".to_string(), "15k0383.mpdz".to_string());
+        let map_filenames: Vec<String> = templates.values().map(|x| x.clone()).collect();
+        println!("map_filenames: {:?}",map_filenames);
+        // Only one error in get_template_folder, so Option not Result
+        let Some(template_dir) = get_template_folder(&self.export_directory) else {
+            log_write("Failed to get or create template directory", LogLevel::ERROR);
+            return;
+        };
+        let mut map_dir = self.export_directory.clone();
+        map_dir.push("files");
+        map_dir.push("file");
+        println!("map_dir: {}",map_dir.display());
+        // 
+        match fs::read_dir(map_dir) {
+            Ok(l) => {
+                let good_dirs: Vec<DirEntry> = l.into_iter().filter_map(|x| x.ok() ).collect();
+                for files_file in good_dirs {
+                    let found_name = files_file.file_name().into_string().expect("NitroFS is ASCII only");
+                    if map_filenames.contains(&found_name) {
+                        // Found it! Copy
+                        let mut to_file_dir = template_dir.clone();
+                        to_file_dir.push(found_name);
+                        let copy_attempt = fs::copy(files_file.path(), to_file_dir);
+                        if copy_attempt.is_err() {
+                            log_write(format!("Error copying template file: '{}'",copy_attempt.unwrap_err()), LogLevel::ERROR);
+                        }
+                    }
+                }
+            },
+            Err(e) => {
+                log_write(format!("Error reading map directory for templates: '{}'",e), LogLevel::ERROR);
+                return;
+            }
+        }
     }
 
     pub fn select_sprite_from_list(&mut self, sprite_index: &usize, sprite_uuid: &Uuid) {

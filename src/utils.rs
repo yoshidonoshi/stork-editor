@@ -362,6 +362,19 @@ pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
     Ok(p)
 }
 
+pub fn get_template_folder(export_dir: &PathBuf) -> Option<PathBuf> {
+    let mut p: PathBuf = PathBuf::from(export_dir);
+    p.push("templates");
+    if !p.exists() {
+        let create_res = fs::create_dir(p.clone());
+        if create_res.is_err() {
+            log_write(format!("Error creating template folder: '{}'",create_res.unwrap_err()), LogLevel::ERROR);
+            return None;
+        }
+    }
+    Some(p)
+}
+
 /// Get the Rect determining how the tile is flipped
 pub fn get_uvs_from_tile(tile: &MapTileRecordData) -> Rect {
     let mut uvs = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
