@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::{data::{mapfile::TopLevelSegmentWrapper, path::{PathDatabase, PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
-const CHANGE_RATE: u32 = 0x10000;
+const CHANGE_RATE: u32 = 0x1000;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct PathAngle {
@@ -229,9 +229,10 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     if let Some(path) = paths.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) {
         if let Some(point) = path.points.iter_mut().find(|y| y.uuid == de.path_settings.selected_point) {
             let point_before = point.clone();
-            ui.label("Warning: This section is WIP, red connecting line is not accurate");
+            //ui.label("Warning: This section is WIP, red connecting line is not accurate");
             ui.horizontal(|ui| {
                 let angle = egui::DragValue::new(&mut point.angle)
+                    .speed(0x10)
                     .hexadecimal(5, false, true);
                 ui.add(angle);
                 ui.label("Angle");
