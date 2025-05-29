@@ -1,4 +1,4 @@
-use std::{env, f32::consts::PI, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
+use std::{collections::HashMap, env, f32::consts::PI, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
@@ -373,6 +373,59 @@ pub fn get_template_folder(export_dir: &PathBuf) -> Option<PathBuf> {
         }
     }
     Some(p)
+}
+
+pub fn get_map_templates() -> HashMap<String,String> {
+    let mut templates: HashMap<String,String> = HashMap::new();
+    templates.insert("Flower Garden - Full".to_string(), "01k3380.mpdz".to_string());
+    templates.insert("Spawn Pipe Interior".to_string(), "15k0382.mpdz".to_string());
+    templates.insert("Generic Pipe Interior".to_string(), "15k0383.mpdz".to_string());
+    templates.insert("Cave - Godrays".to_string(), "08k3381.mpdz".to_string());
+    templates.insert("Cave - Mushrooms".to_string(), "08k5371.mpdz".to_string());
+    templates.insert("Cave - Wall Holes".to_string(), "08y0213.mpdz".to_string());
+    templates.insert("Cave - Lava Goal".to_string(), "08k0353.mpdz".to_string());
+    templates.insert("Cave - Lava Vines".to_string(), "08i0045.mpdz".to_string());
+    templates.insert("Cliff Tunnels - Flowers".to_string(), "09k3117.mpdz".to_string());
+    templates.insert("Cliff Tunnels - Soft Rock".to_string(), "09k5120.mpdz".to_string());
+    templates.insert("Cliff Tunnels - Outside".to_string(), "09k5121.mpdz".to_string());
+    templates.insert("Cliff Tunnels - Top".to_string(), "09k3243.mpdz".to_string());
+    templates.insert("Fortress - Lava".to_string(), "14k5361.mpdz".to_string());
+    templates.insert("Fortress - Boss Room".to_string(), "14m0006.mpdz".to_string());
+    templates.insert("Fortress - Ship Interior".to_string(), "14w2006.mpdz".to_string());
+    templates.insert("Fortress - Metal Spikes".to_string(), "14w2000.mpdz".to_string());
+    templates.insert("Jungle - Vines".to_string(), "16m0046.mpdz".to_string());
+    templates.insert("Jungle - Goal".to_string(), "16m0052.mpdz".to_string());
+    templates.insert("Jungle - Soft Rock".to_string(), "16m0079.mpdz".to_string());
+    templates.insert("Castle Roof - Spike Ferries".to_string(), "13w0113.mpdz".to_string());
+    templates.insert("Castle Roof - Soft Rock".to_string(), "13w0111.mpdz".to_string());
+    templates.insert("Castle Roof - Minigame 1".to_string(), "13y0920.mpdz".to_string());
+    templates.insert("Castle Roof - Log Platforms".to_string(), "13w0112.mpdz".to_string());
+    templates.insert("Castle Roof - Interior".to_string(), "13w0110.mpdz".to_string());
+    templates.insert("Jungle River - Teeter Totters".to_string(), "04w0391.mpdz".to_string());
+    templates.insert("Jungle River - Waterfall".to_string(), "04w0394.mpdz".to_string());
+    templates.insert("Jungle River - Goal".to_string(), "04w0395.mpdz".to_string());
+    templates.insert("High Seas - Rainy Pirate Ship".to_string(), "05k0430.mpdz".to_string());
+    templates.insert("High Seas - Mud Islands".to_string(), "05k3421.mpdz".to_string());
+    templates.insert("High Seas - Night Ship".to_string(), "05k3425.mpdz".to_string());
+    templates.insert("Clouds - Moving Platforms".to_string(), "11w0314.mpdz".to_string());
+    templates.insert("Clouds - Goal".to_string(), "11w0317.mpdz".to_string());
+    templates.insert("Clouds - Large + Spikes".to_string(), "11y0620.mpdz".to_string());
+    templates.insert("Clouds - Soft Rock".to_string(), "11i0047.mpdz".to_string());
+    templates.insert("Sky Stones - Stones".to_string(), "03k4001.mpdz".to_string());
+    templates.insert("Sky Stones - Grass".to_string(), "03k4003.mpdz".to_string());
+    templates.insert("Sky Stones - Wall Holes".to_string(), "03k4004.mpdz".to_string());
+    templates.insert("Sky Stones - Goal".to_string(), "03i0006.mpdz".to_string());
+    templates.insert("Outback - Short Caves".to_string(), "02k0112.mpdz".to_string());
+    templates.insert("Outback - Caves".to_string(), "02k0250.mpdz".to_string());
+    templates.insert("Outback - Goal".to_string(), "02k0113.mpdz".to_string());
+    templates.insert("Outback - Rails".to_string(), "02w0039.mpdz".to_string());
+    templates.insert("Space - Asteroids".to_string(), "17w0114.mpdz".to_string());
+    templates.insert("Snow - Ice".to_string(), "10k7101.mpdz".to_string());
+    templates.insert("Snow - Trees".to_string(), "10k5102.mpdz".to_string());
+    templates.insert("Snow - Goal".to_string(), "10k7104.mpdz".to_string());
+    templates.insert("Snow - Moving Platforms".to_string(), "10k5012.mpdz".to_string());
+    templates.insert("Snow - Skiing".to_string(), "10k6008.mpdz".to_string());
+    templates
 }
 
 /// Get the Rect determining how the tile is flipped
