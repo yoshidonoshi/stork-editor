@@ -963,6 +963,31 @@ fn local_pos_to_col_index(local_pos: &Vec2, std_grid_width: u32) -> u32 {
     tile_index
 }
 
+fn draw_tile(
+    tile: &MapTileRecordData,
+    ctx: &Context, pixel_tiles: &Vec<u8>,
+    painter: &Painter, tc: &mut TileCache,
+    true_rect: &Rect, selected: bool,
+    dim: bool,
+    create_texture_image: impl Fn(&MapTileRecordData, &Vec<u8>) -> ColorImage, texture_name: &str
+) {
+    if let Some(t) = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize) {
+        let uvs = get_uvs_from_tile(tile);
+        let color = match (dim, selected) {
+            (true, _) => Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 0x40),
+            (_, true) => Color32::PURPLE,
+            _ => Color32::WHITE,
+        };
+        painter.image(t.id(), *true_rect, uvs, color);
+    } else {
+        let color_image = create_texture_image(tile, pixel_tiles);
+        set_cached_texture(
+            tc, tile.palette_id as usize, tile.tile_id as usize,
+            ctx.load_texture(texture_name, color_image, egui::TextureOptions::NEAREST),
+        );
+    }
+}
+
 pub fn draw_tile_16(
     tile: &MapTileRecordData, palette: &Palette,
     ctx: &Context, pixel_tiles: &Vec<u8>,
@@ -970,30 +995,13 @@ pub fn draw_tile_16(
     true_rect: &Rect, selected: bool,
     dim: bool
 ) {
-    // See if the texture already exists in the cache, will save much processing power
-    let tex_handle_opt: &Option<egui::TextureHandle> = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize);
-    let mut tex_handle_opt_2: Option<TextureHandle> = Option::None;
-    if tex_handle_opt.is_none() {
-        let byte_array = &get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
-        let nibble_array = pixel_byte_array_to_nibbles(byte_array);
-        let color_image = color_image_from_pal(palette, &nibble_array);
-        tex_handle_opt_2 = Some(ctx.load_texture("tile16", color_image, egui::TextureOptions::NEAREST));
-    }
-
-    let uvs = get_uvs_from_tile(tile);
-    if let Some(t) = tex_handle_opt {
-        if dim {
-            painter.image(t.id(), *true_rect, uvs, Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 0x40));
-        } else if selected {
-            painter.image(t.id(), *true_rect, uvs, Color32::PURPLE);
-        } else {
-            painter.image(t.id(), *true_rect, uvs, Color32::WHITE);
-        }
-    } else {
-        set_cached_texture(tc, tile.palette_id as usize, tile.tile_id as usize, tex_handle_opt_2.unwrap());
-        // It'll render it next time around
-    }
-    
+    draw_tile(tile, ctx, pixel_tiles, painter, tc, true_rect, selected, dim,
+        |tile, pixel_tiles| {
+            let byte_array = get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
+            let nibble_array = pixel_byte_array_to_nibbles(&byte_array);
+            color_image_from_pal(palette, &nibble_array)
+        }, "tile16"
+    );
 }
 
 pub fn draw_tile_256(
@@ -1003,26 +1011,10 @@ pub fn draw_tile_256(
     true_rect: &Rect, selected: bool,
     dim: bool
 ) {
-    let tex_handle_opt: &Option<egui::TextureHandle> = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize);
-    let mut tex_handle_opt_2: Option<TextureHandle> = Option::None;
-    if tex_handle_opt.is_none() {
-        // Create the texture itself
-        let byte_array = get_pixel_bytes_256(pixel_tiles, &tile.tile_id);
-        let color_image = color_image_from_pal(palette256, &byte_array);
-        tex_handle_opt_2 = Some(ctx.load_texture("tile256", color_image, egui::TextureOptions::NEAREST));
-    }
-
-    let uvs = get_uvs_from_tile(tile);
-    if let Some(t) = tex_handle_opt {
-        if dim {
-            painter.image(t.id(), *true_rect, uvs, Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 0x40));
-        } else if selected {
-            painter.image(t.id(), *true_rect, uvs, Color32::PURPLE);
-        } else {
-            painter.image(t.id(), *true_rect, uvs, Color32::WHITE);
-        }
-    } else {
-        set_cached_texture(tc, tile.palette_id as usize, tile.tile_id as usize, tex_handle_opt_2.unwrap());
-        // It'll render it next time around
-    }
+    draw_tile(tile, ctx, pixel_tiles, painter, tc, true_rect, selected, dim,
+        |tile, pixel_tiles| {
+            let byte_array = get_pixel_bytes_256(pixel_tiles, &tile.tile_id);
+            color_image_from_pal(palette256, &byte_array)
+        }, "tile256"
+    );
 }
