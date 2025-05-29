@@ -7,6 +7,12 @@ edition = "2024"
 name = "storkeditor"
 path = "src/main.rs"
 
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+
 [dependencies]
 byteorder = "1.5.0"
 colored = "3.0.0"

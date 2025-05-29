@@ -1,7 +1,9 @@
+use std::f32::consts::PI;
+
 use egui::{Align2, Color32, Context, FontId, Image, Painter, Pos2, Rect, Response, Stroke, TextureHandle, Vec2};
 use uuid::Uuid;
 
-use crate::{data::{area::{TriggerData, AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, scendata::colz::{draw_collision, COLLISION_BG_COLOR, COLLISION_OUTLINE_COLOR, COLLISION_SQUARE}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, distance, get_pixel_bytes_16, get_pixel_bytes_256, get_sin_cos_table_value, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, print_vector_u8, settings_to_string, LogLevel}};
+use crate::{data::{area::{TriggerData, AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, path::PathPoint, scendata::colz::{draw_collision, COLLISION_BG_COLOR, COLLISION_OUTLINE_COLOR, COLLISION_SQUARE}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, distance, get_curve_fine, get_pixel_bytes_16, get_pixel_bytes_256, get_sin_cos_table_value, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, print_vector_u8, settings_to_string, LogLevel}};
 
 const TILE_WIDTH_PX: f32 = 8.0;
 const TILE_HEIGHT_PX: f32 = 8.0;
@@ -382,10 +384,8 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let arm9 = de.loaded_arm9.clone().expect("ARM9 must exist");
     let top_left: Pos2 = ui.min_rect().min;
     if let Some(path_database) = &de.path_data {
-        let mut _line_index: usize = 0;
         for line in &path_database.lines {
             let mut line_points: Vec<Pos2> = Vec::new();
-            let mut _point_index: usize = 0;
             let path_selected = de.path_settings.selected_line == line.uuid;
             for point in &line.points {
                 let placement_vec: Vec2 = Vec2::new(
@@ -405,25 +405,63 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     ),
                     egui::StrokeKind::Outside
                 );
-                // let text_to_draw = format!("{}-{}",&line_index,&point_index);
-                // ui.painter().text(
-                //     rect.left_top(), Align2::LEFT_TOP,
-                //     text_to_draw,
-                //     FontId { size: 12.0, family: egui::FontFamily::Monospace },
-                //     Color32::WHITE
-                // );
-                if point.distance >= 0 {
+                if point.distance >= 0 && point.distance != 0 {
                     let test_val = get_sin_cos_table_value(&arm9, point.angle as u16);
+                    let x_offset = ((test_val.x as i32) * (point.distance as i32)) >> 12; // Note: this includes the tile width
+                    let y_offset = ((test_val.y as i32) * (point.distance as i32)) >> 12; // This will need changing once zoom is added
                     //println!("test_val: {:?}", test_val);
-                    let _end_pos: Pos2 = Pos2::new(true_pos.x + (test_val.x as f32), true_pos.y + (test_val.y as f32));
-                    //ui.painter().line(vec![true_pos,end_pos], Stroke::new(3.0,  if point_selected {Color32::GREEN} else { Color32::PURPLE } ));
+                    let end_pos: Pos2 = Pos2::new(true_pos.x + (x_offset as f32), true_pos.y + (y_offset as f32));//
+                    let stroke = Stroke::new(
+                        if point_selected { 2.0 } else { 1.0 },
+                        if point_selected {Color32::GREEN} else { Color32::RED }
+                    );
+                    ui.painter().line(vec![true_pos,end_pos], stroke);
+                } else {
+                    // Point distance is negative
+                    // Calculations done here: 02054b34
                 }
-                _point_index += 1;
             }
-            _line_index += 1;
-            ui.painter().line(line_points, Stroke::new(1.0,
-                if path_selected { Color32::LIGHT_RED } else { Color32::RED }
-            ));
+            // Circles
+            for (i, cur_point) in line.points.iter().enumerate() {
+                if i == line.points.len() - 1 {
+                    // Skip the last one
+                    break;
+                }
+                if cur_point.distance >= 0 {
+                    // It's a straight line, skip
+                    continue;
+                }
+                // Copy
+                let next_point: PathPoint = line.points[i+1];
+                let (circle_point_fine,radius,rads) = get_curve_fine(cur_point, &next_point);
+                let circle_radius = (radius >> 12) as f32;
+                let circle_vec: Vec2 = Vec2::new(
+                    ((circle_point_fine.x as u32 >> 15) as f32) * TILE_WIDTH_PX,
+                    ((circle_point_fine.y as u32 >> 15) as f32) * TILE_HEIGHT_PX
+                );
+                let circle_pos: Pos2 = top_left + circle_vec;
+                let point_selected = de.path_settings.selected_point == cur_point.uuid;
+                // This is the general circle
+                //ui.painter().circle_stroke(circle_pos, circle_radius, egui::Stroke::new(1.0, Color32::from_rgba_unmultiplied(0xff, 0, 0, 0x05)));
+                
+                let circle_stroke = egui::Stroke::new(if point_selected { 2.0 } else { 1.0 },
+                if point_selected {
+                    Color32::GREEN
+                } else {
+                    Color32::from_rgba_unmultiplied(0xff, 0, 0, 0x55)
+                });
+                let segments: usize = 5;
+                let mut points: Vec<Pos2> = vec![];
+                const RAD_UNIT: f32 = PI / 2.0; // 90 degrees in Radians
+                for i in 0..=segments {
+                    // Divide into segments, then do radian offset
+                    let angle = ((i as f32) / (segments as f32) * RAD_UNIT)+rads;
+                    let x = circle_pos.x + circle_radius * angle.cos();
+                    let y = circle_pos.y - circle_radius * angle.sin();
+                    points.push(Pos2 { x, y });
+                }
+                ui.painter().add(egui::Shape::line(points, circle_stroke));
+            }
         }
         // Interactivity
         if de.display_settings.current_layer == CurrentLayer::PATHS {
@@ -452,6 +490,31 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     if shortest_distance <= PATH_SELECTION_DISTANCE {
                         de.path_settings.selected_point = closest_uuid;
                         de.path_settings.selected_line = closest_line_uuid;
+                    }
+                }
+            }
+            if click_response.secondary_clicked() {
+                if !de.path_settings.selected_line.is_nil(){
+                    if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                        let local_pos = pointer_pos - ui.min_rect().min;
+                        let x_fine = ((local_pos.x / TILE_WIDTH_PX) as u32) << 15;
+                        let y_fine = ((local_pos.y / TILE_HEIGHT_PX) as u32) << 15;
+                        // You are adding it on the end, therefore distance defaults to 0
+                        let p = PathPoint::new(0, 0, x_fine, y_fine);
+                        let puuid = p.uuid; // Copies
+                        let Some(path_data) = de.loaded_map.get_path() else {
+                            log_write("Failed to get PathDatabase", LogLevel::ERROR);
+                            return;
+                        };
+                        let line = path_data.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
+                        if let Some(l) = line {
+                            l.points.push(p);
+                            de.path_settings.selected_point = puuid;
+                            de.graphics_update_needed = true;
+                            de.unsaved_changes = true;
+                        } else {
+                            log_write("Failed to get PathLine for new PathPoint", LogLevel::ERROR);
+                        }
                     }
                 }
             }
