@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::{data::{mapfile::TopLevelSegmentWrapper, path::{PathDatabase, PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
-const CHANGE_RATE: u32 = 0x10000;
+const CHANGE_RATE: u32 = 0x1000;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct PathAngle {

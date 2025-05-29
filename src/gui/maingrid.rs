@@ -432,11 +432,12 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 // Copy
                 let next_point: PathPoint = line.points[i+1];
                 let (circle_point_fine,radius) = get_curve_fine(cur_point, &next_point, false);
-                let placement_vec: Vec2 = Vec2::new(
+                let circle_radius = (radius >> 12) as f32;
+                let circle_vec: Vec2 = Vec2::new(
                     ((circle_point_fine.x as u32 >> 15) as f32) * TILE_WIDTH_PX,
                     ((circle_point_fine.y as u32 >> 15) as f32) * TILE_HEIGHT_PX
                 );
-                let true_pos: Pos2 = top_left + placement_vec;
+                let circle_pos: Pos2 = top_left + circle_vec;
                 let point_selected = de.path_settings.selected_point == cur_point.uuid;
                 let circle_stroke = egui::Stroke::new(if point_selected { 2.0 } else { 1.0 },
                 if point_selected {
@@ -444,7 +445,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 } else {
                     Color32::from_rgba_unmultiplied(0xff, 0, 0, 0x05)
                 });
-                ui.painter().circle_stroke(true_pos, (radius >> 12) as f32, circle_stroke);
+                ui.painter().circle_stroke(circle_pos, circle_radius, circle_stroke);
             }
         }
         // Interactivity
