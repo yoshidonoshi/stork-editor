@@ -15,17 +15,17 @@ pub struct ScrollData {
 
 impl ScrollData {
     pub fn new(rdr: &mut Cursor<&Vec<u8>>) -> Self {
-        let mut ret = ScrollData::default();
         let left_vel = match rdr.read_i32::<LittleEndian>() {
             Err(error) => {
                 log_write(format!("Could not read Left Velocity: '{error}'"), LogLevel::ERROR);
-                return ret;
+                return ScrollData::default();
             }
             Ok(v) => v,
         };
-        ret.left_velocity = left_vel;
-        ret.up_velocity = rdr.read_i32::<LittleEndian>().expect("Up Velocity SCRL");
-        ret
+        Self {
+            left_velocity: left_vel,
+            up_velocity: rdr.read_i32::<LittleEndian>().expect("Up Velocity SCRL")
+        }
     }
 }
 

@@ -20,11 +20,10 @@ pub struct CollisionData {
 
 impl CollisionData {
     pub fn new(compressed_buffer: &Vec<u8>) -> Self {
-        let mut ret: CollisionData = CollisionData::default();
         let decomp: Vec<u8> = lamezip77_lz10_decomp(compressed_buffer);
-        ret.col_tiles = decomp;
-
-        ret
+        Self {
+            col_tiles: decomp
+        }
     }
     pub fn increase_width(&mut self, old_width: u16, increase_by: usize) {
         // Tiles are 2x2
