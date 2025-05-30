@@ -379,11 +379,11 @@ fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &V
         log_write("Selected exit target map changed", LogLevel::DEBUG);
         let Some(course_new) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
             log_write("Failed to find course for selected exit target map", LogLevel::FATAL);
-            return; // Satisfy compiler, but not reached as logging FATAL does message panic
+            unreachable!()
         };
         let Some(first_map_entrance) = course_new.map_entrances.first() else {
             log_write("New exit target map has no entrances",LogLevel::FATAL);
-            return; // Satisfy compiler, but not reached as logging FATAL does message panic
+            unreachable!()
         };
         selected_exit.target_map_entrance = first_map_entrance.uuid;
     }
