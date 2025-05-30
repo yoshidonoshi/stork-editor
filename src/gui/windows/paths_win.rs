@@ -49,13 +49,11 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let btn_add = ui.add(egui::Button::new("New"));
         if btn_add.clicked() {
             log_write("Creating new PathLine", LogLevel::LOG);
-            let path_res = de.loaded_map.get_path();
-            if path_res.is_none() {
+            let Some(path) = de.loaded_map.get_path() else {
                 de.path_settings.selected_line = Uuid::nil();
                 de.path_settings.selected_point = Uuid::nil();
                 return;
-            }
-            let path = path_res.unwrap();
+            };
             // Empty, but with a new UUID
             let mut new_blank_line = PathLine::default();
             new_blank_line.points.push(PathPoint::default()); // Don't let it be empty
@@ -68,13 +66,11 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let del = ui.add_enabled(!de.path_settings.selected_line.is_nil(), egui::Button::new("Delete"));
         if del.clicked() {
-            let path_res = de.loaded_map.get_path();
-            if path_res.is_none() {
+            let Some(path) = de.loaded_map.get_path() else {
                 de.path_settings.selected_line = Uuid::nil();
                 de.path_settings.selected_point = Uuid::nil();
                 return;
-            }
-            let path = path_res.unwrap();
+            };
             let _ = path.delete_line(de.path_settings.selected_line);
             de.path_settings.selected_line = Uuid::nil();
             de.path_settings.selected_point = Uuid::nil();
@@ -90,11 +86,10 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         .column(Column::exact(100.0))
         .sense(egui::Sense::click())
         .body(|mut body| {
-            let path_res = de.loaded_map.get_path();
-            if path_res.is_none() {
+            let Some(path) = de.loaded_map.get_path() else {
                 return;
-            }
-            let paths: &mut Vec<PathLine> = &mut path_res.unwrap().lines;
+            };
+            let paths: &mut Vec<PathLine> = &mut path.lines;
             for path in paths {
                 body.row(20.0, |mut row| {
                     let row_index = row.index();
@@ -120,19 +115,15 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let new_btn = ui.add(egui::Button::new("New"));
         if new_btn.clicked() {
             log_write("Creating PathPoint", LogLevel::DEBUG);
-            let path_res = de.loaded_map.get_path();
-            if path_res.is_none() {
+            let Some(path) = de.loaded_map.get_path() else {
                 log_write("Cannot get PATH for point creation", LogLevel::ERROR);
                 return;
-            }
-            let path = path_res.unwrap();
+            };
             // Now get the line
-            let line_res = path.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
-            if line_res.is_none() {
+            let Some(line) = path.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) else {
                 log_write("Cannot get Line for point creation", LogLevel::ERROR);
                 return;
-            }
-            let line = line_res.unwrap();
+            };
             let new_point = PathPoint::default();
             line.points.push(new_point);
             de.unsaved_changes = true;
@@ -143,34 +134,28 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let del = ui.add_enabled(!de.path_settings.selected_point.is_nil(), egui::Button::new("Delete"));
         if del.clicked() {
-            let path_res = de.loaded_map.get_path();
-            if path_res.is_none() {
+            let Some(path) = de.loaded_map.get_path() else {
                 log_write("Cannot get PATH for point deletion", LogLevel::ERROR);
                 de.path_settings.selected_line = Uuid::nil();
                 de.path_settings.selected_point = Uuid::nil();
                 return;
-            }
-            let path = path_res.unwrap();
+            };
             // Now get the line
-            let line_res = path.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
-            if line_res.is_none() {
+            let Some(line) = path.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) else {
                 log_write("Cannot get Line for point deletion", LogLevel::ERROR);
                 de.path_settings.selected_line = Uuid::nil();
                 de.path_settings.selected_point = Uuid::nil();
                 return;
-            }
-            let line = line_res.unwrap();
+            };
             if line.points.len() <= 1 {
                 log_write("There can only be (at least) one (point)!", LogLevel::WARN);
                 return;
             }
-            let point_pos_res = line.points.iter().position(|x| x.uuid == de.path_settings.selected_point);
-            if point_pos_res.is_none() {
+            let Some(point_pos) = line.points.iter().position(|x| x.uuid == de.path_settings.selected_point) else {
                 log_write("Cannot get Point for point deletion", LogLevel::ERROR);
                 de.path_settings.selected_point = Uuid::nil();
                 return;
-            }
-            let point_pos = point_pos_res.unwrap();
+            };
             line.points.remove(point_pos);
             de.path_settings.selected_point = Uuid::nil();
             de.graphics_update_needed = true;
@@ -188,11 +173,8 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             if de.path_settings.selected_line.is_nil() {
                 return;
             }
-            let path_res = de.loaded_map.get_path();
-            if path_res.is_none() {
-                return;
-            }
-            let paths = &mut path_res.unwrap().lines;
+            let Some(path) = de.loaded_map.get_path() else { return };
+            let paths = &mut path.lines;
             if let Some(path) = paths.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) {
                 for point in &mut path.points {
                     body.row(20.0, |mut row| {
@@ -220,11 +202,7 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     if de.path_settings.selected_point.is_nil() {
         return;
     }
-    let path_res = de.loaded_map.get_path();
-    if path_res.is_none() {
-        return;
-    }
-    let path_db = path_res.unwrap();
+    let Some(path_db) = de.loaded_map.get_path() else { return };
     let paths = &mut path_db.lines;
     if let Some(path) = paths.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) {
         if let Some(point) = path.points.iter_mut().find(|y| y.uuid == de.path_settings.selected_point) {
