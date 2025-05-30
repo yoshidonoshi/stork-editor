@@ -5,7 +5,7 @@ use rfd::FileDialog;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_map_templates, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -785,8 +785,7 @@ impl Gui {
 
     fn create_map_templates(&mut self) {
         log_write("Creating Map templates", LogLevel::LOG);
-        let templates = get_map_templates();
-        let map_filenames: Vec<String> = templates.values().map(|x| x.clone()).collect();
+        let map_filenames: Vec<String> = self.display_engine.course_settings.map_templates.values().map(|x| x.clone()).collect();
         // Only one error in get_template_folder, so Option not Result
         let Some(template_dir) = get_template_folder(&self.export_directory) else {
             log_write("Failed to get or create template directory", LogLevel::ERROR);
@@ -1661,5 +1660,45 @@ impl eframe::App for Gui {
                 });
             });
         }
+        if self.display_engine.course_settings.add_window_open {
+            let add_map_modal = Modal::new(egui::Id::new("add_map_modal"));
+            add_map_modal.show(ctx, |ui| {
+                ui.heading("Choose a Map template");
+                egui::ComboBox::new(egui::Id::new("add_map_combo_box"), "")
+                    .selected_text(format!("{}",&self.display_engine.course_settings.add_map_selected))
+                    .show_ui(ui, |ui| {
+                        let mut map_keys: Vec<String> = self.display_engine.course_settings.map_templates.keys().cloned().collect();
+                        map_keys.sort();
+                        for map_name in map_keys {
+                            ui.selectable_value(&mut self.display_engine.course_settings.add_map_selected,
+                                map_name.clone(), map_name.clone());
+                        }
+                    }
+                );
+                ui.horizontal(|ui| {
+                    if ui.button("Cancel").clicked() {
+                        self.display_engine.course_settings.add_window_open = false;
+                    }
+                    if ui.button("Add").clicked() {
+                        let level = self.display_engine.course_settings.map_templates.get(
+                            &self.display_engine.course_settings.add_map_selected);
+                        let Some(level_file) = level else {
+                            log_write(format!("Map template key not found: '{}'",
+                                self.display_engine.course_settings.add_map_selected), LogLevel::WARN);
+                            return;
+                        };
+                        let Some(template_path) = utils::get_template_folder(&self.export_directory) else {
+                            log_write("Failed to get template directory", LogLevel::ERROR);
+                            return;
+                        };
+                        self.display_engine.loaded_course.add_template(&level_file,&template_path);
+                        self.display_engine.course_settings.add_window_open = false;
+                        self.display_engine.unsaved_changes = true;
+                        self.display_engine.graphics_update_needed = true;
+                    }
+                });
+            });
+        }
     }
 }
+

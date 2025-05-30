@@ -1,14 +1,28 @@
+use std::collections::HashMap;
+
 use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, LogLevel}};
 
-#[derive(Default)]
 pub struct CourseSettings {
     pub selected_map: Option<usize>,
     pub selected_entrance: Option<Uuid>,
-    pub selected_exit: Option<Uuid>
+    pub selected_exit: Option<Uuid>,
+    pub add_window_open: bool,
+    pub map_templates: HashMap<String,String>,
+    pub add_map_selected: String
+}
+impl Default for CourseSettings {
+    fn default() -> Self {
+        Self {
+            selected_map: None, selected_entrance: None,
+            selected_exit: None, add_window_open: false,
+            map_templates: utils::get_map_templates(),
+            add_map_selected: "".to_string()
+        }
+    }
 }
 
 fn get_course_music_name(music: u8) -> String {
@@ -60,7 +74,10 @@ pub fn show_course_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
-        ui.add_enabled(false, egui::Button::new("New"));
+        let new_button = ui.button("New");
+        if new_button.clicked() {
+            de.course_settings.add_window_open = true;
+        }
         ui.add_enabled(false, egui::Button::new("Delete"));
     });
     ui.add_space(5.0);
@@ -280,7 +297,8 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 fn show_selected_entrance_settings(ui: &mut egui::Ui, selected_entrance: &mut MapEntrance) {
     let which_screen = selected_entrance.entrance_flags >> 14;
     let enter_map_anim = selected_entrance.entrance_flags % 0x1000;
-    ui.label(format!("Which Screen?: {:X}",which_screen));
+    ui.label(format!("Raw Flags: {:X}",selected_entrance.entrance_flags));
+    ui.label(format!("Which Screen: {:X}",which_screen));
     ui.label(format!("Entrance Animation?: {:X}",enter_map_anim));
 }
 
