@@ -210,9 +210,9 @@ impl CourseInfo {
         for map in &mut self.level_map_data {
             for exit in &mut map.map_exits {
                 // Fix target maps
-                if let Some(try_exit_map_pos) = map_data_ro.iter().position(|x| x.uuid == exit.target_map) {
+                if let Some(exit_map_pos) = map_data_ro.iter().position(|x| x.uuid == exit.target_map) {
                     // Set the raw to correct
-                    exit.target_map_raw = try_exit_map_pos as u8;
+                    exit.target_map_raw = exit_map_pos as u8;
                     // Entrance MIGHT still be good
                 } else {
                     // The map must no longer exist
@@ -226,9 +226,9 @@ impl CourseInfo {
 
                 // Fix target entrances
                 let target_map_data_ro = &map_data_ro[exit.target_map_raw as usize];
-                if let Some(try_entrance_pos) = target_map_data_ro.map_entrances.iter().position(|y| y.uuid == exit.target_map_entrance) {
+                if let Some(entrance_pos) = target_map_data_ro.map_entrances.iter().position(|y| y.uuid == exit.target_map_entrance) {
                     // Update raw to correct
-                    exit.target_map_entrance_raw = try_entrance_pos as u8;
+                    exit.target_map_entrance_raw = entrance_pos as u8;
                 } else {
                     // Entrance no longer exists, set it to guarantee
                     exit.target_map_entrance_raw = 0;
@@ -418,7 +418,7 @@ impl CourseMapInfo {
             false
         }
     }
-    
+
     pub fn from_template(name_no_ext: &str) -> Self {
         CourseMapInfo {
             map_entrances: vec![MapEntrance::default()],
