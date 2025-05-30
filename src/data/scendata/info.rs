@@ -45,22 +45,22 @@ impl Default for ScenInfoData {
     }
 }
 impl ScenInfoData {
-    pub fn new(rdr: &mut Cursor<&Vec<u8>>, internal_length: u32) -> ScenInfoData {
+    pub fn new(rdr: &mut Cursor<&Vec<u8>>, internal_length: u32) -> Option<ScenInfoData> {
         // 24, 32, 36 are the only three sizes found with pytools
         if internal_length != 0x18 && internal_length != 0x20 && internal_length != 0x24 {
             log_write(format!("Unusual INFO size: 0x{:X}",internal_length), LogLevel::WARN);
         }
         let initial_position: u64 = rdr.position();
-        let layer_width: u16 = rdr.read_u16::<LittleEndian>().unwrap();
-        let layer_height: u16 = rdr.read_u16::<LittleEndian>().unwrap();
-        let height_offset: u32 = rdr.read_u32::<LittleEndian>().unwrap();
-        let x_scroll: u32 = rdr.read_u32::<LittleEndian>().unwrap();
-        let y_scroll: u32 = rdr.read_u32::<LittleEndian>().unwrap();
-        let which_bg: u8 = rdr.read_u8().unwrap();
-        let layer_order: u8 = rdr.read_u8().unwrap();
-        let char_base_block: u8 = rdr.read_u8().unwrap();
-        let screen_base_block: u8 = rdr.read_u8().unwrap();
-        let color_mode: u32 = rdr.read_u32::<LittleEndian>().unwrap();
+        let layer_width: u16 = utils::read_u16(rdr)?;
+        let layer_height: u16 = utils::read_u16(rdr)?;
+        let height_offset: u32 = utils::read_u32(rdr)?;
+        let x_scroll: u32 = utils::read_u32(rdr)?;
+        let y_scroll: u32 = utils::read_u32(rdr)?;
+        let which_bg: u8 = utils::read_u8(rdr)?;
+        let layer_order: u8 = utils::read_u8(rdr)?;
+        let char_base_block: u8 = utils::read_u8(rdr)?;
+        let screen_base_block: u8 = utils::read_u8(rdr)?;
+        let color_mode: u32 = utils::read_u32(rdr)?;
         let mut imbz_filename_noext: Option<String> = Option::None;
         if internal_length > 0x18 {
             imbz_filename_noext = Some(utils::read_c_string(rdr));
@@ -74,7 +74,7 @@ impl ScenInfoData {
                 read_length = rdr.position() - initial_position;
             }
         }
-        ScenInfoData {
+        Some(ScenInfoData {
             layer_width,
             layer_height,
             height_offset,
@@ -86,19 +86,20 @@ impl ScenInfoData {
             screen_base_block,
             color_mode,
             imbz_filename_noext
-        }
+        })
     }
 
     pub fn get_imbz_pixels(&self, proj_dir: &PathBuf) -> Option<Vec<u8>> {
         let mut imbz_withext: String = self.imbz_filename_noext.clone().expect("imbz filename exists");
         imbz_withext.push_str(".imbz");
         let p: PathBuf = nitrofs_abs(proj_dir, &imbz_withext);
-        let imbz_bytes = fs::read(&p);
-        if imbz_bytes.is_err() {
-            log_write(format!("Failed to read IMBZ '{}' from INFO: '{}'",p.display(),imbz_bytes.unwrap_err()), LogLevel::ERROR);
-            return Option::None;
-        }
-        let file_bytes: Vec<u8> = imbz_bytes.unwrap();
+        let file_bytes = match fs::read(&p) {
+            Err(error) => {
+                log_write(format!("Failed to read IMBZ '{}' from INFO: '{error}'", p.display()), LogLevel::ERROR);
+                return Option::None;
+            }
+            Ok(b) => b,
+        };
         let pixels_decomped = lamezip77_lz10_decomp(&file_bytes);
         Some(pixels_decomped)
     }
@@ -128,12 +129,13 @@ impl ScenSegment for ScenInfoData {
         let _ = comp.write_u8(self.char_base_block);
         let _ = comp.write_u8(self.screen_base_block);
         let _ = comp.write_u32::<LittleEndian>(self.color_mode);
-        if self.imbz_filename_noext.is_none() {
+        let Some(imbz_filename_noext) = &self.imbz_filename_noext else {
             // Already 4 padded, just return
             return comp;
-        }
-        // Moving, so needs clone
-        let mut str_vec = self.imbz_filename_noext.clone().unwrap().into_bytes();
+        };
+
+        // not Moving, so no need to clone
+        let mut str_vec = imbz_filename_noext.bytes().collect();
         comp.append(&mut str_vec);
         comp.push(0x00); // Null terminator
         while comp.len() % 4 != 0 {

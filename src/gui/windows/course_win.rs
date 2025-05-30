@@ -150,17 +150,15 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 }
 
 fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
-    if de.course_settings.selected_map.is_none() {
+    let Some(selected_map_index) = de.course_settings.selected_map else {
         ui.label("No Map selected");
         return;
-    }
-    let selected_map_index = de.course_settings.selected_map.unwrap();
-    if selected_map_index >= de.loaded_course.level_map_data.len() {
+    };
+    let Some(stored_map_data) = de.loaded_course.level_map_data.get(selected_map_index).cloned() else {
         log_write("Selected map index out of bounds, clearing", LogLevel::ERROR);
         de.course_settings.selected_map = Option::None;
         return;
-    }
-    let stored_map_data = de.loaded_course.level_map_data[selected_map_index].clone();
+    };
     // MUSIC //
     let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
     let old_map_music_val = selected_map_data.map_music.clone();
@@ -240,11 +238,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             if selected_entrance_uuid == Uuid::nil() {
                 return;
             }
-            let selected_entrance = selected_map_data.get_entrance_mut(&selected_entrance_uuid);
-            if selected_entrance.is_none() {
-                return;
-            }
-            let selected_entrance = selected_entrance.unwrap();
+            let Some(selected_entrance) = selected_map_data.get_entrance_mut(&selected_entrance_uuid) else { return };
             // Begin selected Entrance settings
             ui.horizontal(|ui| {
                 let drag_value_x = egui::DragValue::new(&mut selected_entrance.entrance_x)
@@ -318,12 +312,10 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         });
         ui.vertical(|ui| {
             let ro_map_data = de.loaded_course.level_map_data.clone();
-            let selected_exit = de.get_selected_exit_mut();
-            if selected_exit.is_none() {
+            let Some(selected_exit) = de.get_selected_exit_mut() else {
                 ui.label("No Exit selected");
                 return;
-            }
-            let selected_exit = selected_exit.unwrap();
+            };
             // Here is where the Exit settings are once selected
             show_exit_pos(ui, selected_exit);
             show_exit_type(ui, selected_exit);
@@ -370,12 +362,10 @@ fn show_exit_type(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
 }
 
 fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
-    let course = maps.iter().find(|x| x.uuid == selected_exit.target_map );
-    if course.is_none() {
+    let Some(course) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
         log_write("Somehow, course was none", LogLevel::ERROR);
         return;
-    }
-    let course = course.unwrap();
+    };
     let selected_exit_stored = selected_exit.clone();
     let _exit_target_map_dropdown = egui::ComboBox::from_label("Target Map")
         .selected_text(course.label.clone())
@@ -387,35 +377,30 @@ fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &V
     if selected_exit_stored != *selected_exit {
         // The new entrance will be invalid! Reset it to the first one
         log_write("Selected exit target map changed", LogLevel::DEBUG);
-        let course_new = maps.iter().find(|x| x.uuid == selected_exit.target_map );
-        if course_new.is_none() {
-            log_write("Failed to find course for selected exit target map", LogLevel::ERROR);
-        }
-        let course_new = course_new.unwrap();
-        if course_new.map_entrances.is_empty() {
-            log_write("New exit target map has no entrances",LogLevel::ERROR);
-        }
-        selected_exit.target_map_entrance = course_new.map_entrances[0].uuid;
+        let Some(course_new) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
+            log_write("Failed to find course for selected exit target map", LogLevel::FATAL);
+            return; // Satisfy compiler, but not reached as logging FATAL does message panic
+        };
+        let Some(first_map_entrance) = course_new.map_entrances.first() else {
+            log_write("New exit target map has no entrances",LogLevel::FATAL);
+            return; // Satisfy compiler, but not reached as logging FATAL does message panic
+        };
+        selected_exit.target_map_entrance = first_map_entrance.uuid;
     }
 }
 
 fn show_exit_target_entrance(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
-    let course = maps.iter().find(|x| x.uuid == selected_exit.target_map );
-    if course.is_none() {
+    let Some(course) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
         log_write("Somehow, course was none", LogLevel::ERROR);
         return;
-    }
-    let course = course.unwrap();
-    let cur_entrance = course.get_entrance(&selected_exit.target_map_entrance);
-    if cur_entrance.is_none() {
+    };
+    let Some(cur_entrance) = course.get_entrance(&selected_exit.target_map_entrance) else {
         return;
-    }
-    let cur_entrance = cur_entrance.unwrap();
-    let entrances = course.map_entrances.clone();
+    };
     let _exit_target_map_dropdown = egui::ComboBox::from_label("Target Entrance")
-        .selected_text(cur_entrance.label.clone())
+        .selected_text(&cur_entrance.label)
         .show_ui(ui, |ui| {
-            for enter in entrances {
+            for enter in &course.map_entrances {
                 ui.selectable_value(&mut selected_exit.target_map_entrance, enter.uuid, enter.label.clone());
             }
         });

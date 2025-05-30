@@ -268,24 +268,26 @@ impl DisplayEngine {
         // Build Stamp //
         let rc_path: PathBuf = PathBuf::from(&extract_dir);
         let stamp_rc_path = nitrofs_abs(&rc_path, &"stamp.rc".to_owned());
-        let build_date = read_to_string(stamp_rc_path);
-        if build_date.is_err() {
-            let rc_err1 = format!("Failed to open stamp.rc: {}",build_date.unwrap_err());
-            log_write(rc_err1.clone(), LogLevel::ERROR);
-            return Err(DisplayEngineError::new(rc_err1));
-        }
-        let build_date = build_date.unwrap();
+        let build_date = match read_to_string(stamp_rc_path) {
+            Err(error) => {
+                let rc_err1 = format!("Failed to open stamp.rc: {error}");
+                log_write(rc_err1.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(rc_err1));
+            }
+            Ok(d) => d,
+        };
 
         // Check Header //
         let mut header_path: PathBuf = PathBuf::from(&extract_dir);
         header_path.push("header.yaml");
-        let yaml_content = read_to_string(header_path);
-        if yaml_content.is_err() {
-            let yaml_err1 = format!("Failed to open header.yaml: {}",yaml_content.unwrap_err());
-            log_write(yaml_err1.clone(), LogLevel::ERROR);
-            return Err(DisplayEngineError::new(yaml_err1));
-        }
-        let yaml_content = yaml_content.unwrap();
+        let yaml_content = match read_to_string(header_path) {
+            Err(error) => {
+                let yaml_err1 = format!("Failed to open header.yaml: {error}");
+                log_write(yaml_err1.clone(), LogLevel::ERROR);
+                return Err(DisplayEngineError::new(yaml_err1));
+            }
+            Ok(s) => s,
+        };
         let yaml: Value = serde_yml::from_str(&yaml_content).expect("Failed to parse header.yaml");
         if let Some(game_code) = yaml["gamecode"].as_str() {
             // Does not get the revision, do that later
@@ -312,24 +314,23 @@ impl DisplayEngine {
         let mut arm9_path: PathBuf = PathBuf::from(&extract_dir);
         arm9_path.push("arm9");
         arm9_path.push("arm9.bin");
-        let existence_check = fs::exists(&arm9_path);
-        if existence_check.is_err() || !existence_check.unwrap() {
+        if let None|Some(false) = fs::exists(&arm9_path).ok() {
             let arm9_inval_path = format!("ARM9 Path invalid: '{}'",&arm9_path.display());
             log_write(arm9_inval_path.clone(), LogLevel::ERROR);
             return Err(DisplayEngineError::new(arm9_inval_path));
         }
-        let contents: Result<Vec<u8>, std::io::Error> = fs::read(&arm9_path);
-        match &contents {
-            Ok(_) => {
+        let contents = match fs::read(&arm9_path) {
+            Ok(bytes) => {
                 log_write(format!("Loaded ARM9 binary from '{}' successfully",&arm9_path.display()), LogLevel::LOG);
+                bytes
             }
             Err(e) => {
                 let arm9_io_err = format!("ARM9 IO error: {}", e);
                 log_write(arm9_io_err.clone(), LogLevel::ERROR);
                 return Err(DisplayEngineError::new(arm9_io_err));
             }
-        }
-        de.loaded_arm9 = Some(contents.unwrap());
+        };
+        de.loaded_arm9 = Some(contents);
 
         // Get Revision
         let gamever = de.game_version.expect("Gameversion set"); // Copies
@@ -500,7 +501,14 @@ impl DisplayEngine {
         if let Some(arm9_binary) = &self.loaded_arm9 {
             let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9_binary);
             rdr.set_position(array_internal_address as u64);
-            let string_address: u32 = utils::read_address(&mut rdr); //rdr.read_u32::<LittleEndian>().unwrap();
+            let string_address: u32 = match utils::read_address(&mut rdr) {
+                Some(s) => s,
+                None => {
+                    let err_msg = "Failed to get string address in level name retrieval".to_owned();
+                    log_write(err_msg.clone(), LogLevel::ERROR);
+                    return Err(err_msg)
+                },
+            };
             rdr.set_position(string_address as u64);
             let level_name = utils::read_c_string(&mut rdr);
             Ok(level_name)
@@ -510,7 +518,7 @@ impl DisplayEngine {
     }
 
     #[allow(dead_code)]
-    fn get_level_filename_eur_11(&self, world_index: &u32, level_index: &u32) -> String {
+    fn get_level_filename_eur_11(&self, world_index: &u32, level_index: &u32) -> Result<String,String> {
         // 1-1 filename location: 0xe21ae
         let level_id: u32 = world_index * 10 + level_index;// + 1 maybe not here?
         if (level_id < 0x7b) || (0x7e < level_id) {
@@ -522,26 +530,26 @@ impl DisplayEngine {
         //     }
         // }
         if level_id == 0 {
-            return "0-1_D3".to_owned();
+            return Ok("0-1_D3".to_owned());
         } else {
             if level_id == 0x7a {
                 // FUN_020173c0(0xd,1);
                 // Enemy Check, aka Museum
-                return "ene_check_".to_owned();
+                return Ok("ene_check_".to_owned());
             } else if level_id == 0x7b {
-                return "koopa3".to_owned();
+                return Ok("koopa3".to_owned());
             } else if level_id == 0x7c {
-                return "koopa2".to_owned();
+                return Ok("koopa2".to_owned());
             } else if level_id == 0x7d {
-                return "kuppa".to_owned();
+                return Ok("kuppa".to_owned());
             } else if level_id == 0x7e {
-                return "lastback".to_owned();
+                return Ok("lastback".to_owned());
             } else if level_id == 0x7f {
-                return "0x7f unknown multi".to_owned();
+                return Ok("0x7f unknown multi".to_owned());
             }
         }
         if level_id > 100 {
-            return ">99 unknown multi".to_owned();
+            return Ok(">99 unknown multi".to_owned());
         }
         const LEVEL_ARRAY_ADDR: u32 = 0x0d8e58; //0x020d8e58
         let offset = level_id * 4; // u32 = 4 bytes
@@ -549,12 +557,19 @@ impl DisplayEngine {
         if let Some(arm9_binary) = &self.loaded_arm9 {
             let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9_binary);
             rdr.set_position(array_internal_address as u64);
-            let string_address: u32 = utils::read_address(&mut rdr); //rdr.read_u32::<LittleEndian>().unwrap();
+            let string_address: u32 = match utils::read_address(&mut rdr) {
+                Some(s) => s,
+                None => {
+                    let err_msg = "Failed to get string address in level name retrieval".to_owned();
+                    log_write(err_msg.clone(), LogLevel::ERROR);
+                    return Err(err_msg)
+                },
+            };
             rdr.set_position(string_address as u64);
             let level_name = utils::read_c_string(&mut rdr);
-            level_name
+            Ok(level_name)
         } else {
-            "ERROR, NO BINARY".to_owned()
+            Err("ERROR, NO BINARY".to_owned())
         }
     }
     
@@ -576,12 +591,11 @@ impl DisplayEngine {
         self.loaded_course = crsb;
         map_name.push_str(".mpdz");
         let map_path = nitrofs_abs(&self.export_folder, &map_name);
-        let loaded_map_res = MapData::new(&map_path,&self.export_folder);
-        if loaded_map_res.is_err() {
+        let Ok(loaded_map_res) = MapData::new(&map_path,&self.export_folder) else {
             log_write("Failed to load MapData", LogLevel::ERROR);
             return;
-        }
-        self.loaded_map = loaded_map_res.unwrap();
+        };
+        self.loaded_map = loaded_map_res;
         self.loaded_map.map_name = noext_name;
 
         let seg_count = &self.loaded_map.segments.len();
@@ -687,27 +701,18 @@ impl DisplayEngine {
     }
 
     pub fn get_selected_exit_mut(&mut self) -> Option<&mut MapExit> {
-        if self.course_settings.selected_exit.is_none() {
+        let Some(selected_exit_uuid) = self.course_settings.selected_exit else {
             return Option::None;
-        }
-        let selected_exit_uuid = self.course_settings.selected_exit.unwrap();
-        if self.course_settings.selected_map.is_none() {
+        };
+        let Some(selected_map_index) = self.course_settings.selected_map else {
             return Option::None;
-        }
-        let selected_map_index = self.course_settings.selected_map;
-        if selected_map_index.is_none() {
-            return Option::None;
-        }
-        let selected_map_index = selected_map_index.unwrap();
+        };
         if selected_map_index >= self.loaded_course.level_map_data.len() {
             self.course_settings.selected_map = Option::None;
             log_write("Selected map index out of bounds", LogLevel::WARN);
         }
         let selected_map = &mut self.loaded_course.level_map_data[selected_map_index];
         let map_exit = selected_map.get_exit(&selected_exit_uuid);
-        if map_exit.is_none() {
-            return Option::None;
-        }
         map_exit
     }
 

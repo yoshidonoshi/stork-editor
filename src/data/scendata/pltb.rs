@@ -9,19 +9,6 @@ pub struct PltbData {
     pub palettes: Vec<Palette>
 }
 
-// impl Compilable for PltbData {
-//     fn compile(&self) -> Vec<u8> {
-//         let mut ret: Vec<u8> = vec![];
-
-//         for p in &self.palettes {
-//             let mut pbytes: Vec<u8> = p.compile();
-//             ret.append(&mut pbytes);
-//         }
-
-//         ret
-//     }
-// }
-
 impl PltbData {
     pub fn from_pal_vec(input: Vec<Palette>) -> Self {
         Self {

@@ -114,11 +114,10 @@ impl LevelSpriteSet {
     }
 
     pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> Result<(),()> {
-        let pos = self.sprites.iter().position(|x|x.uuid == sprite_uuid);
-        if pos.is_none() {
+        let Some(pos) = self.sprites.iter().position(|x|x.uuid == sprite_uuid) else {
             return Err(());
-        }
-        self.sprites.remove(pos.unwrap());
+        };
+        self.sprites.remove(pos);
         Ok(())
     }
 }
@@ -283,12 +282,13 @@ impl SpriteGraphicsSegment {
 
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&self.internal_data);
         rdr.set_position(sprite_frame.build_offset as u64 + sprite_frame._pos);
-        let tile_offset_res = rdr.read_u16::<LittleEndian>();
-        if tile_offset_res.is_err() {
-            log_write(format!("Failed to read tile_offset in render_sprite_frame: '{}'",tile_offset_res.unwrap_err()), LogLevel::ERROR);
-            return Vec::new();
-        }
-        let tile_offset: u16 = tile_offset_res.unwrap();
+        let tile_offset = match rdr.read_u16::<LittleEndian>() {
+            Err(error) => {
+                log_write(format!("Failed to read tile_offset in render_sprite_frame: '{error}'"), LogLevel::ERROR);
+                return Vec::new();
+            }
+            Ok(o) => o,
+        };
         let x_offset: i16 = rdr.read_i16::<LittleEndian>().expect("render_sprite_frame: x_offset i16");
         let y_offset: i16 = rdr.read_i16::<LittleEndian>().expect("render_sprite_frame: y_offset i16");
         let flags: u16 = rdr.read_u16::<LittleEndian>().expect("render_sprite_frame: flags u16");

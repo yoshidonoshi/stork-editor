@@ -108,11 +108,11 @@ pub fn header_to_string(header: &u32) -> String {
     let char1 = (header >> 16) % 0x100;
     let char2 = (header >> 8) % 0x100;
     let char3 = (header >> 0) % 0x100;
-    let char0 = std::char::from_u32(char0).unwrap();
-    let char1 = std::char::from_u32(char1).unwrap();
-    let char2 = std::char::from_u32(char2).unwrap();
-    let char3 = std::char::from_u32(char3).unwrap();
-    let str = format!("{}{}{}{}",char3,char2,char1,char0);
+    let char0 = std::char::from_u32(char0).unwrap_or('�');
+    let char1 = std::char::from_u32(char1).unwrap_or('�');
+    let char2 = std::char::from_u32(char2).unwrap_or('�');
+    let char3 = std::char::from_u32(char3).unwrap_or('�');
+    let str = format!("{char3}{char2}{char1}{char0}");
     str
 }
 
@@ -126,12 +126,9 @@ pub fn string_to_settings(settings_string: &String) -> Result<Vec<u8>,String> {
     let split: Vec<&str> = settings_string.trim().split(' ').collect();
     let mut new_settings: Vec<u8> = Vec::new();
     for str8 in split {
-        let pos_u8 = u8::from_str_radix(str8, 16);
-        if pos_u8.is_err() {
-            return Err(pos_u8.unwrap_err().to_string());
-        } else {
-            let u8val = pos_u8.unwrap();
-            new_settings.push(u8val);
+        match u8::from_str_radix(str8, 16) {
+            Ok(u8val) => new_settings.push(u8val),
+            Err(error) => return Err(error.to_string()),
         }
     }
     Ok(new_settings)
@@ -201,12 +198,13 @@ pub fn string_to_header(header: String) -> u32 {
     let header_bytes: &[u8] = header.as_bytes();
     let header_vec = Vec::from(header_bytes);
     let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&header_vec);
-    let read_res = rdr.read_u32::<LittleEndian>();
-    if read_res.is_err() {
-        log_write(format!("Failed to read u32 in string_to_header: {}", read_res.unwrap_err()), LogLevel::ERROR);
-        return 0xFFFFFFFF;
+    match rdr.read_u32::<LittleEndian>() {
+        Err(error) => {
+            log_write(format!("Failed to read u32 in string_to_header: {}", error), LogLevel::ERROR);
+            return 0xFFFFFFFF;
+        },
+        Ok(read_res) => read_res,
     }
-    read_res.unwrap()
 }
 
 pub fn color_from_u16(val: &u16) -> Color32 {
@@ -229,18 +227,19 @@ pub fn read_c_string(rdr: &mut Cursor<&Vec<u8>>) -> String {
         }
         string_buffer.push(charbyte);
     }
-    let result_string = String::from_utf8(string_buffer);
-    if result_string.is_err() {
-        log_write("Failed to read mpdz_name_noext", LogLevel::ERROR);
+    match String::from_utf8(string_buffer) {
+        Err(_) => {
+            log_write("Failed to read mpdz_name_noext", LogLevel::FATAL);
+            String::new() // Satisfy compiler, but FATAL panics with message
+        }
+        Ok(s) => s,
     }
-    let result_string: String = result_string.unwrap();
-    result_string
 }
 
-pub fn read_address(rdr: &mut Cursor<&Vec<u8>>) -> u32 {
-    let mut address: u32 = rdr.read_u32::<LittleEndian>().unwrap();
+pub fn read_address(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
+    let mut address: u32 = read_u32(rdr)?;
     address -= 0x2000000;
-    address
+    Some(address)
 }
 
 pub fn read_fixed_string(vec_data: &Vec<u8>, position: u64, length: u32) -> String {
@@ -253,20 +252,22 @@ pub fn read_fixed_string_cursor(rdr: &mut Cursor<&Vec<u8>>, length: u32) -> Stri
     let mut string_buffer: Vec<u8> = Vec::new();
     let mut i: u32 = 0;
     while i < length {
-        let char_byte = rdr.read_u8();
-        if char_byte.is_err() {
-            log_write(format!("char_byte read error: '{}'",char_byte.unwrap_err()), LogLevel::ERROR);
-            return "READERROR".to_owned();
+        match rdr.read_u8() {
+            Err(error) => {
+                log_write(format!("char_byte read error: '{}'", error), LogLevel::ERROR);
+                return "READERROR".to_owned();
+            }
+            Ok(char_byte) => string_buffer.push(char_byte),
         }
-        string_buffer.push(char_byte.unwrap());
         i += 1;
     }
-    let result_string = String::from_utf8(string_buffer);
-    if result_string.is_err() {
-        log_write("Failed to read fixed string", LogLevel::ERROR);
+    match String::from_utf8(string_buffer) {
+        Err(_) => {
+            log_write("Failed to read fixed string", LogLevel::FATAL);
+            String::new() // Satisfy compiler, but FATAL panics with message
+        }
+        Ok(result_string) => result_string,
     }
-    let result_string: String = result_string.unwrap();
-    result_string
 }
 
 pub fn color_image_from_pal(pal: &Palette, pal_indexes: &Vec<u8>) -> ColorImage {
@@ -491,6 +492,46 @@ pub fn xy_to_index(x_index: u32, y_index: u32, map_width: &u32) -> u32 {
 
 pub fn distance(p1: Pos2, p2: Pos2) -> f32 {
     (p2.x - p1.x).hypot(p2.y - p1.y)
+}
+
+pub fn read_u8(rdr: &mut Cursor<&Vec<u8>>) -> Option<u8> {
+    match rdr.read_u8() {
+        Ok(i) => Some(i),
+        Err(e) => {
+            log_write(format!("Failed to read u8: '{}'",e), LogLevel::ERROR);
+            None
+        }
+    }
+}
+
+pub fn read_u16(rdr: &mut Cursor<&Vec<u8>>) -> Option<u16> {
+    match rdr.read_u16::<LittleEndian>() {
+        Ok(i) => Some(i),
+        Err(e) => {
+            log_write(format!("Failed to read u16: '{}'",e), LogLevel::ERROR);
+            None
+        }
+    }
+}
+
+pub fn read_i16(rdr: &mut Cursor<&Vec<u8>>) -> Option<i16> {
+    match rdr.read_i16::<LittleEndian>() {
+        Ok(i) => Some(i),
+        Err(e) => {
+            log_write(format!("Failed to read i16: '{}'",e), LogLevel::ERROR);
+            None
+        }
+    }
+}
+
+pub fn read_u32(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
+    match rdr.read_u32::<LittleEndian>() {
+        Ok(i) => Some(i),
+        Err(e) => {
+            log_write(format!("Failed to read u32: '{}'",e), LogLevel::ERROR);
+            None
+        }
+    }
 }
 
 #[cfg(test)]

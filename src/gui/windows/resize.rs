@@ -17,19 +17,16 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         return;
     }
     // Get BG and INFO read-only
-    let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
-    if bg.is_none() {
+    let Some(bg) = de.loaded_map.get_background(de.display_settings.current_layer as u8) else {
         log_write("Failed to get BG in resize modal", LogLevel::ERROR);
         settings.window_open = false;
         return;
-    }
-    let info = bg.unwrap().get_info();
-    if info.is_none() {
+    };
+    let Some(info) = bg.get_info() else {
         log_write("Failed to get INFO in resize modal", LogLevel::ERROR);
         settings.window_open = false;
         return;
-    }
-    let info = info.unwrap();
+    };
     // Check reset
     let mut okay_enabled = true;
     if settings.reset_needed {
@@ -77,49 +74,41 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         let button_ok = ui.add_enabled(okay_enabled, egui::Button::new("Okay"));
         if button_ok.clicked() {
             // Do update with mutable versions
-            let bg = de.loaded_map.get_background(de.display_settings.current_layer as u8);
-            if bg.is_none() {
+            let Some(bg) = de.loaded_map.get_background(de.display_settings.current_layer as u8) else {
                 log_write("Failed to get BG in resize modal resizing", LogLevel::ERROR);
                 settings.window_open = false;
                 return;
-            }
-            let bg = bg.unwrap();
-            let info = bg.get_info_mut();
-            if info.is_none() {
+            };
+            let Some(info) = bg.get_info_mut() else {
                 log_write("Failed to get INFO in resize modal resizing", LogLevel::ERROR);
                 settings.window_open = false;
                 return;
-            }
-            let info = info.unwrap();
+            };
             log_write(format!("Changing size of layer from 0x{:X}/0x{:X} to 0x{:X}/0x{:X}",
                 info.layer_width,info.layer_height,
                 settings.new_width,settings.new_height), LogLevel::LOG);
             // Actual resizing calls
             if settings.new_width > info.layer_width {
                 // Width is greater, increase width //
-                let increase_result = bg.increase_width(settings.new_width);
-                // Handle results
-                if increase_result.is_err() {
+                let Ok(increase_result) = bg.increase_width(settings.new_width) else {
                     log_write("Error increasing size of layer", LogLevel::ERROR);
                     settings.reset_needed = true;
                     settings.window_open = false;
                     return;
-                }
-                if increase_result.unwrap() != settings.new_width {
+                };
+                if increase_result != settings.new_width {
                     log_write("Mismatch in result width", LogLevel::ERROR);
                 } else {
                     log_write("Resize successful, updating", LogLevel::LOG);
                 }
             } else if settings.new_width < info.layer_width {
-                let decrease_result = bg.decrease_width(settings.new_width);
-                // Handle results
-                if decrease_result.is_err() {
+                let Ok(decrease_result) = bg.decrease_width(settings.new_width) else {
                     log_write("Error decreasing size of layer", LogLevel::ERROR);
                     settings.reset_needed = true;
                     settings.window_open = false;
                     return;
-                }
-                if decrease_result.unwrap() != settings.new_width {
+                };
+                if decrease_result != settings.new_width {
                     log_write("Mismatch in result width", LogLevel::ERROR);
                 } else {
                     log_write("Resize successful, updating", LogLevel::LOG);
@@ -135,13 +124,12 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
                 return;
             }
             // Trim sprites
-            let spr_res = de.loaded_map.get_setd();
-            if spr_res.is_none() {
-                log_write("Failed to get SETD when resizing", LogLevel::ERROR);
-            } else {
-                let trimmed = spr_res.unwrap().trim(settings.new_width, settings.new_height);
-                log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::DEBUG);
-            }
+            let Some(spr) = de.loaded_map.get_setd() else {
+                log_write("Failed to get SETD when resizing", LogLevel::FATAL);
+                return; // Satisfy compiler, but not reached as logging FATAL does message panic
+            };
+            let trimmed = spr.trim(settings.new_width, settings.new_height);
+            log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::DEBUG);
             // Do things to trigger updates
             log_write("graphics updated", LogLevel::DEBUG);
             de.unsaved_changes = true;

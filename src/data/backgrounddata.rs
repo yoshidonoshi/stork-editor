@@ -46,19 +46,22 @@ impl BackgroundData {
 
             match seg_header_str.as_str() {
                 "INFO" => {
-                    let info = ScenInfoData::new(&mut rdr, seg_internal_length);
+                    let info = match ScenInfoData::new(&mut rdr, seg_internal_length) {
+                        Some(i) => i,
+                        None => {
+                            return Err("Failed to create INFO".to_owned());
+                        }
+                    };
                     ret.scen_segments.push(ScenSegmentWrapper::INFO(info.clone()));
                     // Is there IMBZ data to retrieve?
                     if info.imbz_filename_noext.is_some() {
                         // There is IMBZ data to retrieve. Fetch!
-                        let pixels_decomped = info.get_imbz_pixels(project_directory);
-                        if pixels_decomped.is_none() {
-                            // It already checked if it exists. If not, MAJOR error
-                            log_write(format!("Failed to get IMBZ from INFO on BG layer {}",info.which_bg), LogLevel::ERROR);
+                        if let Some(pixels_decomped) = info.get_imbz_pixels(project_directory) {
+                            ret.pixel_tiles_preview = Some(pixels_decomped);
+                        } else {
+                            log_write(format!("Failed to get IMBZ from INFO on BG layer {}", info.which_bg), LogLevel::ERROR);
                             continue;
                         }
-                        let pixels_decomped = pixels_decomped.unwrap();
-                        ret.pixel_tiles_preview = Some(pixels_decomped);
                     }
                     ret.info_ro = info;
                 }
@@ -136,7 +139,13 @@ impl BackgroundData {
                     let _read_res = rdr.read_exact(&mut buffer);
                     let anmz_decomped = lamezip77_lz10_decomp(&buffer);
                     // The real one to use for previews
-                    let anmz_data = AnmzDataSegment::from_decomp(&anmz_decomped);
+                    let anmz_data = match AnmzDataSegment::from_decomp(&anmz_decomped) {
+                        Some(a) => a,
+                        None => {
+                            log_write("Error reading ANMZ data", LogLevel::ERROR);
+                            continue;// Already did read, so it should be good to continue
+                        },
+                    };
                     ret.scen_segments.push(ScenSegmentWrapper::ANMZ(anmz_data.clone()));
                 }
                 "SCRL" => {

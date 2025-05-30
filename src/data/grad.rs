@@ -2,7 +2,7 @@ use std::io::{Cursor, Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{engine::compression::segment_wrap, utils::{log_write, read_fixed_string_cursor, LogLevel}};
+use crate::{engine::compression::segment_wrap, utils::{self, log_write, read_fixed_string_cursor, LogLevel}};
 
 use super::TopLevelSegment;
 
@@ -56,24 +56,24 @@ impl TopLevelSegment for GradientData {
     }
 }
 impl GradientData {
-    pub fn new(bytedata: &Vec<u8>) -> Self {
+    pub fn new(bytedata: &Vec<u8>) -> Option<Self> {
         let mut ret = GradientData::default();
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(bytedata);
 
         let ginf_header: String = read_fixed_string_cursor(&mut rdr, 4);
         if ginf_header != "GINF" {
             log_write(format!("Did not find GINF header, instead got '{}'",ginf_header), LogLevel::ERROR);
-            return ret;
+            return None;
         }
         let ginf_size = rdr.read_u32::<LittleEndian>().unwrap();
         if ginf_size != 0xc {
             log_write(format!("GINF was not 0xC bytes, was instead {:X}",ginf_size), LogLevel::ERROR);
-            return ret;
+            return None;
         }
-        ret.color_count = rdr.read_u16::<LittleEndian>().unwrap();
-        ret.unknown1 = rdr.read_i16::<LittleEndian>().unwrap();
-        ret.unknown2 = rdr.read_u16::<LittleEndian>().unwrap();
-        ret._padding = rdr.read_u16::<LittleEndian>().unwrap(); // Just in case it's something else
+        ret.color_count = utils::read_u16(&mut rdr)?; //rdr.read_u16::<LittleEndian>().unwrap();
+        ret.unknown1 = utils::read_i16(&mut rdr)?;//rdr.read_i16::<LittleEndian>().unwrap();
+        ret.unknown2 = utils::read_u16(&mut rdr)?;
+        ret._padding = utils::read_u16(&mut rdr)?; // Just in case it's something else
         if ret._padding != 0x0000 {
             log_write(format!("GINF padding was not padding after all! Value was '{:X}', tell creator this",ret._padding), LogLevel::WARN);
         }
@@ -81,7 +81,7 @@ impl GradientData {
         let gcol_header: String = read_fixed_string_cursor(&mut rdr, 4);
         if gcol_header != "GCOL" {
             log_write(format!("Did not find GCOL header, instead got '{}'",gcol_header), LogLevel::ERROR);
-            return ret;
+            return None;
         }
         let gcol_size: u32 = rdr.read_u32::<LittleEndian>().unwrap();
         if gcol_size / 2 != ret.color_count as u32 {
@@ -89,12 +89,13 @@ impl GradientData {
         }
         let mut i: usize = 0;
         while i < ret.color_count as usize {
-            let cur_short_result = rdr.read_u16::<LittleEndian>();
-            if cur_short_result.is_err() {
-                log_write(format!("Error reading GCOL shorts: '{}'",cur_short_result.err().unwrap()), LogLevel::ERROR);
-                return ret;
-            }
-            ret.color_shorts.push(cur_short_result.unwrap());
+            match rdr.read_u16::<LittleEndian>() {
+                Err(error) => {
+                    log_write(format!("Error reading GCOL shorts: '{error}'"), LogLevel::ERROR);
+                    return None;
+                }
+                Ok(cur_short_result) => ret.color_shorts.push(cur_short_result),
+            };
             i += 1;
         }
         let final_position: usize = rdr.position() as usize;
@@ -102,6 +103,6 @@ impl GradientData {
         if final_position != segment_size {
             log_write(format!("GRAD: Mismatch in final position vs segment size: {:X} vs {:X}",final_position,segment_size), LogLevel::ERROR);
         }
-        ret
+        Some(ret)
     }
 }
