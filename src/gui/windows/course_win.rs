@@ -1,14 +1,28 @@
+use std::{collections::HashMap, fs};
+
 use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, nitrofs_abs, LogLevel}};
 
-#[derive(Default)]
 pub struct CourseSettings {
     pub selected_map: Option<usize>,
     pub selected_entrance: Option<Uuid>,
-    pub selected_exit: Option<Uuid>
+    pub selected_exit: Option<Uuid>,
+    pub add_window_open: bool,
+    pub map_templates: HashMap<String,String>,
+    pub add_map_selected: String
+}
+impl Default for CourseSettings {
+    fn default() -> Self {
+        Self {
+            selected_map: None, selected_entrance: None,
+            selected_exit: None, add_window_open: false,
+            map_templates: utils::get_map_templates(),
+            add_map_selected: "".to_string()
+        }
+    }
 }
 
 fn get_course_music_name(music: u8) -> String {
@@ -60,8 +74,56 @@ pub fn show_course_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
-        ui.add_enabled(false, egui::Button::new("New"));
-        ui.add_enabled(false, egui::Button::new("Delete"));
+        if de.game_version.is_none() {
+            ui.disable(); // Project is closed
+        }
+        let new_button = ui.button("New");
+        if new_button.clicked() {
+            de.course_settings.add_window_open = true;
+        }
+        if de.course_settings.selected_map.unwrap_or(0xffff) == de.map_index.unwrap_or(0xDEADBEEF) {
+            // Don't delete the active map
+            ui.disable();
+        }
+        ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
+        let delete_button = ui.button("Delete");
+        if delete_button.hovered() {
+            egui::show_tooltip(ui.ctx(), ui.layer_id(), egui::Id::new("delete_map_warning"), |ui| {
+                ui.label("WARNING: THIS CANNOT BE UNDONE");
+                ui.label("Hold shift and click to confirm deletion");
+            });
+        }
+        if delete_button.clicked() {
+            if !ui.input(|i| i.modifiers.shift) {
+                log_write("Shift must be held down to delete maps", LogLevel::LOG);
+                return;
+            }
+            let Some(selected_map_index) = de.course_settings.selected_map else {
+                log_write("No map selected", LogLevel::DEBUG);
+                return;
+            };
+            if selected_map_index >= de.loaded_course.level_map_data.len() {
+                log_write("Selected map overflow when deleting, resetting", LogLevel::ERROR);
+                de.course_settings.selected_map = None;
+                return;
+            }
+            log_write("Deleting selected Map", LogLevel::LOG);
+            let file_name = &de.loaded_course.level_map_data[selected_map_index].map_filename_noext;
+            let file_to_delete = nitrofs_abs(&de.export_folder, &format!("{}.mpdz",file_name));
+            let _did_delete = de.loaded_course.delete_map_info_by_index(selected_map_index);
+            log_write(format!("Deleting file '{}'...",&file_to_delete.display()), LogLevel::DEBUG);
+            let del_res = fs::remove_file(&file_to_delete);
+            match del_res {
+                Ok(_) => log_write(format!("Deleted file '{}' successfully",&file_to_delete.display()), LogLevel::LOG),
+                Err(e) => {
+                    log_write(format!("Failed to delete file '{}': '{}'",&file_to_delete.display(),e), LogLevel::ERROR);
+                    return;
+                }
+            }
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+            de.course_settings.selected_map = None;
+        }
     });
     ui.add_space(5.0);
     let _table = TableBuilder::new(ui)
@@ -100,22 +162,20 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     }
     let stored_map_data = de.loaded_course.level_map_data[selected_map_index].clone();
     // MUSIC //
-    { // This allows borrowing map data properly
-        let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
-        let old_map_music_val = selected_map_data.map_music.clone();
-        ui.heading("Music");
-        egui::ComboBox::from_label("")
-            .selected_text(format!("0x{:02X} - {}",selected_map_data.map_music,get_course_music_name(selected_map_data.map_music)))
-            .show_ui(ui, |ui| {
-                for x in 0..=23 { // 23 is the highest value found in all CRSBs via script
-                    ui.selectable_value(&mut selected_map_data.map_music, x, get_course_music_name(x));
-                }
-            });
-        if old_map_music_val != selected_map_data.map_music {
-            log_write(format!("Changed Map music index to '{}'",&selected_map_data.map_music), LogLevel::LOG);
-            de.unsaved_changes = true;
-        }
-    } // Return borrowed mutable map data
+    let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
+    let old_map_music_val = selected_map_data.map_music.clone();
+    ui.heading("Music");
+    egui::ComboBox::from_label("")
+        .selected_text(format!("0x{:02X} - {}",selected_map_data.map_music,get_course_music_name(selected_map_data.map_music)))
+        .show_ui(ui, |ui| {
+            for x in 0..=23 { // 23 is the highest value found in all CRSBs via script
+                ui.selectable_value(&mut selected_map_data.map_music, x, get_course_music_name(x));
+            }
+        });
+    if old_map_music_val != selected_map_data.map_music {
+        log_write(format!("Changed Map music index to '{}'",&selected_map_data.map_music), LogLevel::LOG);
+        de.unsaved_changes = true;
+    }
     ui.separator();
     // ENTRANCES //
     ui.heading("Entrances");
@@ -280,7 +340,8 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 fn show_selected_entrance_settings(ui: &mut egui::Ui, selected_entrance: &mut MapEntrance) {
     let which_screen = selected_entrance.entrance_flags >> 14;
     let enter_map_anim = selected_entrance.entrance_flags % 0x1000;
-    ui.label(format!("Which Screen?: {:X}",which_screen));
+    ui.label(format!("Raw Flags: {:X}",selected_entrance.entrance_flags));
+    ui.label(format!("Which Screen: {:X}",which_screen));
     ui.label(format!("Entrance Animation?: {:X}",enter_map_anim));
 }
 
