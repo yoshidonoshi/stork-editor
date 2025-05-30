@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, LogLevel}};
+use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, nitrofs_abs, LogLevel}};
 
 pub struct CourseSettings {
     pub selected_map: Option<usize>,
@@ -81,9 +81,23 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if new_button.clicked() {
             de.course_settings.add_window_open = true;
         }
+        if de.course_settings.selected_map.unwrap_or(0xffff) == de.map_index.unwrap_or(0xDEADBEEF) {
+            // Don't delete the active map
+            ui.disable();
+        }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let delete_button = ui.button("Delete");
+        if delete_button.hovered() {
+            egui::show_tooltip(ui.ctx(), ui.layer_id(), egui::Id::new("delete_map_warning"), |ui| {
+                ui.label("WARNING: THIS CANNOT BE UNDONE");
+                ui.label("Hold shift and click to confirm deletion");
+            });
+        }
         if delete_button.clicked() {
+            if !ui.input(|i| i.modifiers.shift) {
+                log_write("Shift must be held down to delete maps", LogLevel::LOG);
+                return;
+            }
             let Some(selected_map_index) = de.course_settings.selected_map else {
                 log_write("No map selected", LogLevel::DEBUG);
                 return;
@@ -93,7 +107,19 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 de.course_settings.selected_map = None;
                 return;
             }
+            log_write("Deleting selected Map", LogLevel::LOG);
+            let file_name = &de.loaded_course.level_map_data[selected_map_index].map_filename_noext;
+            let file_to_delete = nitrofs_abs(&de.export_folder, &format!("{}.mpdz",file_name));
             let _did_delete = de.loaded_course.delete_map_info_by_index(selected_map_index);
+            log_write(format!("Deleting file '{}'...",&file_to_delete.display()), LogLevel::DEBUG);
+            let del_res = fs::remove_file(&file_to_delete);
+            match del_res {
+                Ok(_) => log_write(format!("Deleted file '{}' successfully",&file_to_delete.display()), LogLevel::LOG),
+                Err(e) => {
+                    log_write(format!("Failed to delete file '{}': '{}'",&file_to_delete.display(),e), LogLevel::ERROR);
+                    return;
+                }
+            }
             de.graphics_update_needed = true;
             de.unsaved_changes = true;
             de.course_settings.selected_map = None;
