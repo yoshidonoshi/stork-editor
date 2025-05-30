@@ -2,7 +2,7 @@ use std::{fs, io::Cursor, path::PathBuf};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use uuid::Uuid;
 
-use crate::{engine::compression::segment_wrap, utils::{self, header_to_string, log_write, LogLevel}};
+use crate::{engine::compression::segment_wrap, utils::{self, log_write, LogLevel}};
 
 use super::Compilable;
 
@@ -53,7 +53,7 @@ impl CourseInfo {
             return CourseInfo::default();
         }
         let file_header = file_header.unwrap();
-        if header_to_string(&file_header) != "CRSB" {
+        if utils::header_to_string(&file_header) != "CRSB" {
             utils::log_write("Course data header was not CRSB", utils::LogLevel::WARN);
         }
         // Okay, checks are out of the way. Lets start reading!
@@ -65,7 +65,7 @@ impl CourseInfo {
         while cscn_index < cscn_count {
             // Begin reading a CSCN segment
             let cscn_header = rdr.read_u32::<LittleEndian>().unwrap();
-            let cscn_header_string = header_to_string(&cscn_header);
+            let cscn_header_string = utils::header_to_string(&cscn_header);
             if cscn_header_string != "CSCN" {
                 utils::log_write(format!("Wrong header, expected CSCN, got '{}'/0x{:08X}",cscn_header_string,&cscn_header), utils::LogLevel::WARN);
             }
@@ -133,7 +133,7 @@ impl CourseInfo {
             src_filename: abs_path.to_str().unwrap_or("UNWRAP FAILURE").to_owned(),
             label: label.clone()
         };
-        let _update_uuids_res = ret.update_exit_uuids();
+        ret.update_exit_uuids();
         ret
     }
 
@@ -145,26 +145,25 @@ impl CourseInfo {
     }
 
     /// Update UUID lists from indexes
-    pub fn update_exit_uuids(&mut self) -> Result<(),()> {
+    pub fn update_exit_uuids(&mut self) {
         log_write(format!("Updating Exit UUIDs for {}",self.src_filename), LogLevel::DEBUG);
         let maps_ro = self.level_map_data.clone();
         for map in &mut self.level_map_data {
             for exit in &mut map.map_exits {
                 if exit.target_map_raw as usize >= maps_ro.len() {
                     log_write("Target Map Raw out of bounds!", LogLevel::ERROR);
-                    return Err(());
+                    return;
                 }
                 let target_map = &maps_ro[exit.target_map_raw as usize];
                 exit.target_map = target_map.uuid;
                 if exit.target_map_entrance_raw as usize >= target_map.map_entrances.len() {
                     log_write("Target Map Entrance Raw out of bounds!", LogLevel::ERROR);
-                    return Err(());
+                    return;
                 }
                 let target_map_entrance = &target_map.map_entrances[exit.target_map_entrance_raw as usize];
                 exit.target_map_entrance = target_map_entrance.uuid;
             }
         }
-        Ok(())
     }
 
     fn update_exit_indexes(&mut self) {
@@ -239,7 +238,65 @@ impl CourseInfo {
             }
         }
         // All of the Raw values are valid now
-        let _ = self.update_exit_uuids();
+        self.update_exit_uuids();
+    }
+
+    pub fn add_template(&mut self, template_file: &str, template_folder: &PathBuf) {
+        log_write(format!("Adding new template map: '{}'",template_file), LogLevel::LOG);
+        let root_path = template_folder.parent().expect("Every possible path has a parent");
+        let mut source_file_path = template_folder.clone();
+        source_file_path.push(template_file);
+        let exists_check = fs::exists(&source_file_path);
+        let Ok(exists) = exists_check else {
+            log_write(format!("source_file_path existence check failed: '{}'",exists_check.unwrap_err()), LogLevel::ERROR);
+            return;
+        };
+        if !exists {
+            log_write(format!("Template file '{}' does not exist", &source_file_path.display()), LogLevel::ERROR);
+            return;
+        }
+        // The file path is valid
+        let mut four_num: u32 = 0;
+        loop {
+            four_num += 1;
+            let new_file_name = format!("{}{:04}.mpdz",&template_file[0..3],four_num);
+            let new_path = utils::nitrofs_abs(&root_path.to_path_buf(), &new_file_name);
+            let Ok(new_path_exists) = fs::exists(&new_path) else {
+                log_write("New Template path existence check failed", LogLevel::ERROR);
+                continue;
+            };
+            if !new_path_exists {
+                // It's good! Copy it
+                let copy_res = fs::copy(&source_file_path, &new_path);
+                match copy_res {
+                    Ok(_) => {
+                        log_write(format!("Successfully copied '{}' to '{}'",source_file_path.display(),new_path.display()), LogLevel::LOG);
+                        let file_name_noext = new_file_name.replace(".mpdz", "");
+                        println!("file_name_noext: {}",file_name_noext);
+                        // Now add the map to the data files
+                        let new_course = CourseMapInfo::from_template(&file_name_noext);
+                        self.fix_exits(); // Make sure everything is synced up before we add
+                        self.level_map_data.push(new_course);
+                        self.update_exit_uuids(); // Then fix the UUIDs (raws will be okay)
+                        return;
+                    },
+                    Err(e) => {
+                        log_write(format!("Error in template file copy: '{}'",e), LogLevel::ERROR);
+                        return;
+                    }
+                }
+            } // Otherwise, continue
+        }
+    }
+
+    pub fn delete_map_info_by_index(&mut self, index: usize) -> bool {
+        if index >= self.level_map_data.len() {
+            log_write("Overflow in delete_map_info_by_index", LogLevel::ERROR);
+            return false;
+        }
+        self.level_map_data.remove(index);
+        self.fix_exits();
+        true
     }
 }
 
@@ -364,6 +421,16 @@ impl CourseMapInfo {
         log_write("Entrance data deleted", LogLevel::DEBUG);
         true
     }
+    pub fn from_template(name_no_ext: &str) -> Self {
+        CourseMapInfo {
+            map_entrances: vec![MapEntrance::default()],
+            map_exits: vec![MapExit::default()],
+            map_music: 0,
+            map_filename_noext: name_no_ext.to_string(),
+            label: name_no_ext.to_string(),
+            uuid: Uuid::new_v4()
+        }
+    }
 }
 
 #[derive(Debug,Clone,PartialEq)]
@@ -373,6 +440,16 @@ pub struct MapEntrance {
     pub entrance_flags: u16,
     pub label: String,
     pub uuid: Uuid
+}
+impl Default for MapEntrance {
+    fn default() -> Self {
+        Self {
+            entrance_x: 2, entrance_y: 2,
+            entrance_flags: 0x8000, // 1-1
+            label: format!("Entrance {:02X}",rand::random::<u8>()),
+            uuid: Uuid::new_v4()
+        }
+    }
 }
 impl Compilable for MapEntrance {
     fn compile(&self) -> Vec<u8> {
@@ -401,6 +478,17 @@ pub struct MapExit {
     /// Only for UX purposes, no effect on game
     pub label: String,
     pub uuid: Uuid
+}
+impl Default for MapExit {
+    fn default() -> Self {
+        Self {
+            exit_x: 0x10, exit_y: 0x10,
+            exit_type: 0x5, // Blue Door
+            target_map_raw: 0, target_map: Uuid::nil(),
+            target_map_entrance_raw: 0, target_map_entrance: Uuid::nil(),
+            label: format!("Exit {:02X}",rand::random::<u8>()), uuid: Uuid::new_v4()
+        }
+    }
 }
 impl Compilable for MapExit {
     fn compile(&self) -> Vec<u8> {
