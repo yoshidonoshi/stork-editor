@@ -271,7 +271,6 @@ impl CourseInfo {
                     Ok(_) => {
                         log_write(format!("Successfully copied '{}' to '{}'",source_file_path.display(),new_path.display()), LogLevel::LOG);
                         let file_name_noext = new_file_name.replace(".mpdz", "");
-                        println!("file_name_noext: {}",file_name_noext);
                         // Now add the map to the data files
                         let new_course = CourseMapInfo::from_template(&file_name_noext);
                         self.fix_exits(); // Make sure everything is synced up before we add
