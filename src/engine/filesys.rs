@@ -51,7 +51,7 @@ pub fn extract_rom_files(nds_file: &PathBuf, output_dir: &PathBuf) -> Result<Pat
 pub struct RomGenerateError{}
 
 pub fn generate_rom(config: &String, new_nds_file: &String) -> Result<(),RomGenerateError> {
-    log_write("This will take a long time...", LogLevel::LOG);
+    log_write("This will take a long time (in debug mode)...", LogLevel::DEBUG);
     let rom = Rom::load(&config, RomLoadOptions::default());
     if rom.is_err() {
         utils::log_write(format!("Failed to load directory '{}'",&config), utils::LogLevel::ERROR);
