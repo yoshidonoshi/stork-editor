@@ -446,7 +446,7 @@ impl Default for MapEntrance {
         Self {
             entrance_x: 2, entrance_y: 2,
             entrance_flags: 0x8000, // 1-1
-            label: "New Entrance".to_string(),
+            label: format!("Entrance {:02X}",rand::random::<u8>()),
             uuid: Uuid::new_v4()
         }
     }
@@ -486,7 +486,7 @@ impl Default for MapExit {
             exit_type: 0x5, // Blue Door
             target_map_raw: 0, target_map: Uuid::nil(),
             target_map_entrance_raw: 0, target_map_entrance: Uuid::nil(),
-            label: "New Exit".to_string(), uuid: Uuid::new_v4()
+            label: format!("Exit {:02X}",rand::random::<u8>()), uuid: Uuid::new_v4()
         }
     }
 }
