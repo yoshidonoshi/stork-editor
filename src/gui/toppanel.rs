@@ -61,6 +61,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 gui_state.display_engine.loaded_map = MapData::default();
                 gui_state.display_engine.loaded_course = CourseInfo::default();
                 gui_state.project_open = false;
+                gui_state.display_engine.game_version = None;
             }
             let button_quit = ui.button("Quit");
             if button_quit.clicked() {

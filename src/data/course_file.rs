@@ -288,6 +288,16 @@ impl CourseInfo {
             } // Otherwise, continue
         }
     }
+
+    pub fn delete_map_info_by_index(&mut self, index: usize) -> bool {
+        if index >= self.level_map_data.len() {
+            log_write("Overflow in delete_map_info_by_index", LogLevel::ERROR);
+            return false;
+        }
+        self.level_map_data.remove(index);
+        self.fix_exits();
+        true
+    }
 }
 
 /// CSCN (Info about map relative to the Level)

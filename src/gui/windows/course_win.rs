@@ -74,11 +74,30 @@ pub fn show_course_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
+        if de.game_version.is_none() {
+            ui.disable(); // Project is closed
+        }
         let new_button = ui.button("New");
         if new_button.clicked() {
             de.course_settings.add_window_open = true;
         }
-        ui.add_enabled(false, egui::Button::new("Delete"));
+        ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
+        let delete_button = ui.button("Delete");
+        if delete_button.clicked() {
+            let Some(selected_map_index) = de.course_settings.selected_map else {
+                log_write("No map selected", LogLevel::DEBUG);
+                return;
+            };
+            if selected_map_index >= de.loaded_course.level_map_data.len() {
+                log_write("Selected map overflow when deleting, resetting", LogLevel::ERROR);
+                de.course_settings.selected_map = None;
+                return;
+            }
+            let _did_delete = de.loaded_course.delete_map_info_by_index(selected_map_index);
+            de.graphics_update_needed = true;
+            de.unsaved_changes = true;
+            de.course_settings.selected_map = None;
+        }
     });
     ui.add_space(5.0);
     let _table = TableBuilder::new(ui)
@@ -117,22 +136,20 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     }
     let stored_map_data = de.loaded_course.level_map_data[selected_map_index].clone();
     // MUSIC //
-    { // This allows borrowing map data properly
-        let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
-        let old_map_music_val = selected_map_data.map_music.clone();
-        ui.heading("Music");
-        egui::ComboBox::from_label("")
-            .selected_text(format!("0x{:02X} - {}",selected_map_data.map_music,get_course_music_name(selected_map_data.map_music)))
-            .show_ui(ui, |ui| {
-                for x in 0..=23 { // 23 is the highest value found in all CRSBs via script
-                    ui.selectable_value(&mut selected_map_data.map_music, x, get_course_music_name(x));
-                }
-            });
-        if old_map_music_val != selected_map_data.map_music {
-            log_write(format!("Changed Map music index to '{}'",&selected_map_data.map_music), LogLevel::LOG);
-            de.unsaved_changes = true;
-        }
-    } // Return borrowed mutable map data
+    let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
+    let old_map_music_val = selected_map_data.map_music.clone();
+    ui.heading("Music");
+    egui::ComboBox::from_label("")
+        .selected_text(format!("0x{:02X} - {}",selected_map_data.map_music,get_course_music_name(selected_map_data.map_music)))
+        .show_ui(ui, |ui| {
+            for x in 0..=23 { // 23 is the highest value found in all CRSBs via script
+                ui.selectable_value(&mut selected_map_data.map_music, x, get_course_music_name(x));
+            }
+        });
+    if old_map_music_val != selected_map_data.map_music {
+        log_write(format!("Changed Map music index to '{}'",&selected_map_data.map_music), LogLevel::LOG);
+        de.unsaved_changes = true;
+    }
     ui.separator();
     // ENTRANCES //
     ui.heading("Entrances");
