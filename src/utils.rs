@@ -229,8 +229,8 @@ pub fn read_c_string(rdr: &mut Cursor<&Vec<u8>>) -> String {
     }
     match String::from_utf8(string_buffer) {
         Err(_) => {
-            log_write("Failed to read mpdz_name_noext", LogLevel::ERROR);
-            panic!()
+            log_write("Failed to read mpdz_name_noext", LogLevel::FATAL);
+            String::new() // Satisfy compiler, but FATAL panics with message
         }
         Ok(s) => s,
     }
@@ -263,8 +263,8 @@ pub fn read_fixed_string_cursor(rdr: &mut Cursor<&Vec<u8>>, length: u32) -> Stri
     }
     match String::from_utf8(string_buffer) {
         Err(_) => {
-            log_write("Failed to read fixed string", LogLevel::ERROR);
-            panic!()
+            log_write("Failed to read fixed string", LogLevel::FATAL);
+            String::new() // Satisfy compiler, but FATAL panics with message
         }
         Ok(result_string) => result_string,
     }

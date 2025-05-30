@@ -125,8 +125,8 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
             }
             // Trim sprites
             let Some(spr) = de.loaded_map.get_setd() else {
-                log_write("Failed to get SETD when resizing", LogLevel::ERROR);
-                panic!()
+                log_write("Failed to get SETD when resizing", LogLevel::FATAL);
+                return; // Satisfy compiler, but not reached as logging FATAL does message panic
             };
             let trimmed = spr.trim(settings.new_width, settings.new_height);
             log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::DEBUG);
