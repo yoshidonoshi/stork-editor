@@ -2,6 +2,7 @@ use crate::{data::{course_file::CourseInfo, mapfile::MapData, types::CurrentLaye
 
 use super::gui::Gui;
 use egui::Button;
+use strum::IntoEnumIterator;
 
 pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
     ui.horizontal(|ui| {
@@ -175,13 +176,9 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
         let _cur_layer_combo = egui::ComboBox::from_label("")
             .selected_text(format!("{selected_bg:?}"))
             .show_ui(ui, |ui| {
-                ui.selectable_value(selected_bg, CurrentLayer::BG1, "BG1");
-                ui.selectable_value(selected_bg, CurrentLayer::BG2, "BG2");
-                ui.selectable_value(selected_bg, CurrentLayer::BG3, "BG3");
-                ui.selectable_value(selected_bg, CurrentLayer::SPRITES, "Sprites");
-                ui.selectable_value(selected_bg, CurrentLayer::COLLISION, "Collision");
-                ui.selectable_value(selected_bg, CurrentLayer::PATHS, "Paths");
-                ui.selectable_value(selected_bg, CurrentLayer::TRIGGERS, "Triggers");
+                for layer in CurrentLayer::iter() {
+                    ui.selectable_value(selected_bg, layer, format!("{layer:?}"));
+                }
             });
         if *selected_bg != old_selected_bg {
             log_write("Cleaning up due to layer change", LogLevel::DEBUG);
