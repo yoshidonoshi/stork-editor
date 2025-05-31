@@ -24,10 +24,6 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             return;
         }
     };
-    if layer.is_none() {
-        ui.label(format!("Current layer is not loaded: '{}'",which_bg));
-        return;
-    }
     let mut tileset_name = String::from("N/A");
     if let Some(bg_layer) = &layer {
         let imbz_noext = &bg_layer.get_info().expect("saved_brushes layer has info").imbz_filename_noext;
@@ -38,8 +34,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             ui.disable();
         }
     } else {
-        // Logically impossible
-        log_write(format!("Failed to load BG layer '{}' in show_stamps_window",which_bg), LogLevel::FATAL);
+        ui.label(format!("Current layer is not loaded: '{}'",which_bg));
         return;
     }
     ui.label(format!("Current tileset file: '{}'", tileset_name));
@@ -89,9 +84,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         if label_name.clicked() {
                             if tileset_match {
                                 de.brush_settings.cur_selected_brush = Some(i);
-                                let got_brush = get_selected_brush_data(&de.saved_brushes, i);
-                                if got_brush.is_ok() {
-                                    de.current_brush = got_brush.unwrap();
+                                if let Ok(got_brush) = get_selected_brush_data(&de.saved_brushes, i) {
+                                    de.current_brush = got_brush;
                                 }
                             }
                         }
@@ -104,9 +98,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         if tileset_label.clicked() {
                             if tileset_match {
                                 de.brush_settings.cur_selected_brush = Some(i);
-                                let got_brush = get_selected_brush_data(&de.saved_brushes, i);
-                                if got_brush.is_ok() {
-                                    de.current_brush = got_brush.unwrap();
+                                if let Ok(got_brush) = get_selected_brush_data(&de.saved_brushes, i) {
+                                    de.current_brush = got_brush;
                                 }
                             }
                         }
@@ -115,9 +108,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     if row.response().clicked() {
                         if tileset_match {
                             de.brush_settings.cur_selected_brush = Some(i);
-                            let got_brush = get_selected_brush_data(&de.saved_brushes, i);
-                            if got_brush.is_ok() {
-                                de.current_brush = got_brush.unwrap();
+                            if let Ok(got_brush) = get_selected_brush_data(&de.saved_brushes, i) {
+                                de.current_brush = got_brush;
                             }
                         }
                     }
@@ -155,11 +147,13 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.disable();
         let brush_load_button = ui.button("Load Brushes JSON");
         if brush_load_button.clicked() {
-            let brushes_load_attempt = load_brushes_from_file();
-            if brushes_load_attempt.is_err() {
-                log_write(format!("Failed to load brushes from JSON: '{}'",brushes_load_attempt.unwrap_err()), LogLevel::ERROR);
-            } else {
-                de.saved_brushes = brushes_load_attempt.unwrap();
+            match load_brushes_from_file() {
+                Err(error) => {
+                    log_write(format!("Failed to load brushes from JSON: '{error}'"), LogLevel::ERROR);
+                }
+                Ok(brushes_load_attempt) => {
+                    de.saved_brushes = brushes_load_attempt;
+                }
             }
         }
     });
@@ -180,28 +174,30 @@ pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
         "brushes": []
     });
     for brush in brushes {
-        let j_string = serde_json::to_value(brush);
-        if j_string.is_err() {
-            log_write(format!("Failed to convert Brush '{}' to JSON: '{}'",brush.name,j_string.unwrap_err()), LogLevel::ERROR);
-            return;
-        }
-        out_json["brushes"].as_array_mut().expect("Get output JSON as mutable array").push(j_string.unwrap());
+        let j_string = match serde_json::to_value(brush) {
+            Err(error) => {
+                log_write(format!("Failed to convert Brush '{}' to JSON: '{error}'", brush.name), LogLevel::ERROR);
+                return;
+            }
+            Ok(j) => j,
+        };
+        out_json["brushes"].as_array_mut().expect("Get output JSON as mutable array").push(j_string);
     }
     let pretty_string = serde_json::to_string(&out_json).expect("Brushes should Stringify correctly");
     let mut output = File::create("stored_brushes.json").expect("Can init the Brushes JSON file");
-    let json_write = write!(output,"{}",pretty_string);
-    if json_write.is_err() {
-        log_write(format!("Failed to write Brushes JSON: '{}'",json_write.unwrap_err()), LogLevel::ERROR);
+    if let Err(error) = write!(output,"{pretty_string}") {
+        log_write(format!("Failed to write Brushes JSON: '{error}'"), LogLevel::ERROR);
     }
 }
 
 pub fn load_brushes_from_file() -> Result<Vec<Brush>,Box<dyn Error>> {
-    let file: Result<File, std::io::Error> = File::open("stored_brushes.json");
-    if file.is_err() {
-        log_write(format!("Could not open stored_brushes.json: '{}'",file.unwrap_err()), LogLevel::WARN);
-        return Ok(Vec::new());
-    }
-    let file = file.unwrap();
+    let file = match File::open("stored_brushes.json") {
+        Err(error) => {
+            log_write(format!("Could not open stored_brushes.json: '{error}'"), LogLevel::WARN);
+            return Ok(Vec::new());
+        }
+        Ok(f) => f,
+    };
     let reader = BufReader::new(file);
     let j: Value = serde_json::from_reader(reader)?;
     let brush_json_array = j["brushes"].as_array().expect("Brushes JSON array created");

@@ -370,7 +370,8 @@ impl DisplayEngine {
 
         // Version checks //
         let got_contents = de.loaded_arm9.clone().expect("ARM9 was loaded properly");
-        match de.game_version.expect("Must be a version") {
+        let game_version = de.game_version.expect("Must be a version");
+        match game_version {
             GameVersion::USA10 => {
                 let found_str = utils::read_fixed_string(&got_contents, 0xe1e6e, 6);
                 if !found_str.eq("1-1_D3") {
@@ -412,24 +413,23 @@ impl DisplayEngine {
                 log_write("This should be impossible to hit in version test", LogLevel::FATAL);
             }
         }
-        log_write(format!("Assuming game version {}",get_gameversion_prettyname(&de.game_version.unwrap())), LogLevel::LOG);
+        log_write(format!("Assuming game version {}",get_gameversion_prettyname(&game_version)), LogLevel::LOG);
         Ok(de)
     }
 
     fn get_level_filename(&self, world_index: &u32, level_index: &u32) -> String {
-        if self.game_version.is_none() {
+        let Some(game_ver) = self.game_version else {
             // Should be impossible
             log_write("Attempted to call get_level_filename before game opened", LogLevel::FATAL);
-            return String::new();
-        }
-        let game_ver = self.game_version.expect("Game version can't not be loaded");
+            unreachable!();
+        };
         let filename_res = match game_ver {
             GameVersion::USA10 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA10),
             GameVersion::USA11 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA11),
             //GameVersion::EUR => self.get_level_filename_eur_11(world_index, level_index),
             _ => {
-                log_write(format!("Attempted to get level filename on unsupported version: '{:?}'",&self.game_version.unwrap()), LogLevel::FATAL);
-                return String::new();
+                log_write(format!("Attempted to get level filename on unsupported version: '{game_ver:?}'"), LogLevel::FATAL);
+                unreachable!();
             },
         };
         match filename_res {

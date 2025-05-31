@@ -2,6 +2,7 @@ use crate::{data::{course_file::CourseInfo, mapfile::MapData, types::CurrentLaye
 
 use super::gui::Gui;
 use egui::Button;
+use strum::IntoEnumIterator;
 
 pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
     puffin::profile_function!();
@@ -12,14 +13,8 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             let button_open_rom = ui.add_enabled(true, Button::new("Open ROM..."));
             if button_open_rom.clicked() {
                 ui.close_menu();
-                let _open_rom_res = gui_state.do_open_rom();
-                match _open_rom_res {
-                    Ok(_) => {
-                        // Do nothing
-                    }
-                    Err(e) => {
-                        gui_state.do_alert(&e.cause);
-                    }
+                if let Err(error) = gui_state.do_open_rom() {
+                    gui_state.do_alert(&error.cause);
                 }
             }
             let button_open_project = ui.add_enabled(true, Button::new("Open Project..."));
@@ -181,13 +176,9 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
         let _cur_layer_combo = egui::ComboBox::from_label("")
             .selected_text(format!("{selected_bg:?}"))
             .show_ui(ui, |ui| {
-                ui.selectable_value(selected_bg, CurrentLayer::BG1, "BG1");
-                ui.selectable_value(selected_bg, CurrentLayer::BG2, "BG2");
-                ui.selectable_value(selected_bg, CurrentLayer::BG3, "BG3");
-                ui.selectable_value(selected_bg, CurrentLayer::Sprites, "Sprites");
-                ui.selectable_value(selected_bg, CurrentLayer::Collision, "Collision");
-                ui.selectable_value(selected_bg, CurrentLayer::Paths, "Paths");
-                ui.selectable_value(selected_bg, CurrentLayer::Triggers, "Triggers");
+                for layer in CurrentLayer::iter() {
+                    ui.selectable_value(selected_bg, layer, format!("{layer:?}"));
+                }
             });
         if *selected_bg != old_selected_bg {
             log_write("Cleaning up due to layer change", LogLevel::DEBUG);

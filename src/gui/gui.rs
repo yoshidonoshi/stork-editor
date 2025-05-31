@@ -3,6 +3,7 @@ use std::{collections::HashMap, error::Error, fmt, fs::{self, DirEntry, File}, i
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
 use serde_json::Value;
+use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
 use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
@@ -11,7 +12,7 @@ use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepan
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,EnumIter)]
 pub enum StorkTheme {
     DARK,
     LIGHT,
@@ -499,9 +500,8 @@ impl Gui {
             Ok(f) => f,
         };
         // Write file
-        let file_write_result = file.write_all(&packed_level_file);
-        if file_write_result.is_err() {
-            log_write(format!("Failed to write Course file: '{}'",file_write_result.unwrap_err()), LogLevel::ERROR);
+        if let Err(error) = file.write_all(&packed_level_file) {
+            log_write(format!("Failed to write Course file: '{error}'"), LogLevel::ERROR);
         } else {
             log_write(format!("Course file saved to '{}'",&file_name_ext), LogLevel::LOG);
             self.display_engine.unsaved_changes = false;
@@ -674,14 +674,8 @@ impl Gui {
             }
             // Open ROM
             if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL | Modifiers::SHIFT, Key::O)) {
-                let _open_rom_res = self.do_open_rom();
-                match _open_rom_res {
-                    Ok(_) => {
-                        // Do nothing
-                    }
-                    Err(e) => {
-                        self.do_alert(&e.cause);
-                    }
+                if let Err(error) = self.do_open_rom() {
+                    self.do_alert(&error.cause);
                 }
                 return;
             }
@@ -797,9 +791,8 @@ impl Gui {
                     log_write(exists_fail.clone(), LogLevel::LOG);
                     return Err(RomExtractError::new(&exists_fail));
                 }
-                let extract_result = filesys::extract_rom_files(&path_rom, &self.export_directory);
-                if extract_result.is_err() {
-                    let fail_msg = format!("Failed to extract ROM: '{}'",extract_result.unwrap_err());
+                if let Err(error) = filesys::extract_rom_files(&path_rom, &self.export_directory) {
+                    let fail_msg = format!("Failed to extract ROM: '{error}'");
                     log_write(fail_msg.clone(), LogLevel::ERROR);
                     return Err(RomExtractError::new(&fail_msg));
                 }
@@ -831,9 +824,8 @@ impl Gui {
                         // Found it! Copy
                         let mut to_file_dir = template_dir.clone();
                         to_file_dir.push(found_name);
-                        let copy_attempt = fs::copy(files_file.path(), to_file_dir);
-                        if copy_attempt.is_err() {
-                            log_write(format!("Error copying template file: '{}'",copy_attempt.unwrap_err()), LogLevel::ERROR);
+                        if let Err(error) = fs::copy(files_file.path(), to_file_dir) {
+                            log_write(format!("Error copying template file: '{error}'"), LogLevel::ERROR);
                         }
                     }
                 }
@@ -987,8 +979,7 @@ impl Gui {
                     top_left_most = Pos2::new(cur_sprite.x_position as f32, cur_sprite.y_position as f32);
                 }
                 self.display_engine.clipboard.sprite_clip.sprites.push(cur_sprite);
-                let cut_delete_result = self.display_engine.loaded_map.delete_sprite_by_uuid(*spr_id);
-                if cut_delete_result.is_err() {
+                if self.display_engine.loaded_map.delete_sprite_by_uuid(*spr_id).is_err() {
                     log_write("Failed to delete Sprite by UUID in do_cut", LogLevel::ERROR);
                 }
             }
@@ -1222,9 +1213,9 @@ impl eframe::App for Gui {
                 egui::ComboBox::from_label("Background")
                     .selected_text(format!("{radio:?}"))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(radio, BGVALUE::BG1, "BG1");
-                        ui.selectable_value(radio, BGVALUE::BG2, "BG2");
-                        ui.selectable_value(radio, BGVALUE::BG3, "BG3");
+                        for bg in BGVALUE::iter() {
+                            ui.selectable_value(radio, bg, format!("{bg:?}"));
+                        }
                     });
                 let cur_palette = self.tile_preview_pal.clone();
                 egui::ComboBox::from_label("Palette")

@@ -1,6 +1,7 @@
 use std::{fmt::{self, Debug}, io::Cursor};
 
 use egui::{Color32, TextureHandle};
+use strum::EnumIter;
 
 use crate::utils::{self, log_write, LogLevel};
 
@@ -164,14 +165,14 @@ impl MapTileRecordData {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy, EnumIter)]
 pub enum BGVALUE {
     BG1,
     BG2,
     BG3
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, EnumIter)]
 pub enum CurrentLayer {
     BG1 = 1,
     BG2 = 2,

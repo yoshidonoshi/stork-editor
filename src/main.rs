@@ -4,7 +4,7 @@ use clap::Parser;
 use egui::Vec2;
 use gui::gui::Gui;
 use log::LevelFilter;
-use once_cell::sync::OnceCell;
+use once_cell::sync::Lazy;
 use utils::{log_write, LogLevel};
 
 mod utils;
@@ -22,14 +22,11 @@ pub struct Args {
     debug: bool
 }
 
-static CLIARGS: OnceCell<Args> = OnceCell::new();
+static CLI_ARGS: Lazy<Args> = Lazy::new(|| Args::parse());
 
 fn main() -> eframe::Result {
     let _ = simple_logging::log_to_file("stork.log", LevelFilter::Info);
     log_panics::init(); // We want it to go in stork.log
-    
-    let args = Args::parse();
-    CLIARGS.set(args).expect("Args init failed");
 
     log_write(format!("== Starting Stork Editor {} ==", VERSION), LogLevel::LOG);
 
@@ -53,10 +50,9 @@ fn main() -> eframe::Result {
                 log_write("No default system theme found, defaulting to Dark", LogLevel::WARN);
                 cc.egui_ctx.set_theme(egui::Theme::Dark);
             }
-            let sprite_load_result = gui.load_sprite_csv();
-            if sprite_load_result.is_err() {
+            if let Err(error) = gui.load_sprite_csv() {
                 // The software simply won't work without this. It shouldn't be possible
-                log_write(format!("Sprite database load error: '{}'",sprite_load_result.unwrap_err()), LogLevel::FATAL);
+                log_write(format!("Sprite database load error: '{error}'"), LogLevel::FATAL);
             } else {
                 log_write("Sprite database loaded successfully", LogLevel::LOG);
             }

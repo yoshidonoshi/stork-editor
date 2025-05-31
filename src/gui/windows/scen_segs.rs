@@ -9,12 +9,10 @@ pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, laye
     .auto_shrink(false)
     .min_scrolled_height(1.0)
     .show(ui, |ui| {
-        let bg = de.loaded_map.get_background(*layer as u8);
-        if bg.is_none() {
+        let Some(bg) = de.loaded_map.get_background(*layer as u8) else {
             ui.label("Not on a loaded background layer");
             return;
-        }
-        let bg = bg.unwrap();
+        };
         for (i,seg) in &mut bg.scen_segments.iter_mut().enumerate() {
             let header = seg.header().clone();
             match header.as_str() {
@@ -183,14 +181,14 @@ fn show_info_segment(ui: &mut egui::Ui, info: &mut ScenInfoData) -> bool {
         ui.add_enabled(false,color_mode_drag);
         ui.label("Color Mode");
     });
-    if info.imbz_filename_noext.is_none() {
+    if let Some(imbz_filename_noext) = &info.imbz_filename_noext {
         ui.horizontal(|ui| {
-            ui.label("'Local'");
+            ui.label(format!("'{imbz_filename_noext}'"));
             ui.label("Pixel Tile Source");
         });
     } else {
         ui.horizontal(|ui| {
-            ui.label(format!("'{}'",info.imbz_filename_noext.clone().unwrap()));
+            ui.label("'Local'");
             ui.label("Pixel Tile Source");
         });
     }
