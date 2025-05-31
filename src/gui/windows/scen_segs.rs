@@ -3,6 +3,7 @@ use egui::Color32;
 use crate::{data::{scendata::{info::ScenInfoData, ScenSegment, ScenSegmentWrapper}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, layer: &CurrentLayer) {
+    puffin::profile_function!();
     let mut do_del: Option<usize> = Option::None;
     egui::ScrollArea::vertical()
     .auto_shrink(false)

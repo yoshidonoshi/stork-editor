@@ -23,6 +23,7 @@ const BG_SELECTION_STROKE: Color32 = Color32::WHITE;
 /// Each one takes in the display data plus a UI reference, then combines the two
 /// to create a drawn layer. This also includes logic to disable drawing the layer.
 pub fn render_primary_grid(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
+    puffin::profile_function!();
     draw_background(ui, de, vrect, 3, de.display_settings.show_bg3);
     draw_background(ui, de, vrect, 2, de.display_settings.show_bg2);
     draw_background(ui, de, vrect, 1, de.display_settings.show_bg1);
@@ -50,6 +51,7 @@ pub fn render_primary_grid(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Re
 }
 
 fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) {
+    puffin::profile_function!();
     let Some(bg_with_col) = de.loaded_map.get_bg_with_colz() else { return };
     let Some(bg) = de.loaded_map.get_background(bg_with_col) else { return };
     let Some(info_c) = bg.get_info() else { return };
@@ -211,6 +213,7 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
 }
 
 fn draw_triggers(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     let top_left_screen: Pos2 = ui.min_rect().min;
     let Some(area) = de.loaded_map.get_area() else { return };
     for trigger in &area.triggers {
@@ -244,6 +247,7 @@ fn draw_triggers(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 }
 
 fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     let top_left_screen: Pos2 = ui.min_rect().min;
     // It's read-only, we aren't changing it
     let Some(blkz_data) = de.loaded_map.get_blkz().cloned() else { return };
@@ -294,6 +298,7 @@ fn draw_blkz_tile(
 }
 
 fn draw_entrances(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     let top_left: Pos2 = ui.min_rect().min;
     let Some(map_index) = de.map_index else { return };
     let maps_count = de.loaded_course.level_map_data.len();
@@ -322,6 +327,7 @@ fn draw_entrances(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 }
 
 fn draw_exits(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     let top_left: Pos2 = ui.min_rect().min;
     let Some(map_index) = de.map_index else { return };
     let maps_count = de.loaded_course.level_map_data.len();
@@ -351,6 +357,7 @@ fn draw_exits(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 const PATH_SELECTION_DISTANCE: f32 = 20.0;
 
 fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     let arm9 = de.loaded_arm9.clone().expect("ARM9 must exist");
     let top_left: Pos2 = ui.min_rect().min;
     if let Some(path_database) = &de.path_data {
@@ -493,6 +500,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 }
 
 fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
+    puffin::profile_function!();
     let top_left: Pos2 = ui.min_rect().min;
     let mut update_map: bool = false;
     // If this always fires, it will block COLZ clicks
@@ -656,6 +664,7 @@ fn draw_background(
     vrect: &Rect, whichbg: u8,
     show: bool
 ) {
+    puffin::profile_function!();
     // This is used to offset the drawing to the window
     //   Otherwise it doesn't "stick to the window"
     let top_left: Pos2 = ui.min_rect().min;
@@ -993,6 +1002,7 @@ fn draw_tile(
     dim: bool,
     create_texture_image: impl Fn(&MapTileRecordData, &Vec<u8>) -> ColorImage, texture_name: &str
 ) {
+    puffin::profile_function!();
     if let Some(t) = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize) {
         let uvs = utils::get_uvs_from_tile(tile);
         let color = match (dim, selected) {
@@ -1017,6 +1027,7 @@ pub fn draw_tile_16(
     true_rect: &Rect, selected: bool,
     dim: bool
 ) {
+    puffin::profile_function!();
     draw_tile(tile, ctx, pixel_tiles, painter, tc, true_rect, selected, dim,
         |tile, pixel_tiles| {
             let byte_array = utils::get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
@@ -1033,6 +1044,7 @@ pub fn draw_tile_256(
     true_rect: &Rect, selected: bool,
     dim: bool
 ) {
+    puffin::profile_function!();
     draw_tile(tile, ctx, pixel_tiles, painter, tc, true_rect, selected, dim,
         |tile, pixel_tiles| {
             let byte_array = utils::get_pixel_bytes_256(pixel_tiles, &tile.tile_id);

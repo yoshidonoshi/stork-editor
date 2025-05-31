@@ -8,6 +8,7 @@ use crate::{data::sprites::SpriteMetadata, utils::{log_write, settings_to_string
 use super::gui::Gui;
 
 pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
+    puffin::profile_function!();
     StripBuilder::new(ui)
         .size(Size::exact(100.0))
         .size(Size::remainder())

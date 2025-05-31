@@ -11,6 +11,7 @@ pub struct ResizeSettings {
 }
 
 pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &mut ResizeSettings) {
+    puffin::profile_function!();
     if !de.display_settings.is_cur_layer_bg() {
         log_write("Cannot resize, not on BG layer", LogLevel::WARN);
         settings.window_open = false;

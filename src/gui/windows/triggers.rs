@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::{data::{area::{Trigger, TriggerData}, mapfile::TopLevelSegmentWrapper, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 pub fn show_triggers_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     if de.display_settings.current_layer != CurrentLayer::TRIGGERS {
         ui.disable();
     }

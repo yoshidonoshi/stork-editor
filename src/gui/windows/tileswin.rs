@@ -12,6 +12,7 @@ const TILES_ARRAY_WIDTH: usize = 0x10;
 const TOP_MARGIN: f32 = 1.0;
 
 pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &Vec<TextureHandle>) {
+    puffin::profile_function!();
     let painter: &egui::Painter = ui.painter();
     let top_left: Pos2 = ui.min_rect().min + Vec2::new(0.0, TOP_MARGIN);
     for (tile_index,tile) in preview_tile_cache.iter().enumerate() {

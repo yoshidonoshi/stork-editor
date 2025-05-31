@@ -8,6 +8,7 @@ const COL_TILE_DIM: f32 = 16.0;
 const COLL_RECT: Vec2 = Vec2::new(COL_TILE_DIM, COL_TILE_DIM);
 
 pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     if de.display_settings.current_layer != CurrentLayer::COLLISION {
         ui.disable();
     }
