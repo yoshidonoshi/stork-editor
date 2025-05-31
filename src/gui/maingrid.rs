@@ -788,6 +788,28 @@ fn draw_background(
                         }
                         
                     }
+                    // Draw lines to show true edges of layers //
+                    if tile_y as u32 == info.layer_height as u32 - 1 {
+                        // True rect is the bottommost tile
+                        let point_1 = true_rect.left_bottom() + Vec2::new(1.0, 1.0);
+                        let point_2 = true_rect.right_bottom() + Vec2::new(-1.0, 1.0);
+                        ui.painter().line(vec![point_1,point_2], egui::Stroke::new(1.0, if is_selected_layer {
+                            Color32::RED
+                        } else {
+                            Color32::BLUE
+                        }));
+                    }
+                    if tile_x as u32 == info.layer_width as u32 - 1 {
+                        // True rect is the rightmost tile
+                        let point_1 = true_rect.right_top() + Vec2::new(1.0, 1.0);
+                        let point_2 = true_rect.right_bottom() + Vec2::new(1.0, -1.0);
+                        ui.painter().line(vec![point_1,point_2], egui::Stroke::new(1.0, if is_selected_layer {
+                            Color32::RED
+                        } else {
+                            Color32::BLUE
+                        }));
+                    }
+
                     map_index += 1;
                 }
                 // Interactivity //
