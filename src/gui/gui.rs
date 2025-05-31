@@ -1504,6 +1504,8 @@ impl eframe::App for Gui {
                             but = but.highlight();
                         }
                         if but.clicked() {
+                            // Since the targeting is done via GUI, but accesses the saved data
+                            self.save_course();
                             // This is to be used once support for ALL map selection is working
                             self.map_change_selected_map = map.map_filename_noext.clone();
                             self.change_map(map_index);
