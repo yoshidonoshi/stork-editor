@@ -23,10 +23,6 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             return;
         }
     };
-    if layer.is_none() {
-        ui.label(format!("Current layer is not loaded: '{}'",which_bg));
-        return;
-    }
     let mut tileset_name = String::from("N/A");
     if let Some(bg_layer) = &layer {
         let imbz_noext = &bg_layer.get_info().expect("saved_brushes layer has info").imbz_filename_noext;
@@ -37,8 +33,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             ui.disable();
         }
     } else {
-        // Logically impossible
-        log_write(format!("Failed to load BG layer '{}' in show_stamps_window",which_bg), LogLevel::FATAL);
+        ui.label(format!("Current layer is not loaded: '{}'",which_bg));
         return;
     }
     ui.label(format!("Current tileset file: '{}'", tileset_name));
