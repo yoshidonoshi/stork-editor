@@ -44,4 +44,7 @@ cross build --release --target x86_64-pc-windows-gnu
 
 See [CONTRIBUTING.md](https://github.com/yoshidonoshi/stork-editor/blob/main/CONTRIBUTING.md)
 
-©YoshiDonoshi
+## Major Contributors
+- [YoshiDonoshi](https://github.com/yoshidonoshi): Lead developer, research
+- [SpeckyYT](https://github.com/SpeckyYT): Rust wizardry
+- [Eden](https://www.youtube.com/@Eden-0005): Testing

@@ -8,6 +8,7 @@
   - Each set of bug fixes triggers a minor release 
  
 ## Making a bug report
+0. If you don't have/don't want to make a GitHub account, you can just describe the issue on the Discord server
 1. Create the Issue here: https://github.com/yoshidonoshi/stork-editor/issues/new
 2. Give it a descriptive name and apply the "bug" label
 3. In the body, add the following:
