@@ -421,7 +421,7 @@ impl DisplayEngine {
         let Some(game_ver) = self.game_version else {
             // Should be impossible
             log_write("Attempted to call get_level_filename before game opened", LogLevel::FATAL);
-            return String::new();
+            unreachable!();
         };
         let filename_res = match game_ver {
             GameVersion::USA10 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA10),
@@ -429,7 +429,7 @@ impl DisplayEngine {
             //GameVersion::EUR => self.get_level_filename_eur_11(world_index, level_index),
             _ => {
                 log_write(format!("Attempted to get level filename on unsupported version: '{game_ver:?}'"), LogLevel::FATAL);
-                return String::new();
+                unreachable!();
             },
         };
         match filename_res {
