@@ -42,7 +42,12 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         return;
     }
     ui.label(format!("Current tileset file: '{}'", tileset_name));
-    ui.checkbox(&mut de.brush_settings.only_show_same_tileset, "Only show same tileset");
+    let checkbox = ui.checkbox(&mut de.brush_settings.only_show_same_tileset, "Only show same tileset");
+    if checkbox.hovered() {
+        egui::show_tooltip(ui.ctx(), ui.layer_id(), egui::Id::new("same_tileset_checked"), |ui| {
+            ui.label("Some tilesets have similar Brush names, but aren't compatible");
+        });
+    }
     ui.horizontal(|ui| {
         ui.label("Filter:");
         ui.add_enabled(true, egui::TextEdit::singleline(&mut de.brush_settings.cur_search_string));
