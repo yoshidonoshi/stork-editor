@@ -76,8 +76,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         return;
     }
     if let Some(layer) = de.loaded_map.get_background(cur_layer) {
-        let pal = &layer.get_pltb();
-        if pal.is_none() {
+        if layer.get_pltb().is_none() {
             return;
         }
         let info = layer.get_info().expect("brush layer has info");

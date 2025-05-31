@@ -336,8 +336,7 @@ pub fn print_cursor(rdr: &mut Cursor<&Vec<u8>>, length: usize) {
 
 #[allow(dead_code)] // May not be used in final
 pub fn write_vec_test_file(byte_vector: &Vec<u8>,filename: String) {
-    let result = write(&filename, byte_vector);
-    if result.is_err() {
+    if write(&filename, byte_vector).is_err() {
         log_write(format!("Failed to write vec test file '{}'",&filename), LogLevel::ERROR);
     }
 }
@@ -354,9 +353,8 @@ pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
     let mut p: PathBuf = PathBuf::from(export_dir);
     p.push("backups");
     if !p.exists() {
-        let create_res = fs::create_dir(p.clone());
-        if create_res.is_err() {
-            log_write(format!("Error creating backup folder: '{}'",create_res.unwrap_err()), LogLevel::ERROR);
+        if let Err(error) = fs::create_dir(p.clone()) {
+            log_write(format!("Error creating backup folder: '{error}'"), LogLevel::ERROR);
             return Err(());
         }
     }
@@ -367,9 +365,8 @@ pub fn get_template_folder(export_dir: &PathBuf) -> Option<PathBuf> {
     let mut p: PathBuf = PathBuf::from(export_dir);
     p.push("templates");
     if !p.exists() {
-        let create_res = fs::create_dir(p.clone());
-        if create_res.is_err() {
-            log_write(format!("Error creating template folder: '{}'",create_res.unwrap_err()), LogLevel::ERROR);
+        if let Err(error) = fs::create_dir(p.clone()) {
+            log_write(format!("Error creating template folder: '{error}'"), LogLevel::ERROR);
             return None;
         }
     }

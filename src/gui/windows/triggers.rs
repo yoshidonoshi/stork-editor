@@ -39,11 +39,7 @@ fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let add_button = ui.add(egui::Button::new("New"));
         if add_button.clicked() {
             log_write("Adding new Trigger", LogLevel::LOG);
-            let area_mut_res = de.loaded_map.get_area_mut();
-            if area_mut_res.is_none() {
-                return;
-            }
-            let area = area_mut_res.unwrap();
+            let Some(area) = de.loaded_map.get_area_mut() else { return };
             let new_trigger = Trigger { left_x: 2, top_y: 2, right_x: 12, bottom_y: 12, uuid: Uuid::new_v4() };
             de.trigger_settings.selected_uuid = new_trigger.uuid;
             area.triggers.push(new_trigger);
@@ -55,11 +51,7 @@ fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             egui::Button::new("Delete"));
         if del.clicked() {
             log_write(format!("Attempting to delete Trigger {}",de.trigger_settings.selected_uuid), LogLevel::DEBUG);
-            let area_mut_res = de.loaded_map.get_area_mut();
-            if area_mut_res.is_none() {
-                return;
-            }
-            let area = area_mut_res.unwrap();
+            let Some(area) = de.loaded_map.get_area_mut() else { return };
             let _did_delete = area.delete(de.trigger_settings.selected_uuid);
             de.trigger_settings.selected_uuid = Uuid::nil();
             de.graphics_update_needed = true;
@@ -72,12 +64,8 @@ fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         .column(Column::exact(100.0))
         .sense(egui::Sense::click())
         .body(|mut body| {
-            let area = de.loaded_map.get_area();
-            if area.is_none() {
-                return;
-            }
-            let triggers = &area.unwrap().triggers;
-            for trigger in triggers {
+            let Some(area) = de.loaded_map.get_area() else { return };
+            for trigger in &area.triggers {
                 body.row(20.0, |mut row| {
                     let row_index = row.index();
                     row.set_selected(de.trigger_settings.selected_uuid == trigger.uuid);
@@ -96,23 +84,19 @@ fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 }
 
 fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid: Uuid) {
-    let t_get_res = de.loaded_map.get_area_mut();
-    if t_get_res.is_none() {
+    let Some(trigger_data) = de.loaded_map.get_area_mut() else {
         de.trigger_settings.selected_uuid = Uuid::nil();
         return;
-    }
-    let trigger_data: &mut TriggerData = t_get_res.unwrap();
+    };
     if trigger_data.triggers.is_empty() {
         return;
     }
     let triggers = &mut trigger_data.triggers;
-    let t1 = triggers.iter_mut().find(|x| x.uuid == trigger_uuid);
-    if t1.is_none() {
+    let Some(t) = triggers.iter_mut().find(|x| x.uuid == trigger_uuid) else {
         log_write(format!("Could not find Trigger with UUID '{}'",trigger_uuid), LogLevel::WARN);
         de.trigger_settings.selected_uuid = Uuid::nil();
         return;
-    }
-    let t = t1.unwrap();
+    };
     let trigger_before = t.clone();
     // Left X
     ui.horizontal(|ui| {

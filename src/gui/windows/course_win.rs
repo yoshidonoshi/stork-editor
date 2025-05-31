@@ -231,10 +231,9 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
         });
         ui.vertical(|ui| {
-            if de.course_settings.selected_entrance.is_none() {
+            let Some(selected_entrance_uuid) = de.course_settings.selected_entrance else {
                 return;
-            }
-            let selected_entrance_uuid = de.course_settings.selected_entrance.expect("selected entrance passed nonecheck already");
+            };
             if selected_entrance_uuid == Uuid::nil() {
                 return;
             }
