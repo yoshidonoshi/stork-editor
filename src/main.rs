@@ -38,14 +38,11 @@ fn main() -> eframe::Result {
                 log_write("No default system theme found, defaulting to Dark", LogLevel::WARN);
                 cc.egui_ctx.set_theme(egui::Theme::Dark);
             }
-            match gui.load_sprite_csv() {
-                Err(error) => {
-                    // The software simply won't work without this. It shouldn't be possible
-                    log_write(format!("Sprite database load error: '{error}'"), LogLevel::FATAL);
-                }
-                Ok(_) => {
-                    log_write("Sprite database loaded successfully", LogLevel::LOG);
-                }
+            if let Err(error) = gui.load_sprite_csv() {
+                // The software simply won't work without this. It shouldn't be possible
+                log_write(format!("Sprite database load error: '{error}'"), LogLevel::FATAL);
+            } else {
+                log_write("Sprite database loaded successfully", LogLevel::LOG);
             }
             Ok(gui)
         })

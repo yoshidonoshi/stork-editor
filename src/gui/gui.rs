@@ -644,14 +644,8 @@ impl Gui {
             }
             // Open ROM
             if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL | Modifiers::SHIFT, Key::O)) {
-                let _open_rom_res = self.do_open_rom();
-                match _open_rom_res {
-                    Ok(_) => {
-                        // Do nothing
-                    }
-                    Err(e) => {
-                        self.do_alert(&e.cause);
-                    }
+                if let Err(error) = self.do_open_rom() {
+                    self.do_alert(&error.cause);
                 }
                 return;
             }
