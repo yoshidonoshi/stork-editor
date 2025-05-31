@@ -3,6 +3,7 @@ use std::{collections::HashMap, error::Error, fmt, fs::{self, DirEntry, File}, i
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
 use serde_json::Value;
+use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
 use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
@@ -11,7 +12,7 @@ use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepan
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(PartialEq,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq,EnumIter)]
 pub enum StorkTheme {
     DARK,
     LIGHT,
@@ -1207,9 +1208,9 @@ impl eframe::App for Gui {
                 egui::ComboBox::from_label("Background")
                     .selected_text(format!("{radio:?}"))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(radio, BGVALUE::BG1, "BG1");
-                        ui.selectable_value(radio, BGVALUE::BG2, "BG2");
-                        ui.selectable_value(radio, BGVALUE::BG3, "BG3");
+                        for bg in BGVALUE::iter() {
+                            ui.selectable_value(radio, bg, format!("{bg:?}"));
+                        }
                     });
                 let cur_palette = self.tile_preview_pal.clone();
                 egui::ComboBox::from_label("Palette")
