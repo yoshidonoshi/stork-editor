@@ -706,7 +706,7 @@ impl Gui {
             }
             // SPRITE CONTROLS //
             if
-                self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES
+                self.display_engine.display_settings.current_layer == CurrentLayer::Sprites
                 && !self.display_engine.selected_sprite_uuids.is_empty()
             {
                 let mut should_update: bool = false;
@@ -854,7 +854,7 @@ impl Gui {
     }
 
     pub fn do_select_all(&mut self) {
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             self.display_engine.selected_sprite_uuids.clear(); // So we don't get duplicates
             for s in &self.display_engine.level_sprites {
                 self.display_engine.selected_sprite_uuids.push(s.uuid);
@@ -877,7 +877,7 @@ impl Gui {
     }
 
     pub fn do_select_none(&mut self) {
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             self.display_engine.selected_sprite_uuids.clear();
         } else if self.is_cur_layer_bg() {
             self.display_engine.bg_sel_data.clear();
@@ -885,7 +885,7 @@ impl Gui {
     }
 
     pub fn is_copy_possible(&self) -> bool {
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             !self.display_engine.selected_sprite_uuids.is_empty()
         } else if self.display_engine.display_settings.is_cur_layer_bg() {
             !self.display_engine.bg_sel_data.selected_map_indexes.is_empty()
@@ -896,7 +896,7 @@ impl Gui {
 
     pub fn do_copy(&mut self) {
         // SPRITES
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             // Replace copied sprites
             self.display_engine.clipboard.sprite_clip.sprites.clear();
             let uuids_copy = self.display_engine.selected_sprite_uuids.clone();
@@ -948,7 +948,7 @@ impl Gui {
     }
 
     pub fn is_cut_possible(&self) -> bool {
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             !self.display_engine.selected_sprite_uuids.is_empty()
         } else if self.display_engine.display_settings.is_cur_layer_bg() {
             !self.display_engine.bg_sel_data.selected_map_indexes.is_empty()
@@ -959,7 +959,7 @@ impl Gui {
 
     pub fn do_cut(&mut self) {
         // SPRITES
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             self.display_engine.clipboard.sprite_clip.sprites.clear();
             // Copy so we can delete properly
             let uuids_copy = self.display_engine.selected_sprite_uuids.clone();
@@ -1023,7 +1023,7 @@ impl Gui {
     }
 
     pub fn is_paste_possible(&self) -> bool {
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             !self.display_engine.clipboard.sprite_clip.sprites.is_empty()
         } else if self.is_cur_layer_bg() {
             !self.display_engine.clipboard.bg_clip.tiles.is_empty()
@@ -1037,7 +1037,7 @@ impl Gui {
             log_write("Cannot paste while project is closed", LogLevel::LOG);
             return;
         }
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             log_write(format!("Pasting {} Sprites",self.display_engine.clipboard.sprite_clip.sprites.len()),LogLevel::LOG);
             let tl_x = self.display_engine.clipboard.sprite_clip.top_left_pos.x as i32;
             let tl_y = self.display_engine.clipboard.sprite_clip.top_left_pos.y as i32;
@@ -1099,7 +1099,7 @@ impl Gui {
             CurrentLayer::BG1 => self.clear_bg_layer(1),
             CurrentLayer::BG2 => self.clear_bg_layer(2),
             CurrentLayer::BG3 => self.clear_bg_layer(3),
-            CurrentLayer::COLLISION => {
+            CurrentLayer::Collision => {
                 let Some(colz_index) = self.display_engine.loaded_map.get_bg_with_colz() else {
                     log_write("Somehow, there is no layer with COLZ during clear", LogLevel::ERROR);
                     return;
@@ -1338,7 +1338,7 @@ impl eframe::App for Gui {
             .show(ctx, |ui| {
                 side_panel_show(ui, self);
             });
-        if self.display_engine.display_settings.current_layer == CurrentLayer::SPRITES {
+        if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             egui::SidePanel::left("sprites_panel")
                 .resizable(false)
                 .min_width(150.0)

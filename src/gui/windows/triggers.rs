@@ -7,7 +7,7 @@ use crate::{data::{area::{Trigger, TriggerData}, mapfile::TopLevelSegmentWrapper
 
 pub fn show_triggers_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
-    if de.display_settings.current_layer != CurrentLayer::TRIGGERS {
+    if de.display_settings.current_layer != CurrentLayer::Triggers {
         ui.disable();
     }
     if de.loaded_map.get_area().is_none() {
