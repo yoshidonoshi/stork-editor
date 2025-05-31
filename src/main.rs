@@ -4,7 +4,7 @@ use clap::Parser;
 use egui::Vec2;
 use gui::gui::Gui;
 use log::LevelFilter;
-use once_cell::sync::OnceCell;
+use once_cell::sync::Lazy;
 use utils::{log_write, LogLevel};
 
 mod utils;
@@ -22,14 +22,11 @@ pub struct Args {
     debug: bool
 }
 
-static CLIARGS: OnceCell<Args> = OnceCell::new();
+static CLI_ARGS: Lazy<Args> = Lazy::new(|| Args::parse());
 
 fn main() -> eframe::Result {
     let _ = simple_logging::log_to_file("stork.log", LevelFilter::Info);
     log_panics::init(); // We want it to go in stork.log
-    
-    let args = Args::parse();
-    CLIARGS.set(args).expect("Args init failed");
 
     log_write(format!("== Starting Stork Editor {} ==", VERSION), LogLevel::LOG);
 
