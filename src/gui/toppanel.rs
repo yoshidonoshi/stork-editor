@@ -164,9 +164,10 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 gui_state.help_modal_open = true;
                 ui.close_menu();
             }
-            // TODO: discuss with donoshi where to put this
-            if ui.button("Enable profiling").clicked() {
-                utils::profile::enable_profiling();
+            if utils::is_debug() {
+                if ui.button("Enable profiling").clicked() {
+                    utils::profile::enable_profiling();
+                }
             }
         });
     }); // End top menu bar

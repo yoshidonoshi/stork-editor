@@ -21,8 +21,7 @@ pub fn log_write(msg: impl Into<String>, level: LogLevel) {
     let msg = msg.into();
     match level {
         LogLevel::DEBUG => {
-            let args: Vec<String> = env::args().collect();
-            if !(args.len() >= 2 && args[1] == "--debug") {
+            if !is_debug() {
                 return;
             }
             println!("[DEBUG] {msg}");
@@ -534,6 +533,11 @@ pub fn read_u32(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
             None
         }
     }
+}
+
+pub fn is_debug() -> bool {
+    let args: Vec<String> = env::args().collect();
+    args.len() >= 2 && args[1] == "--debug"
 }
 
 #[cfg(test)]
