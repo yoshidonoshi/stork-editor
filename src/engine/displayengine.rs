@@ -580,12 +580,11 @@ impl DisplayEngine {
         initial_level_name.push_str(".crsb");
         let crsb_path = nitrofs_abs(&self.export_folder, &initial_level_name);
         let crsb = CourseInfo::new(&crsb_path,&format!("Course {}-{}",world_index+1,level_index+1));
-        // TESTING
-        // let crsb_recompiled = crsb.wrap();
-        // let file_bytes = fs::read(&crsb_path).expect("CRSB path should exist");
-        // compare_vector_u8s(&file_bytes, &crsb_recompiled);
-        // END TESTING
         log_write(format!("Loaded Course '{}' from '{}'",&crsb.label,&crsb.src_filename), LogLevel::LOG);
+        if (map_index as usize) >= crsb.level_map_data.len() {
+            log_write(format!("map_index was out of bounds in load_level: '{}' >= '{}'",map_index,crsb.level_map_data.len()), LogLevel::ERROR);
+            return;
+        }
         let mut map_name = crsb.level_map_data[map_index as usize].map_filename_noext.clone();
         let noext_name = map_name.clone();
         self.loaded_course = crsb;

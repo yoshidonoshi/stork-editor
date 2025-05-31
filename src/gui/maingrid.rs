@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use egui::{Align2, Color32, ColorImage, Context, FontId, Image, Painter, Pos2, Rect, Response, Stroke, Vec2};
 use uuid::Uuid;
 
-use crate::{data::{area::{AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, path::PathPoint, scendata::colz::{draw_collision, COLLISION_BG_COLOR, COLLISION_OUTLINE_COLOR, COLLISION_SQUARE}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, distance, get_curve_fine, get_pixel_bytes_16, get_pixel_bytes_256, get_sin_cos_table_value, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, print_vector_u8, settings_to_string, LogLevel}};
+use crate::{data::{area::{AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, path::PathPoint, scendata::colz::{self, draw_collision}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{self, log_write, LogLevel}};
 
 const TILE_WIDTH_PX: f32 = 8.0;
 const TILE_HEIGHT_PX: f32 = 8.0;
@@ -95,11 +95,11 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
             }
             let tile_x_px: f32 = tile_x * (TILE_WIDTH_PX*2.0);
             let tile_y_px: f32 = tile_y * (TILE_HEIGHT_PX*2.0);
-            let rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_x_px, tile_y_px), COLLISION_SQUARE);
-            let col_bg_color = COLLISION_BG_COLOR;
+            let rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_x_px, tile_y_px), colz::COLLISION_SQUARE);
+            let col_bg_color = colz::COLLISION_BG_COLOR;
             if *col_u8 == 0x1 { // Square, 95% of non-empty colliders (I checked)
                 painter.rect_filled(rect, 0.0, col_bg_color);
-                painter.rect_stroke(rect, 0.0, Stroke::new(1.0, COLLISION_OUTLINE_COLOR), egui::StrokeKind::Middle);
+                painter.rect_stroke(rect, 0.0, Stroke::new(1.0, colz::COLLISION_OUTLINE_COLOR), egui::StrokeKind::Middle);
             } else if *col_u8 == 0x1A { // 0x1A is the Collision coin
                 image.paint_at(ui, rect);
             } else {
@@ -285,11 +285,11 @@ fn draw_blkz_tile(
     pixel_tiles: &Vec<u8>, true_rect: &Rect,
     ctx: &Context, painter: &Painter
 ) {
-    let byte_array = &get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
-    let nibble_array = pixel_byte_array_to_nibbles(byte_array);
-    let color_image = color_image_from_pal(palette, &nibble_array);
+    let byte_array = &utils::get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
+    let nibble_array = utils::pixel_byte_array_to_nibbles(byte_array);
+    let color_image = utils::color_image_from_pal(palette, &nibble_array);
     let handle = ctx.load_texture("tile16", color_image, egui::TextureOptions::NEAREST);
-    let uvs = get_uvs_from_tile(tile);
+    let uvs = utils::get_uvs_from_tile(tile);
     painter.image(handle.id(), *true_rect, uvs, Color32::WHITE);
 }
 
@@ -376,7 +376,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     egui::StrokeKind::Outside
                 );
                 if point.distance >= 0 && point.distance != 0 {
-                    let test_val = get_sin_cos_table_value(&arm9, point.angle as u16);
+                    let test_val = utils::get_sin_cos_table_value(&arm9, point.angle as u16);
                     let x_offset = ((test_val.x as i32) * (point.distance as i32)) >> 12; // Note: this includes the tile width
                     let y_offset = ((test_val.y as i32) * (point.distance as i32)) >> 12; // This will need changing once zoom is added
                     //println!("test_val: {:?}", test_val);
@@ -403,7 +403,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 }
                 // Copy
                 let next_point: PathPoint = line.points[i+1];
-                let (circle_point_fine,radius,rads) = get_curve_fine(cur_point, &next_point);
+                let (circle_point_fine,radius,rads) = utils::get_curve_fine(cur_point, &next_point);
                 let circle_radius = (radius >> 12) as f32;
                 let circle_vec: Vec2 = Vec2::new(
                     ((circle_point_fine.x as u32 >> 15) as f32) * TILE_WIDTH_PX,
@@ -449,7 +449,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                                 ((point.y_fine >> 15) as f32) * TILE_HEIGHT_PX
                             );
                             let point_pos = placement_vec.to_pos2();
-                            let distance = distance(point_pos, local_pos.to_pos2());
+                            let distance = utils::distance(point_pos, local_pos.to_pos2());
                             if distance < shortest_distance {
                                 shortest_distance = distance;
                                 closest_uuid = point.uuid;
@@ -555,7 +555,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     de.selected_sprite_uuids.dedup();
                     // If length is one, handle gui
                     if de.selected_sprite_uuids.len() == 1 {
-                        de.latest_sprite_settings = settings_to_string(&level_sprite.settings);
+                        de.latest_sprite_settings = utils::settings_to_string(&level_sprite.settings);
                     }
                 }
                 // If selected
@@ -903,7 +903,7 @@ fn draw_background(
                             let tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
                             let tile_y: u32 = (local_pos.y/TILE_HEIGHT_PX) as u32;
                             let tile_index: u32 = tile_y * grid_width + tile_x;
-                            println!("=== Mouse clicked at 0x{},0x{} on BG {} ===",tile_x, tile_y, whichbg);
+                            println!("=== Mouse clicked at 0x{:X},0x{:X} on BG {} ===",tile_x, tile_y, whichbg);
                             println!("Map tile index: 0x{:X}",tile_index);
                             let clicked_map_tile = &map_tiles.tiles[tile_index as usize];
                             println!("{}",clicked_map_tile);
@@ -912,13 +912,13 @@ fn draw_background(
                                 let array_start: usize = clicked_map_tile.tile_id as usize * 32;
                                 let array_end: usize = array_start + 32;
                                 let pixels = pixel_tiles[array_start..array_end].to_vec();
-                                print_vector_u8(&pixels);
+                                utils::print_vector_u8(&pixels);
                             } else {
                                 // 256
                                 let array_start: usize = clicked_map_tile.tile_id as usize * 64;
                                 let array_end: usize = array_start + 64;
                                 let pixels = pixel_tiles[array_start..array_end].to_vec();
-                                print_vector_u8(&pixels);
+                                utils::print_vector_u8(&pixels);
                             }
                             println!("=== End Click Debug ===");
                         }
@@ -972,7 +972,7 @@ fn draw_tile(
     create_texture_image: impl Fn(&MapTileRecordData, &Vec<u8>) -> ColorImage, texture_name: &str
 ) {
     if let Some(t) = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize) {
-        let uvs = get_uvs_from_tile(tile);
+        let uvs = utils::get_uvs_from_tile(tile);
         let color = match (dim, selected) {
             (true, _) => Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 0x40),
             (_, true) => Color32::PURPLE,
@@ -997,9 +997,9 @@ pub fn draw_tile_16(
 ) {
     draw_tile(tile, ctx, pixel_tiles, painter, tc, true_rect, selected, dim,
         |tile, pixel_tiles| {
-            let byte_array = get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
-            let nibble_array = pixel_byte_array_to_nibbles(&byte_array);
-            color_image_from_pal(palette, &nibble_array)
+            let byte_array = utils::get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
+            let nibble_array = utils::pixel_byte_array_to_nibbles(&byte_array);
+            utils::color_image_from_pal(palette, &nibble_array)
         }, "tile16"
     );
 }
@@ -1013,8 +1013,8 @@ pub fn draw_tile_256(
 ) {
     draw_tile(tile, ctx, pixel_tiles, painter, tc, true_rect, selected, dim,
         |tile, pixel_tiles| {
-            let byte_array = get_pixel_bytes_256(pixel_tiles, &tile.tile_id);
-            color_image_from_pal(palette256, &byte_array)
+            let byte_array = utils::get_pixel_bytes_256(pixel_tiles, &tile.tile_id);
+            utils::color_image_from_pal(palette256, &byte_array)
         }, "tile256"
     );
 }
