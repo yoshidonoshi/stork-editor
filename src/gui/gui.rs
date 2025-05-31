@@ -508,6 +508,7 @@ impl Gui {
         }
     }
     pub fn generate_bg_cache(&self, ctx: &egui::Context, which_bg: u8, bg_pal: &Palette) -> Vec<TextureHandle> {
+        puffin::profile_function!();
         let layer: &Option<BackgroundData> = match which_bg {
             0x1 => &self.display_engine.bg_layer_1,
             0x2 => &self.display_engine.bg_layer_2,
@@ -642,6 +643,7 @@ impl Gui {
     }
 
     fn handle_input(&mut self, ctx: &egui::Context) {
+        puffin::profile_function!();
         if self.project_open { // Don't make loading the level an undo
             self.undoer.feed_state(ctx.input(|input| input.time), &self.display_engine.loaded_map);
         }
@@ -1151,6 +1153,8 @@ impl Gui {
 
 impl eframe::App for Gui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        puffin::profile_function!();
+
         // Windowing Title
         let mut window_title: String = "Stork Editor".to_owned();
         if self.project_open {
@@ -1212,6 +1216,7 @@ impl eframe::App for Gui {
             .resizable(false)
             .vscroll(false)
             .show(ctx, |ui: &mut egui::Ui| {
+                puffin::profile_scope!("BG Tiles");
                 let radio = &mut self.selected_tile_preview_bg;
                 ui.set_min_size(Vec2::new(300.0,500.0));
                 egui::ComboBox::from_label("Background")

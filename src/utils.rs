@@ -6,6 +6,8 @@ use egui::{pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
 
 use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, gui::windows::paths_win::PathAngle};
 
+pub mod profile;
+
 #[derive(PartialEq)]
 pub enum LogLevel {
     DEBUG,

@@ -3,6 +3,7 @@ use egui::Color32;
 use crate::{data::{backgrounddata::BackgroundData, mapfile::TopLevelSegmentWrapper, TopLevelSegment}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 pub fn show_map_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     ui.label(format!("Map location: {}",de.loaded_map.src_file));
     let mut do_del: Option<usize> = Option::None;
     egui::ScrollArea::vertical()
