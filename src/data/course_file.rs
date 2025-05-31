@@ -245,15 +245,17 @@ impl CourseInfo {
         let root_path = template_folder.parent().expect("Every possible path has a parent");
         let mut source_file_path = template_folder.clone();
         source_file_path.push(template_file);
-        let exists_check = fs::exists(&source_file_path);
-        let Ok(exists) = exists_check else {
-            log_write(format!("source_file_path existence check failed: '{}'",exists_check.unwrap_err()), LogLevel::ERROR);
-            return;
+        match fs::exists(&source_file_path) {
+            Err(error) => {
+                log_write(format!("source_file_path existence check failed: '{error}'"), LogLevel::ERROR);
+                return;
+            }
+            Ok(false) => {
+                log_write(format!("Template file '{}' does not exist", &source_file_path.display()), LogLevel::ERROR);
+                return;
+            }
+            _ => {}
         };
-        if !exists {
-            log_write(format!("Template file '{}' does not exist", &source_file_path.display()), LogLevel::ERROR);
-            return;
-        }
         // The file path is valid
         let mut four_num: u32 = 0;
         loop {
