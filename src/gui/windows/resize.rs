@@ -116,8 +116,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
             } else {
                 log_write("No change in layer width", LogLevel::DEBUG);
             }
-            let change_height_result = bg.change_height(settings.new_height);
-            if change_height_result.is_err() {
+            if bg.change_height(settings.new_height).is_err() {
                 log_write("Error changing height of layer", LogLevel::ERROR);
                 settings.reset_needed = true;
                 settings.window_open = false;

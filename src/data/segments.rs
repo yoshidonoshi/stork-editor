@@ -30,8 +30,7 @@ impl DataSegment {
         let header = rdr.read_u32::<LittleEndian>().unwrap();
         let size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;
         let mut inner_data: Vec<u8> = Vec::new();
-        let read_res = rdr.read_to_end(&mut inner_data);
-        if read_res.is_err() {
+        if let Err(_) = rdr.read_to_end(&mut inner_data) {
             utils::log_write(String::from("Could not read to end of data"), utils::LogLevel::ERROR);
         }
         let inside_len = &inner_data.len();
