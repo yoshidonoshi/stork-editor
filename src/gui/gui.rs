@@ -305,7 +305,18 @@ impl Gui {
         self.cur_world = 0;
         self.cur_level = 0;
         let cur_map_index = 0;
-        self.display_engine.load_level(self.cur_world, self.cur_level, cur_map_index);
+        match self.display_engine.load_level(self.cur_world, self.cur_level, cur_map_index) {
+            Ok(_) => { /* Do nothing, it worked */},
+            Err(e) => {
+                // TODO: If the first map file of the project is deleted,
+                //   this will soft lock, and they can never open their project...
+                //   Fix this, as rare is at may be
+                self.do_alert(&e);
+                // It will have reverted, refresh
+                self.display_engine.graphics_update_needed = true;
+                return;
+            }
+        }
         self.needs_bg_tile_refresh = true;
         self.project_open = true;
         // Load brushes
@@ -376,7 +387,15 @@ impl Gui {
             return;
         }
         self.clear_map_data();
-        self.display_engine.load_level(world_index, level_index,0);
+        match self.display_engine.load_level(world_index, level_index,0) {
+            Ok(_) => { /* Do nothing, it worked */},
+            Err(e) => {
+                self.do_alert(&e);
+                // It will have reverted, refresh
+                self.display_engine.graphics_update_needed = true;
+                return;
+            }
+        }
         self.cur_level = level_index;
         self.cur_world = world_index;
         self.needs_bg_tile_refresh = true;
@@ -415,7 +434,15 @@ impl Gui {
     }
     pub fn change_map(&mut self, map_index: u32) {
         self.clear_map_data();
-        self.display_engine.load_level(self.cur_world, self.cur_level, map_index);
+        match self.display_engine.load_level(self.cur_world, self.cur_level, map_index) {
+            Ok(_) => { /* Do nothing, it worked */},
+            Err(e) => {
+                self.do_alert(&e);
+                // It will have reverted, refresh
+                self.display_engine.graphics_update_needed = true;
+                return;
+            }
+        }
         self.needs_bg_tile_refresh = true;
         if !self.display_engine.loaded_map.unhandled_headers.is_empty() {
             let segments_str = self.display_engine.loaded_map.unhandled_headers.join(", ");
