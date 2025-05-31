@@ -573,8 +573,9 @@ impl DisplayEngine {
         }
     }
     
-    pub fn load_level(&mut self, world_index: u32, level_index: u32, map_index: u32) {
+    pub fn load_level(&mut self, world_index: u32, level_index: u32, map_index: u32) -> Result<(),String> {
         log_write(format!("Loading World {} Level {} Map {}",&world_index+1,&level_index+1,&map_index+1), LogLevel::LOG);
+        let map_index_store = self.map_index; // Backup
         self.map_index = Some(map_index as usize);
         let mut initial_level_name = self.get_level_filename(&world_index, &level_index);
         initial_level_name.push_str(".crsb");
@@ -582,18 +583,30 @@ impl DisplayEngine {
         let crsb = CourseInfo::new(&crsb_path,&format!("Course {}-{}",world_index+1,level_index+1));
         log_write(format!("Loaded Course '{}' from '{}'",&crsb.label,&crsb.src_filename), LogLevel::LOG);
         if (map_index as usize) >= crsb.level_map_data.len() {
-            log_write(format!("map_index was out of bounds in load_level: '{}' >= '{}'",map_index,crsb.level_map_data.len()), LogLevel::ERROR);
-            return;
+            let err_msg = format!("map_index was out of bounds in load_level: '{}' >= '{}'",map_index,crsb.level_map_data.len());
+            log_write(&err_msg, LogLevel::ERROR);
+            // Revert
+            self.map_index = map_index_store;
+            return Err(err_msg);
         }
         let mut map_name = crsb.level_map_data[map_index as usize].map_filename_noext.clone();
         let noext_name = map_name.clone();
+        let loaded_course_store = self.loaded_course.clone(); // Backup
         self.loaded_course = crsb;
         map_name.push_str(".mpdz");
         let map_path = nitrofs_abs(&self.export_folder, &map_name);
-        let Ok(loaded_map_res) = MapData::new(&map_path,&self.export_folder) else {
-            log_write("Failed to load MapData", LogLevel::ERROR);
-            return;
+        let loaded_map_res = match MapData::new(&map_path,&self.export_folder) {
+            Ok(x) => x,
+            Err(e) => {
+                let err_msg = format!("Failed to load MapData: '{}'",e);
+                log_write(&err_msg, LogLevel::ERROR);
+                // Revert
+                self.map_index = map_index_store;
+                self.loaded_course = loaded_course_store;
+                return Err(err_msg);
+            }
         };
+
         self.loaded_map = loaded_map_res;
         self.loaded_map.map_name = noext_name;
 
@@ -604,6 +617,7 @@ impl DisplayEngine {
         
         // Do it manually the first time, don't wait for refresh
         self.update_graphics_from_mapdata();
+        Ok(()) // Could something useful be returned?
     }
 
     pub fn get_render_archive(&mut self, archive_name_local: &String) -> &RenderArchive {
