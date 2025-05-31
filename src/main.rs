@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use clap::Parser;
 use egui::Vec2;
 use gui::gui::Gui;
 use log::LevelFilter;
+use once_cell::sync::OnceCell;
 use utils::{log_write, LogLevel};
 
 mod utils;
@@ -13,11 +15,24 @@ mod gui;
 const ICON_BYTES: &[u8;486] = include_bytes!("../assets/icon.png");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+pub struct Args {
+    #[arg(short,long)]
+    debug: bool
+}
+
+static CLIARGS: OnceCell<Args> = OnceCell::new();
+
 fn main() -> eframe::Result {
     let _ = simple_logging::log_to_file("stork.log", LevelFilter::Info);
     log_panics::init(); // We want it to go in stork.log
-    log_write(format!("== Starting Stork Editor {} ==", VERSION), LogLevel::LOG);
     
+    let args = Args::parse();
+    CLIARGS.set(args).expect("Args init failed");
+
+    log_write(format!("== Starting Stork Editor {} ==", VERSION), LogLevel::LOG);
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size(Vec2::new(1000.0, 800.0))

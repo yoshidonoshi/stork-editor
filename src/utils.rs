@@ -1,10 +1,10 @@
-use std::{collections::HashMap, env, f32::consts::PI, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
+use std::{collections::HashMap, f32::consts::PI, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
 use egui::{pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
 
-use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, gui::windows::paths_win::PathAngle};
+use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, gui::windows::paths_win::PathAngle, CLIARGS};
 
 pub mod profile;
 
@@ -536,8 +536,7 @@ pub fn read_u32(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
 }
 
 pub fn is_debug() -> bool {
-    let args: Vec<String> = env::args().collect();
-    args.len() >= 2 && args[1] == "--debug"
+    CLIARGS.get().expect("Args worked").debug
 }
 
 #[cfg(test)]
