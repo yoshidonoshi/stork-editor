@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
 use egui::{pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
 
-use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, gui::windows::paths_win::PathAngle, CLIARGS};
+use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, gui::windows::paths_win::PathAngle, CLI_ARGS};
 
 pub mod profile;
 
@@ -533,7 +533,7 @@ pub fn read_u32(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
 }
 
 pub fn is_debug() -> bool {
-    CLIARGS.get().expect("Args worked").debug
+    CLI_ARGS.debug
 }
 
 #[cfg(test)]
