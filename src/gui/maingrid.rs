@@ -128,7 +128,7 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
         de.col_selector_status.selecting_rect = Rect::NOTHING;
     }
     // COLZ Interactivity //
-    if de.display_settings.current_layer == CurrentLayer::COLLISION {
+    if de.display_settings.current_layer == CurrentLayer::Collision {
         let col_sense_resp: Response = ui.interact(true_rect, egui::Id::new("col_tile_click"), egui::Sense::all());
         // Do it in three separate ones to avoid repeated input checking that won't be used
         if col_sense_resp.clicked() {
@@ -225,7 +225,7 @@ fn draw_triggers(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         }
     }
 
-    if de.display_settings.current_layer == CurrentLayer::TRIGGERS {
+    if de.display_settings.current_layer == CurrentLayer::Triggers {
         let click_response = ui.interact(ui.min_rect(), egui::Id::new("AREA_click"), egui::Sense::click());
         if click_response.clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
@@ -441,7 +441,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
         }
         // Interactivity
-        if de.display_settings.current_layer == CurrentLayer::PATHS {
+        if de.display_settings.current_layer == CurrentLayer::Paths {
             let click_response = ui.interact(ui.min_rect(), egui::Id::new("PATH_click"), egui::Sense::click());
             if click_response.clicked() {
                 if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
@@ -505,7 +505,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
     let mut update_map: bool = false;
     // If this always fires, it will block COLZ clicks
     let mut click_fallback_response: Option<Response> = Option::None;
-    if de.display_settings.current_layer == CurrentLayer::SPRITES {
+    if de.display_settings.current_layer == CurrentLayer::Sprites {
         click_fallback_response = Some(ui.interact(ui.min_rect(), egui::Id::new("sprite_click_fallback"), egui::Sense::click()));
     }
     // It's one way, don't mutable borrow
@@ -548,7 +548,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
         }
 
         // Interactivity
-        if de.display_settings.current_layer == CurrentLayer::SPRITES {
+        if de.display_settings.current_layer == CurrentLayer::Sprites {
             let is_shift = ui.ctx().input(|i| i.modifiers.shift);
             for (i,r) in drawn_rects.iter().enumerate() {
                 let click_response = ui.interact(*r, egui::Id::new(format!("sprite_click_{}_{}",level_sprite.uuid,i)), egui::Sense::click());
@@ -627,7 +627,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
         }
     }
     // Fallback/background/placement (not existing)
-    if de.display_settings.current_layer == CurrentLayer::SPRITES {
+    if de.display_settings.current_layer == CurrentLayer::Sprites {
         if let Some(cfr) = &click_fallback_response {
             if cfr.clicked() { // Clicked on empty background
                 de.selected_sprite_uuids.clear();
@@ -774,7 +774,7 @@ fn draw_background(
                         selected = true;
                     }
                     let is_cur_lay_bg = de.display_settings.is_cur_layer_bg();
-                    let dim = (!is_selected_layer && is_cur_lay_bg) || de.display_settings.current_layer == CurrentLayer::COLLISION;
+                    let dim = (!is_selected_layer && is_cur_lay_bg) || de.display_settings.current_layer == CurrentLayer::Collision;
                     if let Some(tilecache) = &mut tc {
                         if !info.is_256_colorpal_mode() {
                             draw_tile_16(

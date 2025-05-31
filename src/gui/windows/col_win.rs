@@ -9,7 +9,7 @@ const COLL_RECT: Vec2 = Vec2::new(COL_TILE_DIM, COL_TILE_DIM);
 
 pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
-    if de.display_settings.current_layer != CurrentLayer::COLLISION {
+    if de.display_settings.current_layer != CurrentLayer::Collision {
         ui.disable();
     }
     let top_left: Pos2 = ui.min_rect().min;
@@ -40,7 +40,7 @@ pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     }
     ui.add_space(260.0);
     // Interactivity
-    if de.display_settings.current_layer == CurrentLayer::COLLISION {
+    if de.display_settings.current_layer == CurrentLayer::Collision {
         let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new("col_window_tile_click"), egui::Sense::click());
         if click_response.clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {

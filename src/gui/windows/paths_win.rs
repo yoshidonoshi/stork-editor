@@ -15,7 +15,7 @@ pub struct PathAngle {
 
 pub fn show_paths_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
-    if de.display_settings.current_layer != CurrentLayer::PATHS {
+    if de.display_settings.current_layer != CurrentLayer::Paths {
         ui.disable();
     }
     if de.loaded_map.get_path().is_none() {

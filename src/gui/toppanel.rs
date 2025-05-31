@@ -125,7 +125,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                     gui_state.resize_settings.reset_needed = true;
                     gui_state.resize_settings.window_open = true;
                     ui.close_menu();
-                } else if gui_state.display_engine.display_settings.current_layer == CurrentLayer::COLLISION {
+                } else if gui_state.display_engine.display_settings.current_layer == CurrentLayer::Collision {
                     if let Some(colz_layer) = gui_state.display_engine.loaded_map.get_bg_with_colz() {
                         gui_state.do_alert(&format!("Cannot resize collision, as it is attached to the layer '{colz_layer}'"));
                     } else {
@@ -184,10 +184,10 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 ui.selectable_value(selected_bg, CurrentLayer::BG1, "BG1");
                 ui.selectable_value(selected_bg, CurrentLayer::BG2, "BG2");
                 ui.selectable_value(selected_bg, CurrentLayer::BG3, "BG3");
-                ui.selectable_value(selected_bg, CurrentLayer::SPRITES, "Sprites");
-                ui.selectable_value(selected_bg, CurrentLayer::COLLISION, "Collision");
-                ui.selectable_value(selected_bg, CurrentLayer::PATHS, "Paths");
-                ui.selectable_value(selected_bg, CurrentLayer::TRIGGERS, "Triggers");
+                ui.selectable_value(selected_bg, CurrentLayer::Sprites, "Sprites");
+                ui.selectable_value(selected_bg, CurrentLayer::Collision, "Collision");
+                ui.selectable_value(selected_bg, CurrentLayer::Paths, "Paths");
+                ui.selectable_value(selected_bg, CurrentLayer::Triggers, "Triggers");
             });
         if *selected_bg != old_selected_bg {
             log_write("Cleaning up due to layer change", LogLevel::DEBUG);

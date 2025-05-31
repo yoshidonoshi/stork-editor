@@ -176,10 +176,10 @@ pub enum CurrentLayer {
     BG1 = 1,
     BG2 = 2,
     BG3 = 3,
-    SPRITES = 4,
-    COLLISION = 5,
-    PATHS = 6,
-    TRIGGERS = 7
+    Sprites = 4,
+    Collision = 5,
+    Paths = 6,
+    Triggers = 7
 }
 
 
