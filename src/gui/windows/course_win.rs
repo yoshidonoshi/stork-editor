@@ -59,6 +59,7 @@ fn get_course_music_name(music: u8) -> String {
 }
 
 pub fn show_course_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     StripBuilder::new(ui)
         .size(Size::exact(100.0))
         .size(Size::remainder())

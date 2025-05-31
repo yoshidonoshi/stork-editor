@@ -1,9 +1,10 @@
-use crate::{data::{course_file::CourseInfo, mapfile::MapData, types::CurrentLayer}, utils::{log_write, LogLevel}};
+use crate::{data::{course_file::CourseInfo, mapfile::MapData, types::CurrentLayer}, utils::{self, log_write, LogLevel}};
 
 use super::gui::Gui;
 use egui::Button;
 
 pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
+    puffin::profile_function!();
     ui.horizontal(|ui| {
         // File Menu //
         //ui.spacing_mut().item_spacing = vec2(16.0,16.0);
@@ -162,6 +163,10 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             if button_help.clicked() {
                 gui_state.help_modal_open = true;
                 ui.close_menu();
+            }
+            // TODO: discuss with donoshi where to put this
+            if ui.button("Enable profiling").clicked() {
+                utils::profile::enable_profiling();
             }
         });
     }); // End top menu bar

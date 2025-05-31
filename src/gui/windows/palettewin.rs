@@ -7,6 +7,7 @@ const PAL_BOX_HEIGHT: f32 = 15.0;
 const PAL_RECT: Vec2 = Vec2::new(PAL_BOX_WIDTH, PAL_BOX_HEIGHT);
 
 pub fn palette_window_show(ui: &mut egui::Ui, de: &DisplayEngine) {
+    puffin::profile_function!();
     let top_left: Pos2 = ui.min_rect().min;
     for y in 0..16 {
         for x in 0..16 {

@@ -97,6 +97,7 @@ fn draw_collision_polygon(painter: &Painter, pos_vec: Vec<Pos2>, bg_color: Color
 }
 
 pub fn draw_collision(painter: &Painter, rect: &Rect, col_type: u8) {
+    puffin::profile_function!();
     match col_type {
         0x00 => { /* Blank */ },
         0x01 => draw_collision_polygon(painter, vec![rect.left_top(),rect.right_top(),rect.right_bottom(),rect.left_bottom()],COLLISION_BG_COLOR),

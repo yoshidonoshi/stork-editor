@@ -9,6 +9,7 @@ use crate::{data::backgrounddata::BackgroundData, engine::displayengine::Display
 use super::brushes::Brush;
 
 pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     if !de.display_settings.is_cur_layer_bg() {
         // Technically uneccesary, but the disabled appearance is good
         ui.disable();

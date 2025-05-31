@@ -1,6 +1,7 @@
 use crate::{engine::displayengine::DisplayEngine, gui::gui::StorkTheme};
 
 pub fn stork_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+    puffin::profile_function!();
     ui.heading("Settings");
     let _cur_layer_combo = egui::ComboBox::from_label("Theme")
         .selected_text(format!("{}",de.display_settings.stork_theme))
