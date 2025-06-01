@@ -1,10 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![recursion_limit = "2048"]
 
 use std::sync::LazyLock;
 
 use clap::Parser;
 use egui::Vec2;
-use gui::gui::Gui;
+use gui::{gui::Gui, windows::saved_brushes::load_stored_brushes};
 use log::LevelFilter;
 use utils::{log_write, LogLevel};
 
@@ -51,13 +52,20 @@ fn main() -> eframe::Result {
                 log_write("No default system theme found, defaulting to Dark", LogLevel::WARN);
                 cc.egui_ctx.set_theme(egui::Theme::Dark);
             }
-            if let Err(error) = gui.load_sprite_csv() {
-                // The software simply won't work without this. It shouldn't be possible
-                log_write(format!("Sprite database load error: '{error}'"), LogLevel::FATAL);
-            } else {
-                log_write("Sprite database loaded successfully", LogLevel::LOG);
-            }
+            initial_load(&mut gui);
+
             Ok(gui)
         })
     )
+}
+
+fn initial_load(gui: &mut Gui) {
+    if let Err(error) = gui.load_sprite_csv() {
+        // The software simply won't work without this. It shouldn't be possible
+        log_write(format!("Sprite database load error: '{error}'"), LogLevel::FATAL);
+    } else {
+        log_write("Sprite database loaded successfully", LogLevel::LOG);
+    }
+    load_stored_brushes();
+    gui.load_saved_brushes();
 }

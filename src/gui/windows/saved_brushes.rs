@@ -1,12 +1,12 @@
-use std::{error::Error, fs::File, io::{BufReader, Write}};
+use std::{error::Error, fs::File, io::{BufReader, Write}, sync::LazyLock};
 
 use egui::TextEdit;
 use egui_extras::{Column, TableBuilder};
-use serde_json::{json, Value};
+use serde_json::json;
 
-use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::{gui::Gui, windows::brushes::STORED_BRUSHES}, utils::{log_write, LogLevel}};
 
-use super::brushes::Brush;
+use super::brushes::{Brush, StoredBrushes};
 
 pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
@@ -56,7 +56,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         .drag_to_scroll(false)
         .max_scroll_height(400.0)
         .body(|mut body| {
-            for (i,stamp) in de.saved_brushes.iter().enumerate() {
+            for (i, stamp) in get_all_brushes(&de.saved_brushes).enumerate() {
                 if de.brush_settings.only_show_same_tileset {
                     if tileset_name != stamp.tileset {
                         continue;
@@ -84,9 +84,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         if label_name.clicked() {
                             if tileset_match {
                                 de.brush_settings.cur_selected_brush = Some(i);
-                                if let Ok(got_brush) = get_selected_brush_data(&de.saved_brushes, i) {
-                                    de.current_brush = got_brush;
-                                }
+                                de.current_brush = stamp.clone();
                             }
                         }
                     });
@@ -98,9 +96,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         if tileset_label.clicked() {
                             if tileset_match {
                                 de.brush_settings.cur_selected_brush = Some(i);
-                                if let Ok(got_brush) = get_selected_brush_data(&de.saved_brushes, i) {
-                                    de.current_brush = got_brush;
-                                }
+                                de.current_brush = stamp.clone();
                             }
                         }
                     });
@@ -108,9 +104,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     if row.response().clicked() {
                         if tileset_match {
                             de.brush_settings.cur_selected_brush = Some(i);
-                            if let Ok(got_brush) = get_selected_brush_data(&de.saved_brushes, i) {
-                                de.current_brush = got_brush;
-                            }
+                            de.current_brush = stamp.clone();
                         }
                     }
                 });
@@ -147,64 +141,60 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.disable();
         let brush_load_button = ui.button("Load Brushes JSON");
         if brush_load_button.clicked() {
-            match load_brushes_from_file() {
-                Err(error) => {
-                    log_write(format!("Failed to load brushes from JSON: '{error}'"), LogLevel::ERROR);
-                }
-                Ok(brushes_load_attempt) => {
-                    de.saved_brushes = brushes_load_attempt;
-                }
-            }
+
         }
     });
 }
 
-fn get_selected_brush_data(saved_brushes: &Vec<Brush>, sel_brush_index: usize) -> Result<Brush,()> {
-    if sel_brush_index >= saved_brushes.len() {
-        log_write("Selected Brush index out of bounds", LogLevel::ERROR);
-        return Err(());
-    }
-    let brush_to_load = saved_brushes[sel_brush_index].clone();
-    Ok(brush_to_load)
+#[inline]
+fn get_all_brushes(saved_brushes: &Vec<Brush>) -> Box<dyn Iterator<Item = &Brush> + '_> {
+    Box::new(STORED_BRUSHES.brushes.iter().chain(saved_brushes))
 }
+
+pub fn load_stored_brushes() {
+    log_write("Loading Stored brushes...", LogLevel::DEBUG);
+    LazyLock::force(&STORED_BRUSHES);
+    log_write("Loaded stored brushes successfully", LogLevel::LOG);
+}
+
+const LOCAL_BRUSHES_FILE: &str = "saved_brushes.json";
 
 pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
     log_write("Saving loaded Brushes to JSON...", LogLevel::LOG);
-    let mut out_json = json!({
-        "brushes": []
+    let saved_brushes = json!({
+        "brushes": brushes,
     });
-    for brush in brushes {
-        let j_string = match serde_json::to_value(brush) {
-            Err(error) => {
-                log_write(format!("Failed to convert Brush '{}' to JSON: '{error}'", brush.name), LogLevel::ERROR);
-                return;
-            }
-            Ok(j) => j,
-        };
-        out_json["brushes"].as_array_mut().expect("Get output JSON as mutable array").push(j_string);
-    }
-    let pretty_string = serde_json::to_string_pretty(&out_json).expect("Brushes should Stringify correctly");
-    let mut output = File::create("stored_brushes.json").expect("Can init the Brushes JSON file");
+    let pretty_string = serde_json::to_string_pretty(&saved_brushes).expect("Brushes should Stringify correctly");
+    let mut output = File::create(LOCAL_BRUSHES_FILE).expect("Can init the Brushes JSON file");
     if let Err(error) = write!(output,"{pretty_string}") {
         log_write(format!("Failed to write Brushes JSON: '{error}'"), LogLevel::ERROR);
     }
 }
 
-pub fn load_brushes_from_file() -> Result<Vec<Brush>,Box<dyn Error>> {
-    let file = match File::open("stored_brushes.json") {
+fn load_saved_brushes() -> Result<Vec<Brush>,Box<dyn Error>> {
+    let file = match File::open(LOCAL_BRUSHES_FILE) {
         Err(error) => {
-            log_write(format!("Could not open stored_brushes.json: '{error}'"), LogLevel::WARN);
+            log_write(format!("Could not open {LOCAL_BRUSHES_FILE}: '{error}'"), LogLevel::WARN);
             return Ok(Vec::new());
         }
         Ok(f) => f,
     };
     let reader = BufReader::new(file);
-    let j: Value = serde_json::from_reader(reader)?;
-    let brush_json_array = j["brushes"].as_array().expect("Brushes JSON array created");
-    let mut out_array: Vec<Brush> = Vec::new();
-    for brush_value in brush_json_array {
-        let b: Brush = serde_json::from_value(brush_value.clone())?;
-        out_array.push(b);
+    let saved_brushes: StoredBrushes = serde_json::from_reader(reader)?;
+    Ok(saved_brushes.brushes)
+}
+
+impl Gui {
+    pub fn load_saved_brushes(&mut self) {
+        log_write("Loading Saved brushes...", LogLevel::DEBUG);
+        match load_saved_brushes() {
+            Err(error) => {
+                log_write(format!("Failed to load brushes from JSON: '{error}'"), LogLevel::ERROR);
+            }
+            Ok(brushes_load_attempt) => {
+                self.display_engine.saved_brushes = brushes_load_attempt;
+                log_write("Loaded saved brushes successfully", LogLevel::LOG);
+            }
+        }
     }
-    Ok(out_array)
 }
