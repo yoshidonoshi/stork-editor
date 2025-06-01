@@ -71,7 +71,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     } // Otherwise nothing selected
 
                     let stamp_name = stamp.name.clone().to_lowercase();
-                    let cur_search_string = &de.brush_settings.cur_search_string.clone();
+                    let cur_search_string = &de.brush_settings.cur_search_string.clone().to_lowercase();
                     if !stamp_name.contains(cur_search_string.trim()) {
                         return;
                     }
