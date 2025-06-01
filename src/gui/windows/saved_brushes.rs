@@ -183,7 +183,7 @@ pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
         };
         out_json["brushes"].as_array_mut().expect("Get output JSON as mutable array").push(j_string);
     }
-    let pretty_string = serde_json::to_string(&out_json).expect("Brushes should Stringify correctly");
+    let pretty_string = serde_json::to_string_pretty(&out_json).expect("Brushes should Stringify correctly");
     let mut output = File::create("stored_brushes.json").expect("Can init the Brushes JSON file");
     if let Err(error) = write!(output,"{pretty_string}") {
         log_write(format!("Failed to write Brushes JSON: '{error}'"), LogLevel::ERROR);
