@@ -3391,7 +3391,6 @@ dependencies = [
  "lamezip77",
  "log",
  "log-panics",
- "once_cell",
  "profiling",
  "puffin",
  "puffin_http",

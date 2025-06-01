@@ -1,10 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::sync::LazyLock;
+
 use clap::Parser;
 use egui::Vec2;
 use gui::gui::Gui;
 use log::LevelFilter;
-use once_cell::sync::Lazy;
 use utils::{log_write, LogLevel};
 
 mod utils;
@@ -22,7 +23,7 @@ pub struct Args {
     debug: bool
 }
 
-static CLI_ARGS: Lazy<Args> = Lazy::new(|| Args::parse());
+static CLI_ARGS: LazyLock<Args> = LazyLock::new(|| Args::parse());
 
 fn main() -> eframe::Result {
     let _ = simple_logging::log_to_file("stork.log", LevelFilter::Info);
