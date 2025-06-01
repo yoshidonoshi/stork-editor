@@ -532,6 +532,7 @@ pub fn read_u32(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
     }
 }
 
+#[inline]
 pub fn is_debug() -> bool {
     CLI_ARGS.debug
 }
