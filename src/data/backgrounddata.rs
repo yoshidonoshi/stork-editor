@@ -106,7 +106,7 @@ impl BackgroundData {
                     let mp_decomp = lamezip77_lz10_decomp(&buffer);
                     let mpbz = MapTileDataSegment::from_decomped_vec(&mp_decomp,ret.info_ro.layer_width);
                     // Probably get rid of this eventually, or only activate in debug mode
-                    mpbz.test_against_raw_decomp(&Some(ret.info_ro.clone()), &mp_decomp);
+                    mpbz.test_against_raw_decomp(Some(&ret.info_ro), &mp_decomp);
                     let mpbz_wrapped = ScenSegmentWrapper::MPBZ(mpbz.clone());
                     ret.scen_segments.push(mpbz_wrapped);
                 }
@@ -366,7 +366,7 @@ impl TopLevelSegment for BackgroundData {
         let mut compiled: Vec<u8> = Vec::new();
         let info_c = self.get_info().expect("There is always INFO");
         for segment in &self.scen_segments {
-            let mut seg_comp = segment.wrap(&Some(info_c.clone()));
+            let mut seg_comp = segment.wrap(Some(&info_c));
             compiled.append(&mut seg_comp);
         }
 
