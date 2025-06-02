@@ -27,14 +27,14 @@ pub fn render_primary_grid(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Re
     draw_background(ui, de, vrect, 3, de.display_settings.show_bg3);
     draw_background(ui, de, vrect, 2, de.display_settings.show_bg2);
     draw_background(ui, de, vrect, 1, de.display_settings.show_bg1);
-    if de.display_settings.show_col {
-        draw_collision_layer(ui, de, vrect);
-    }
     if de.display_settings.show_breakable_rock {
         draw_breakable_rock(ui, de);
     }
     if de.display_settings.show_sprites {
         draw_sprites(ui, de, vrect);
+    }
+    if de.display_settings.show_col { // Goes over Sprites since some work with collision
+        draw_collision_layer(ui, de, vrect);
     }
     if de.display_settings.show_paths {
         draw_paths(ui, de);
