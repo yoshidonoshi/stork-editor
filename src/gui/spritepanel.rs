@@ -3,7 +3,7 @@ use std::f32;
 use egui::ScrollArea;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 
-use crate::{data::sprites::SpriteMetadata, utils::{log_write, settings_to_string, string_to_settings, LogLevel}};
+use crate::{data::sprites::{LevelSprite, SpriteMetadata}, gui::{spritesettings, SpriteSettings}, utils::{log_write, settings_to_string, string_to_settings, LogLevel}};
 
 use super::gui::Gui;
 
@@ -27,24 +27,40 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                     ui.label(&sprite_meta.description);
                     ui.label(format!("X/Y Position: 0x{:X}/0x{:X}",&sprite.x_position,&sprite.y_position));
                     if sprite.settings_length != 0 {
-                        ui.add(egui::TextEdit::multiline(&mut gui_state.display_engine.latest_sprite_settings).desired_width(120.0));
-                        let res = ui.add_enabled(
-                            is_settings_string_valid(
-                                &gui_state.display_engine.latest_sprite_settings,
-                                sprite.settings_length as usize
-                            ) && gui_state.display_engine.latest_sprite_settings != settings_to_string(&sprite.settings),
-                            egui::Button::new("Update Settings")
-                        );
-                        if res.clicked() {
-                            log_write("Updating selected Sprite settings".to_owned(), LogLevel::LOG);
-                            match string_to_settings(&gui_state.display_engine.latest_sprite_settings) {
-                                Err(error) => log_write(format!("Still had bad settings somehow: '{error}'"), LogLevel::ERROR),
-                                Ok(new_settings) => {
-                                    gui_state.display_engine.loaded_map.update_sprite_settings(sprite.uuid, new_settings);
-                                    gui_state.display_engine.unsaved_changes = true;
-                                    gui_state.display_engine.graphics_update_needed = true;
+                        match sprite.object_id {
+                            0x36 => {
+                                let mut shyguy = spritesettings::ShyGuy::from_sprite(sprite);
+                                shyguy.get_ui(ui);
+                                let comp = shyguy.compile();
+                                settings_save_check(gui_state, &comp, sprite);
+                            }
+                            0x9F => {
+                                let mut hint_block = spritesettings::HintBlock::from_sprite(sprite);
+                                hint_block.get_ui(ui);
+                                let comp = hint_block.compile();
+                                settings_save_check(gui_state, &comp, sprite);
+                            }
+                            _ => { // Anything we don't know
+                                ui.add(egui::TextEdit::multiline(&mut gui_state.display_engine.latest_sprite_settings).desired_width(120.0));
+                                let res = ui.add_enabled(
+                                    is_settings_string_valid(
+                                        &gui_state.display_engine.latest_sprite_settings,
+                                        sprite.settings_length as usize
+                                    ) && gui_state.display_engine.latest_sprite_settings != settings_to_string(&sprite.settings),
+                                    egui::Button::new("Update Settings")
+                                );
+                                if res.clicked() {
+                                    log_write("Updating selected Sprite settings".to_owned(), LogLevel::LOG);
+                                    match string_to_settings(&gui_state.display_engine.latest_sprite_settings) {
+                                        Err(error) => log_write(format!("Still had bad settings somehow: '{error}'"), LogLevel::ERROR),
+                                        Ok(new_settings) => {
+                                            gui_state.display_engine.loaded_map.update_sprite_settings(sprite.uuid, new_settings);
+                                            gui_state.display_engine.unsaved_changes = true;
+                                            gui_state.display_engine.graphics_update_needed = true;
+                                        }
+                                    };
                                 }
-                            };
+                            } // End unknown settings
                         }
                     } else {
                         ui.label("No Settings");
@@ -131,4 +147,12 @@ fn render_table(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 });
             });
     });
+}
+
+fn settings_save_check(gui_state: &mut Gui, comp: &Vec<u8>, sprite: &LevelSprite) {
+    if *comp != sprite.settings {
+        gui_state.display_engine.unsaved_changes = true;
+        gui_state.display_engine.graphics_update_needed = true;
+        gui_state.display_engine.loaded_map.update_sprite_settings(sprite.uuid, comp.clone());
+    }
 }
