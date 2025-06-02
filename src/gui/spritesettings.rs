@@ -4,6 +4,8 @@ use crate::data::sprites::LevelSprite;
 
 use super::SpriteSettings;
 
+
+
 // pub struct MovingPlatform {
 //     pub appearance: u8,
 //     pub path_index: u8,
@@ -21,14 +23,20 @@ pub struct ShyGuy {
     pub behavior: u8
 }
 impl SpriteSettings for ShyGuy {
-    fn get_ui(&mut self, ui: &mut egui::Ui) -> egui::Response {
-        ui.horizontal(|ui| {
-            let drag_val = egui::DragValue::new(&mut self.behavior)
-                .hexadecimal(2, false, true)
-                .range(0..=2);
-            ui.add(drag_val);
-            ui.label("Behavior");
-        }).response
+    fn show_ui(&mut self, ui: &mut egui::Ui) -> egui::Response {
+        ui.label("Behavior");
+        egui::ComboBox::from_label("")
+            .selected_text(match self.behavior {
+                0 => "Wander",
+                2 => "Chase",
+                _ => "Unknown"
+            })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.behavior, 0, "Wander");
+                ui.selectable_value(&mut self.behavior, 1, "Unknown");
+                ui.selectable_value(&mut self.behavior, 2, "Chase");
+            }            
+        ).response
     }
 
     fn compile(&self) -> Vec<u8> {
@@ -46,7 +54,7 @@ pub struct HintBlock {
     pub message: u16
 }
 impl SpriteSettings for HintBlock {
-    fn get_ui(&mut self, ui: &mut egui::Ui) -> egui::Response {
+    fn show_ui(&mut self, ui: &mut egui::Ui) -> egui::Response {
         ui.horizontal(|ui| {
             let drag_val = egui::DragValue::new(&mut self.message)
                 .hexadecimal(2, false, true)

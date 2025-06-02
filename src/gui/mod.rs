@@ -10,7 +10,7 @@ pub mod spritesettings;
 
 pub trait SpriteSettings {
     /// Generate a UI that modifies it
-    fn get_ui(&mut self, ui: &mut egui::Ui) -> egui::Response;
+    fn show_ui(&mut self, ui: &mut egui::Ui) -> egui::Response;
     /// Create 4-padded settings vector
     fn compile(&self) -> Vec<u8>;
     /// Create it from the Sprite

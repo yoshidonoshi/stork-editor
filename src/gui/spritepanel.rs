@@ -28,15 +28,15 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                     ui.label(format!("X/Y Position: 0x{:X}/0x{:X}",&sprite.x_position,&sprite.y_position));
                     if sprite.settings_length != 0 {
                         match sprite.object_id {
-                            0x36 => {
+                            0x36 | 0x37 | 0x38 | 0x39 => {
                                 let mut shyguy = spritesettings::ShyGuy::from_sprite(sprite);
-                                shyguy.get_ui(ui);
+                                shyguy.show_ui(ui);
                                 let comp = shyguy.compile();
                                 settings_save_check(gui_state, &comp, sprite);
                             }
                             0x9F => {
                                 let mut hint_block = spritesettings::HintBlock::from_sprite(sprite);
-                                hint_block.get_ui(ui);
+                                hint_block.show_ui(ui);
                                 let comp = hint_block.compile();
                                 settings_save_check(gui_state, &comp, sprite);
                             }
