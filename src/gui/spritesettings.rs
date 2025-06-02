@@ -76,3 +76,67 @@ impl SpriteSettings for HintBlock {
         Self { message: first_byte + (second_byte << 8) }
     }
 }
+
+pub struct RedArrowSign {
+    pub kind: u8,
+    pub order: i8
+}
+impl SpriteSettings for RedArrowSign {
+    fn show_ui(&mut self, ui: &mut egui::Ui) -> egui::Response {
+        ui.label("Kind");
+        egui::ComboBox::new(egui::Id::new("kind"), "")
+            .selected_text(match self.kind {
+                0x0 => "Left Signpost".to_string(),
+                0x1 => "Right Signpost".to_string(),
+                0x2 => "Up Decal".to_string(),
+                0x3 => "Up Right Decal".to_string(),
+                0x4 => "Right Decal".to_string(),
+                0x5 => "Down Right Decal".to_string(),
+                0x6 => "Down Decal".to_string(),
+                0x7 => "Down Left Decal".to_string(),
+                0x8 => "Left Decal".to_string(),
+                0x9 => "Up Left Decal".to_string(),
+                _ => format!("Unknown: 0x{:X}",self.kind)
+            })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.kind, 0, "Left Signpost");
+                ui.selectable_value(&mut self.kind, 1, "Right Signpost");
+                ui.selectable_value(&mut self.kind, 2, "Up Decal");
+                ui.selectable_value(&mut self.kind, 3, "Up Right Decal");
+                ui.selectable_value(&mut self.kind, 4, "Right Decal");
+                ui.selectable_value(&mut self.kind, 5, "Down Right Decal");
+                ui.selectable_value(&mut self.kind, 6, "Down Decal");
+                ui.selectable_value(&mut self.kind, 7, "Down Left Decal");
+                ui.selectable_value(&mut self.kind, 8, "Left Decal");
+                ui.selectable_value(&mut self.kind, 9, "Up Left Decal");
+            }            
+        );
+        ui.label("Order (WIP)");
+        egui::ComboBox::new(egui::Id::new("order"), "")
+            .selected_text(match self.order {
+                -2 => "Before Yoshi".to_string(),
+                -1 => "Behind Yoshi".to_string(),
+                _ => format!("Unknown value: 0x{:X}",self.order)
+            })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.order, -2, "Before Yoshi");
+                ui.selectable_value(&mut self.order, -1, "Behind Yoshi");
+            }            
+        ).response
+    }
+
+    fn compile(&self) -> Vec<u8> {
+        let mut comp: Vec<u8> = vec![];
+        let _ = comp.write_u8(self.kind);
+        let _ = comp.write_i8(self.order);
+        let _padding = comp.write_u16::<LittleEndian>(0x0000);
+        comp
+    }
+
+    fn from_sprite(spr: &LevelSprite) -> Self {
+        Self {
+            kind: spr.settings[0],
+            order: spr.settings[1] as i8,
+        }
+    }
+}

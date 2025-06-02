@@ -3,7 +3,7 @@ use std::f32;
 use egui::ScrollArea;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 
-use crate::{data::sprites::{LevelSprite, SpriteMetadata}, gui::{spritesettings, SpriteSettings}, utils::{log_write, settings_to_string, string_to_settings, LogLevel}};
+use crate::{data::sprites::{LevelSprite, SpriteMetadata}, gui::{spritesettings, SpriteSettings}, utils::{self, is_debug, log_write, settings_to_string, string_to_settings, LogLevel}};
 
 use super::gui::Gui;
 
@@ -32,6 +32,12 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                                 let mut shyguy = spritesettings::ShyGuy::from_sprite(sprite);
                                 shyguy.show_ui(ui);
                                 let comp = shyguy.compile();
+                                settings_save_check(gui_state, &comp, sprite);
+                            }
+                            0x9A => {
+                                let mut red_arrow_sign = spritesettings::RedArrowSign::from_sprite(sprite);
+                                red_arrow_sign.show_ui(ui);
+                                let comp = red_arrow_sign.compile();
                                 settings_save_check(gui_state, &comp, sprite);
                             }
                             0x9F => {
@@ -151,6 +157,11 @@ fn render_table(ui: &mut egui::Ui, gui_state: &mut Gui) {
 
 fn settings_save_check(gui_state: &mut Gui, comp: &Vec<u8>, sprite: &LevelSprite) {
     if *comp != sprite.settings {
+        if is_debug() {
+            log_write("Settings before and after:", LogLevel::DEBUG);
+            utils::print_vector_u8(&sprite.settings);
+            utils::print_vector_u8(comp);
+        }
         gui_state.display_engine.unsaved_changes = true;
         gui_state.display_engine.graphics_update_needed = true;
         gui_state.display_engine.loaded_map.update_sprite_settings(sprite.uuid, comp.clone());
