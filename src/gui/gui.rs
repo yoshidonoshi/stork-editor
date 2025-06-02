@@ -812,7 +812,7 @@ impl Gui {
             log_write("Failed to get or create template directory", LogLevel::ERROR);
             return;
         };
-        let mut map_dir = self.export_directory.join("files/file");
+        let map_dir = self.export_directory.join("files/file");
         match fs::read_dir(map_dir) {
             Ok(l) => {
                 let good_dirs: Vec<DirEntry> = l.into_iter().filter_map(|x| x.ok() ).collect();
