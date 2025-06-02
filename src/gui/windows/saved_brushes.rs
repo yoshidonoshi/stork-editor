@@ -148,7 +148,12 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         }
         let button_store = ui.add_enabled(store_enabled, egui::Button::new("Store Current Brush"));
         if button_store.clicked() {
-            de.current_brush.name = de.brush_settings.pos_brush_name.clone();
+            let entered_brush_name = de.brush_settings.pos_brush_name.clone();
+            if entered_brush_name.trim().is_empty() {
+                log_write("Cannot save Brush with no name", LogLevel::WARN);
+                return;
+            }
+            de.current_brush.name = entered_brush_name;
             de.current_brush.tileset = tileset_name.clone();
             // This is so janky... Damnit Rust
             de.current_brush.palette_offset = layer.clone().expect("Layer should load in Stamps")._pal_offset;
