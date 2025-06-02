@@ -243,7 +243,7 @@ impl CourseInfo {
     pub fn add_template(&mut self, template_file: &str, template_folder: &PathBuf) {
         log_write(format!("Adding new template map: '{}'",template_file), LogLevel::LOG);
         let root_path = template_folder.parent().expect("Every possible path has a parent");
-        let source_file_path = template_folder.join(template_file);
+        let source_file_path = template_folder.join(format!("./{template_file}"));
         match fs::exists(&source_file_path) {
             Err(error) => {
                 log_write(format!("source_file_path existence check failed: '{error}'"), LogLevel::ERROR);
