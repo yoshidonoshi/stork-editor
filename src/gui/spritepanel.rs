@@ -98,7 +98,7 @@ fn render_table(ui: &mut egui::Ui, gui_state: &mut Gui) {
             .striped(false)
             .resizable(false)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .column(Column::exact(150.0))
+            .column(Column::exact(145.0))
             //.min_scrolled_height(0.0)
             .sense(egui::Sense::click())
             .body(|body| {
