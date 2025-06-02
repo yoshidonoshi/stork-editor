@@ -1,6 +1,6 @@
 use std::{error::Error, fs::File, io::{BufReader, Write}, sync::LazyLock};
 
-use egui::TextEdit;
+use egui::{CursorIcon, TextEdit};
 use egui_extras::{Column, TableBuilder};
 use serde_json::json;
 
@@ -56,34 +56,40 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         .drag_to_scroll(false)
         .max_scroll_height(400.0)
         .body(|mut body| {
-            for (i, stamp) in get_all_brushes(&de.saved_brushes).enumerate() {
+            let stored_brushes_size = STORED_BRUSHES.brushes.len();
+
+            let mut create_brush_row = |i, brush_index, stamp: &Brush, saved_brushes: Option<&mut Vec<Brush>>| {
+                // Tileset check
                 if de.brush_settings.only_show_same_tileset {
                     if tileset_name != stamp.tileset {
-                        continue;
+                        return;
                     }
                 }
+
+                // Search check
+                let stamp_name = stamp.name.trim().to_lowercase();
+                let cur_search_string = de.brush_settings.cur_search_string.trim().to_lowercase();
+                if !stamp_name.contains(&cur_search_string) {
+                    return;
+                }
+
                 let tileset_match = tileset_name == stamp.tileset;
                 body.row(20.0, |mut row| {
                     if let Some(sel_stamp) = &de.brush_settings.cur_selected_brush {
                         if tileset_match { // Don't let them select the wrong one
-                            row.set_selected(*sel_stamp == row.index());
+                            row.set_selected(*sel_stamp == brush_index);
                         }
                     } // Otherwise nothing selected
-
-                    let stamp_name = stamp.name.clone().to_lowercase();
-                    let cur_search_string = &de.brush_settings.cur_search_string.clone();
-                    if !stamp_name.contains(cur_search_string.trim()) {
-                        return;
-                    }
                     
                     row.col(|ui| {
                         if !tileset_match {
                             ui.disable();
                         }
+                        // TODO: remove interaction
                         let label_name = ui.label(&stamp.name);
                         if label_name.clicked() {
                             if tileset_match {
-                                de.brush_settings.cur_selected_brush = Some(i);
+                                de.brush_settings.cur_selected_brush = Some(brush_index);
                                 de.current_brush = stamp.clone();
                             }
                         }
@@ -92,22 +98,45 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         if !tileset_match {
                             ui.disable();
                         }
+                        // TODO: remove interaction
                         let tileset_label = ui.label(&stamp.tileset);
                         if tileset_label.clicked() {
                             if tileset_match {
-                                de.brush_settings.cur_selected_brush = Some(i);
+                                de.brush_settings.cur_selected_brush = Some(brush_index);
                                 de.current_brush = stamp.clone();
                             }
                         }
                     });
 
-                    if row.response().clicked() {
+                    let response = row.response();
+
+                    if response.clicked() {
                         if tileset_match {
-                            de.brush_settings.cur_selected_brush = Some(i);
+                            de.brush_settings.cur_selected_brush = Some(brush_index);
                             de.current_brush = stamp.clone();
                         }
                     }
+
+                    response.context_menu(|ui| {
+                        ui.add_enabled_ui(saved_brushes.is_some(), |ui| {
+                            if ui.button("Delete").clicked() {
+                                if let Some(saved_brushes) = saved_brushes {
+                                    saved_brushes.remove(i);
+                                    save_brushes_to_file(&saved_brushes);
+                                }
+                            }
+                        });
+                    });
+
+                    response.on_hover_cursor(CursorIcon::PointingHand);
                 });
+            };
+
+            for (i, stamp) in STORED_BRUSHES.brushes.iter().enumerate() {
+                create_brush_row(i, i, stamp, None)
+            }
+            for (i, stamp) in de.saved_brushes.clone().into_iter().enumerate() {
+                create_brush_row(i, i + stored_brushes_size, &stamp, Some(&mut de.saved_brushes));
             }
         });
     ui.horizontal(|ui| {
@@ -126,6 +155,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             // Height, Width, Tiles already set in Brush window
             de.saved_brushes.push(de.current_brush.clone());
             de.brush_settings.pos_brush_name.clear();
+            save_brushes_to_file(&de.saved_brushes);
         }
         if store_enabled {
             ui.text_edit_singleline(&mut de.brush_settings.pos_brush_name);
@@ -146,6 +176,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     });
 }
 
+#[allow(dead_code)]
 #[inline]
 fn get_all_brushes(saved_brushes: &Vec<Brush>) -> Box<dyn Iterator<Item = &Brush> + '_> {
     Box::new(STORED_BRUSHES.brushes.iter().chain(saved_brushes))

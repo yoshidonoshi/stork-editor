@@ -281,7 +281,9 @@ impl Gui {
         let de: Result<DisplayEngine, DisplayEngineError> = DisplayEngine::new(path.clone());
         match de {
             Ok(de) => {
+                let saved_brushes = std::mem::take(&mut self.display_engine.saved_brushes);
                 self.display_engine = de; // Move it on in!
+                self.display_engine.saved_brushes = saved_brushes;
             }
             Err(e) => {
                 self.do_alert(&e.cause);
