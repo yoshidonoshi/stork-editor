@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use egui::{emath, pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
 use uuid::Uuid;
 
-use crate::{engine::{compression::segment_wrap, displayengine::DisplayEngine}, utils::{color_image_from_pal, log_write, pixel_byte_array_to_nibbles, LogLevel}};
+use crate::{engine::{compression::segment_wrap, displayengine::DisplayEngine}, utils::{self, color_image_from_pal, log_write, pixel_byte_array_to_nibbles, LogLevel}};
 
 use super::{segments::DataSegment, types::Palette, TopLevelSegment};
 
@@ -31,8 +31,8 @@ impl Default for LevelSprite {
 }
 impl fmt::Display for LevelSprite {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"LevelSprite [ id=0x{:X}, uuid={}, x_pos=0x{:X}, y_pos=0x{:X}, settings={:?}",
-            self.object_id, self.uuid, self.x_position, self.y_position, self.settings)
+        write!(f,"LevelSprite [ id=0x{:X}, uuid={}, x_pos=0x{:X}, y_pos=0x{:X}, settings=[{}] ]",
+            self.object_id, self.uuid, self.x_position, self.y_position, utils::settings_to_string(&self.settings))
     }
 }
 impl LevelSprite {
@@ -193,7 +193,24 @@ pub fn draw_sprite(
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
             return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
-        },
+        }
+        0x23 => {
+            const PIPE_PALETTE: usize = 0x89;
+            let direction: u16 = sprite.settings[0] as u16 + ((sprite.settings[1] as u16) << 8);
+            let _length: u16 = sprite.settings[2] as u16 + ((sprite.settings[3] as u16) << 8);
+            // 0 and 1 is up and down, 2 and 3 is left and right
+            let tileset_offset: usize = if direction < 2 { 0x13 } else { 0x12 }; // 02042e80, ~02042e9c
+            let gra = get_graphics_segment(de, "objset.arcz".to_owned(), tileset_offset);
+            let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), PIPE_PALETTE, 0, 16);
+            match direction {
+                0x00 => { // Going down
+                    gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
+                }
+                _ => {
+                    vec![Rect::NOTHING]
+                }
+            }
+        }
         0x28 => { // Flower Collectible
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x16);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x9b, 0, 16);
@@ -311,8 +328,8 @@ impl SpriteGraphicsSegment {
             position.x += bframe.x_offset as f32;
             position.y += bframe.y_offset as f32;
             // Then do the tile offset ones
-            let index_offset_x: f32 = n as f32 % dims.x;
-            let index_offset_y: f32 = (n as f32 / dims.y).floor();
+            let index_offset_x: f32 = (n as f32) % dims.x;
+            let index_offset_y: f32 = ((n as f32) / dims.x).floor();
             //println!("Index: x={},y={}",index_offset_x,index_offset_y);
             position.x += index_offset_x * tile_dim;
             position.y += index_offset_y * tile_dim;

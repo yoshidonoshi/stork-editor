@@ -566,6 +566,11 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                         de.latest_sprite_settings = utils::settings_to_string(&level_sprite.settings);
                     }
                 }
+                // Debug
+                if click_response.middle_clicked() {
+                    println!("== Middle Clicked Sprite {} ==",level_sprite.uuid);
+                    println!("- {}",level_sprite);
+                }
                 // If selected
                 if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
                     // Hover is a grab icon
