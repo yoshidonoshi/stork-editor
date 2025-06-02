@@ -16,11 +16,11 @@ impl AnimatedPaletteData {
 }
 
 impl ScenSegment for AnimatedPaletteData {
-    fn compile(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         self._raw.clone()
     }
 
-    fn wrap(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let compiled = self.compile(info);
         segment_wrap(&compiled, self.header())
     }

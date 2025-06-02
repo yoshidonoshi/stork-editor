@@ -674,20 +674,20 @@ fn draw_background(
     let uppermost_tile = vrect.top() / TILE_HEIGHT_PX;
     let bottommost_tile = vrect.bottom() / TILE_HEIGHT_PX;
     #[allow(unused_assignments)] // Unknown why this is needed
-    let mut bg_layer_opt: &Option<BackgroundData> = &Option::None;
+    let mut bg_layer_opt: Option<&BackgroundData> = Option::None;
     #[allow(unused_assignments)] // Same here
     let mut tc: Option<&mut TileCache> = Option::None;
     match whichbg {
         1 => {
-            bg_layer_opt = &de.bg_layer_1;
+            bg_layer_opt = de.bg_layer_1.as_ref();
             tc = Some(&mut de.tile_cache_bg1);
         }
         2 => {
-            bg_layer_opt = &de.bg_layer_2;
+            bg_layer_opt = de.bg_layer_2.as_ref();
             tc = Some(&mut de.tile_cache_bg2);
         }
         3 => {
-            bg_layer_opt = &de.bg_layer_3;
+            bg_layer_opt = de.bg_layer_3.as_ref();
             tc = Some(&mut de.tile_cache_bg3);
         }
         _ => {

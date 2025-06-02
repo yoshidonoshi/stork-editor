@@ -64,11 +64,11 @@ impl AnmzDataSegment {
 }
 
 impl ScenSegment for AnmzDataSegment {
-    fn compile(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         self._raw_decomp.clone()
     }
 
-    fn wrap(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let compiled = self.compile(info);
         let compressed = lamezip77_lz10_recomp(&compiled);
         segment_wrap(&compressed, self.header())

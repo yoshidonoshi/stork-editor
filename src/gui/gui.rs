@@ -6,7 +6,7 @@ use serde_json::Value;
 use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
-use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -509,14 +509,14 @@ impl Gui {
     }
     pub fn generate_bg_cache(&self, ctx: &egui::Context, which_bg: u8, bg_pal: &Palette) -> Vec<TextureHandle> {
         puffin::profile_function!();
-        let layer: &Option<BackgroundData> = match which_bg {
-            0x1 => &self.display_engine.bg_layer_1,
-            0x2 => &self.display_engine.bg_layer_2,
-            0x3 => &self.display_engine.bg_layer_3,
+        let layer= match which_bg {
+            0x1 => self.display_engine.bg_layer_1.as_ref(),
+            0x2 => self.display_engine.bg_layer_2.as_ref(),
+            0x3 => self.display_engine.bg_layer_3.as_ref(),
             _ => {
                 // This should be impossible
                 log_write("Invalid bg index in generate_bg_cache", LogLevel::FATAL);
-                &Option::None
+                Option::None
             }
         };
         if let Some(layer_data) = &layer {

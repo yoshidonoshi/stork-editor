@@ -17,11 +17,11 @@ impl ImbzData {
 }
 
 impl ScenSegment for ImbzData {
-    fn compile(&self, _info: &Option<super::info::ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&super::info::ScenInfoData>) -> Vec<u8> {
         self.pixel_tiles.clone()
     }
 
-    fn wrap(&self, info: &Option<super::info::ScenInfoData>) -> Vec<u8> {
+    fn wrap(&self, info: Option<&super::info::ScenInfoData>) -> Vec<u8> {
         let compressed = self.compile(info);
         segment_wrap(&compressed, self.header())
     }
