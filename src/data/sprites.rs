@@ -1,7 +1,7 @@
 use std::{fmt, io::{Cursor, Read, Write}};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use egui::{emath, pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
+use egui::{emath, pos2, Color32, ColorImage, Pos2, Rect, TextureHandle, Vec2};
 use uuid::Uuid;
 
 use crate::{engine::{compression::segment_wrap, displayengine::DisplayEngine}, utils::{self, color_image_from_pal, log_write, pixel_byte_array_to_nibbles, LogLevel}};
@@ -197,17 +197,29 @@ pub fn draw_sprite(
         0x23 => {
             const PIPE_PALETTE: usize = 0x89;
             let direction: u16 = sprite.settings[0] as u16 + ((sprite.settings[1] as u16) << 8);
-            let _length: u16 = sprite.settings[2] as u16 + ((sprite.settings[3] as u16) << 8);
+            let length: u16 = sprite.settings[2] as u16 + ((sprite.settings[3] as u16) << 8);
             // 0 and 1 is up and down, 2 and 3 is left and right
             let tileset_offset: usize = if direction < 2 { 0x13 } else { 0x12 }; // 02042e80, ~02042e9c
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), tileset_offset);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), PIPE_PALETTE, 0, 16);
             match direction {
                 0x00 => { // Going down
-                    gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
+                    let mut rects = vec![];
+                    let mut top = gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+                    for i in 0..length {
+                        let new_rect = rect.left_top() + Vec2::new(0.0, (i as f32 * 16.0) + 16.0);
+                        let mut mid = gra.render_sprite_frame(ui,1,&pal,&new_rect,tile_dim,selected);
+                        rects.append(&mut mid);
+                    }
+                    let end_rect = rect.left_top() + Vec2::new(0.0, (length as f32 * 16.0) + 16.0);
+                    let mut end = gra.render_sprite_frame(ui,2,&pal,&end_rect,tile_dim,selected);
+                    rects.append(&mut top);
+                    rects.append(&mut end);
+                    rects
                 }
                 _ => {
-                    vec![Rect::NOTHING]
+                    // You'll need to add handlers for the others too
+                    vec![]
                 }
             }
         }
