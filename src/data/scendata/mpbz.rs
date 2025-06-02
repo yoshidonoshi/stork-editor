@@ -31,7 +31,7 @@ impl MapTileDataSegment {
             let offset: u32 = (layer_width * tile_offset) as u32;
             let blank = MapTileRecordData::new(&0x0000);
             for _ in 0..offset {
-                mpbz_vec.push(blank.clone());
+                mpbz_vec.push(blank);
             }
             count_tiles -= 3; // Undo the 3 tiles worth of data read
         } else {

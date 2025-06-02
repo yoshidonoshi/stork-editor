@@ -172,7 +172,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             ui.label("This dropdown determines what layer to work with, and locks the rest");
         });
         let selected_bg: &mut CurrentLayer = &mut gui_state.display_engine.display_settings.current_layer;
-        let old_selected_bg = selected_bg.clone();
+        let old_selected_bg = *selected_bg;
         let _cur_layer_combo = egui::ComboBox::from_label("")
             .selected_text(format!("{selected_bg:?}"))
             .show_ui(ui, |ui| {

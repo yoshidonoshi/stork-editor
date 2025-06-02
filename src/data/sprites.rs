@@ -306,7 +306,7 @@ impl SpriteGraphicsSegment {
             let color_image: ColorImage = color_image_from_pal(pal, &nibbles_64);
             let tex: TextureHandle = ui.ctx().load_texture("sprite_tex", color_image, egui::TextureOptions::NEAREST);
             // Generate Rect from top_left
-            let mut position: Pos2 = top_left.clone();
+            let mut position: Pos2 = *top_left;
             // First do the per-position ones
             position.x += bframe.x_offset as f32;
             position.y += bframe.y_offset as f32;

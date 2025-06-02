@@ -67,9 +67,9 @@ impl BackgroundData {
                 }
                 "COLZ" => {
                     let mut compressed_buffer: Vec<u8> = vec![0;seg_internal_length as usize];
-                    let _read_res = rdr.read_exact(&mut compressed_buffer);
+                    let _read_res: Result<(), std::io::Error> = rdr.read_exact(&mut compressed_buffer);
                     let colz_obj = CollisionData::new(&compressed_buffer);
-                    ret.scen_segments.push(ScenSegmentWrapper::COLZ(colz_obj.clone()));
+                    ret.scen_segments.push(ScenSegmentWrapper::COLZ(colz_obj));
                 }
                 "PLTB" => {
                     let mut pal_vec: Vec<Palette> = Vec::new();
@@ -97,7 +97,7 @@ impl BackgroundData {
                         rdr.set_position(start_pos + seg_internal_length as u64);
                     }
                     let pltb = PltbData::from_pal_vec(pal_vec);
-                    let pltb_wrapped = ScenSegmentWrapper::PLTB(pltb.clone());
+                    let pltb_wrapped = ScenSegmentWrapper::PLTB(pltb);
                     ret.scen_segments.push(pltb_wrapped);
                 }
                 "MPBZ" => {
@@ -107,7 +107,7 @@ impl BackgroundData {
                     let mpbz = MapTileDataSegment::from_decomped_vec(&mp_decomp,ret.info_ro.layer_width);
                     // Probably get rid of this eventually, or only activate in debug mode
                     mpbz.test_against_raw_decomp(Some(&ret.info_ro), &mp_decomp);
-                    let mpbz_wrapped = ScenSegmentWrapper::MPBZ(mpbz.clone());
+                    let mpbz_wrapped = ScenSegmentWrapper::MPBZ(mpbz);
                     ret.scen_segments.push(mpbz_wrapped);
                 }
                 "IMGB" => {
@@ -119,7 +119,7 @@ impl BackgroundData {
                     if ret.pixel_tiles_preview.is_some() {
                         log_write("IMGB: Attempting to write to pixeltiles when already contains data", LogLevel::WARN);
                     }
-                    ret.pixel_tiles_preview = Some(buffer.clone()); // Hand the actual data into it
+                    ret.pixel_tiles_preview = Some(buffer); // Hand the actual data into it
                 }
                 "IMBZ" => {
                     let mut imbz_comped_buffer: Vec<u8> = vec![0;seg_internal_length as usize];
@@ -146,7 +146,7 @@ impl BackgroundData {
                             continue;// Already did read, so it should be good to continue
                         },
                     };
-                    ret.scen_segments.push(ScenSegmentWrapper::ANMZ(anmz_data.clone()));
+                    ret.scen_segments.push(ScenSegmentWrapper::ANMZ(anmz_data));
                 }
                 "SCRL" => {
                     let scrl = ScrollData::new(&mut rdr);
@@ -169,7 +169,7 @@ impl BackgroundData {
                     // I wrote a script to check every single one
                     // This should not be possible
                     let unknown_seg = format!("Unknown segment in SCEN: '{}'",&seg_header_str);
-                    log_write(unknown_seg.clone(), LogLevel::ERROR);
+                    log_write(&unknown_seg, LogLevel::ERROR);
                     return Err(unknown_seg);
                     // let mut _buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     // let _read_res = rdr.read_exact(&mut _buffer);
@@ -178,7 +178,7 @@ impl BackgroundData {
         }
 
         // Apply ANMZ preview //
-        if let Some(anmz_data) = ret.clone().get_anmz() {
+        if let Some(anmz_data) = ret.get_anmz().cloned() {
             let mut cur_vram_offset: usize = anmz_data.vram_offset as usize;
             if ret.info_ro.color_mode > 0x1 {
                 log_write("Color Modes above 1 may be poorly supported", LogLevel::WARN);
@@ -205,7 +205,7 @@ impl BackgroundData {
         if ret.scen_segments.len() != test_load_count {
             let mismatch_msg = format!("Mismatch in loaded segments versus load count: {} vs {}",
                 ret.scen_segments.len(),test_load_count);
-            log_write(mismatch_msg.clone(), LogLevel::ERROR);
+            log_write(&mismatch_msg, LogLevel::ERROR);
             return Err(mismatch_msg);
         }
 
@@ -344,16 +344,18 @@ impl BackgroundData {
     }
 
     pub fn change_height(&mut self, new_height: u16) -> Result<u16,()> {
-        let info_c = self.get_info().expect("INFO is always there").clone();
+        let info_c = self.get_info().expect("INFO is always there");
+        let layer_width = info_c.layer_width;
+
         if new_height % 2 != 0 {
             log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::WARN);
             return Err(());
         }
         if let Some(mpbz) = self.get_mpbz_mut() {
-            mpbz.change_height(new_height, info_c.layer_width);
+            mpbz.change_height(new_height, layer_width);
         }
         if let Some(colz) = self.get_colz_mut() {
-            colz.change_height(new_height, info_c.layer_width);
+            colz.change_height(new_height, layer_width);
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_height = new_height;

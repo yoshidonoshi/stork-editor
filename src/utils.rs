@@ -285,7 +285,7 @@ pub fn color_image_from_pal(pal: &Palette, pal_indexes: &Vec<u8>) -> ColorImage 
             let col32: Color32 = Color32::TRANSPARENT;
             ret.push(col32);
         } else {
-            let col32: Color32 = pal.colors[*n as usize].color.clone();
+            let col32: Color32 = pal.colors[*n as usize].color;
             ret.push(col32);
         }
     }
@@ -343,18 +343,13 @@ pub fn write_vec_test_file(byte_vector: &Vec<u8>,filename: String) {
 }
 
 pub fn nitrofs_abs(export_dir: &PathBuf,filename_local: &String) -> PathBuf {
-    let mut p: PathBuf = export_dir.clone();
-    p.push("files");
-    p.push("file");
-    p.push(filename_local);
-    p
+    export_dir.join(format!("files/file/{filename_local}"))
 }
 
 pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
-    let mut p: PathBuf = PathBuf::from(export_dir);
-    p.push("backups");
+    let p = export_dir.join("backups");
     if !p.exists() {
-        if let Err(error) = fs::create_dir(p.clone()) {
+        if let Err(error) = fs::create_dir(&p) {
             log_write(format!("Error creating backup folder: '{error}'"), LogLevel::ERROR);
             return Err(());
         }
@@ -363,10 +358,9 @@ pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
 }
 
 pub fn get_template_folder(export_dir: &PathBuf) -> Option<PathBuf> {
-    let mut p: PathBuf = PathBuf::from(export_dir);
-    p.push("templates");
+    let p = export_dir.join("templates");
     if !p.exists() {
-        if let Err(error) = fs::create_dir(p.clone()) {
+        if let Err(error) = fs::create_dir(&p) {
             log_write(format!("Error creating template folder: '{error}'"), LogLevel::ERROR);
             return None;
         }

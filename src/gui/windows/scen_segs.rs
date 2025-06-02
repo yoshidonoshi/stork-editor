@@ -14,8 +14,9 @@ pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, laye
             return;
         };
         for (i,seg) in &mut bg.scen_segments.iter_mut().enumerate() {
-            let header = seg.header().clone();
-            match header.as_str() {
+            let header = seg.header();
+            let header = header.as_str();
+            match header {
                 "INFO" => {
                     ui.heading("INFO");
                     if let ScenSegmentWrapper::INFO(info) = seg {

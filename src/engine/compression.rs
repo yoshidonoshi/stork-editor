@@ -105,8 +105,7 @@ pub fn segment_wrap(data: &Vec<u8>, magic: String) -> Vec<u8> {
     let mut magic_vec: Vec<u8> = magic.into_bytes(); // Gets emptied so must be mut
     ret.append(&mut magic_vec);
     let _ = ret.write_u32::<LittleEndian>(internal_len);
-    let mut to_insert = internal_data.clone();
-    ret.append(&mut to_insert);
+    ret.append(&mut internal_data);
     while ret.len() % 4 != 0 {
         ret.push(0x00);
     }
@@ -122,7 +121,6 @@ pub fn segment_wrap_u32(data: &Vec<u8>, magic: u32) -> Vec<u8> {
     let internal_len = internal_data.len() as u32;
     let _ = ret.write_u32::<LittleEndian>(magic);
     let _ = ret.write_u32::<LittleEndian>(internal_len);
-    let mut to_insert = internal_data.clone();
-    ret.append(&mut to_insert);
+    ret.append(&mut internal_data);
     ret
 }

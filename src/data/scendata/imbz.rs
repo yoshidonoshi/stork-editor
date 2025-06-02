@@ -11,7 +11,7 @@ impl ImbzData {
     pub fn new(byte_data_compressed: &Vec<u8>) -> Self {
         let byte_data = lamezip77_lz10_decomp(byte_data_compressed);
         Self {
-            pixel_tiles: byte_data.clone()
+            pixel_tiles: byte_data
         }
     }
 }

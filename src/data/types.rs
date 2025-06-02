@@ -147,7 +147,7 @@ impl MapTileRecordData {
         short_val
     }
     pub fn get_render_pal_id(&self, layer_pal_offset: u8, color_mode: u32) -> usize {
-        let mut pal_index = self.palette_id.clone() as usize;
+        let mut pal_index = self.palette_id as usize;
         pal_index += layer_pal_offset as usize;
         // Pretty sure 0x2 is this
         if color_mode == 0x0 || color_mode == 0x2 {

@@ -243,8 +243,7 @@ impl CourseInfo {
     pub fn add_template(&mut self, template_file: &str, template_folder: &PathBuf) {
         log_write(format!("Adding new template map: '{}'",template_file), LogLevel::LOG);
         let root_path = template_folder.parent().expect("Every possible path has a parent");
-        let mut source_file_path = template_folder.clone();
-        source_file_path.push(template_file);
+        let source_file_path = template_folder.join(template_file);
         match fs::exists(&source_file_path) {
             Err(error) => {
                 log_write(format!("source_file_path existence check failed: '{error}'"), LogLevel::ERROR);
@@ -320,8 +319,7 @@ impl Compilable for CourseMapInfo {
         // Music ID
         let _ = comp.write_u8(self.map_music);
         // MPDZ name
-        let mut str_vec = self.map_filename_noext.clone().into_bytes();
-        comp.append(&mut str_vec);
+        for b in self.map_filename_noext.bytes() { comp.push(b) }
         comp.push(0x00); // Null terminator
         // Why there are 8 bytes here, I know not
         for _spacer in 0..8 {
