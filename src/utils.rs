@@ -343,13 +343,18 @@ pub fn write_vec_test_file(byte_vector: &Vec<u8>,filename: String) {
 }
 
 pub fn nitrofs_abs(export_dir: &PathBuf,filename_local: &String) -> PathBuf {
-    export_dir.join(format!("files/file/{filename_local}"))
+    let mut p: PathBuf = export_dir.clone();
+    p.push("files");
+    p.push("file");
+    p.push(filename_local);
+    p
 }
 
 pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
-    let p = export_dir.join("backups");
+    let mut p: PathBuf = PathBuf::from(export_dir);
+    p.push("backups");
     if !p.exists() {
-        if let Err(error) = fs::create_dir(&p) {
+        if let Err(error) = fs::create_dir(p.clone()) {
             log_write(format!("Error creating backup folder: '{error}'"), LogLevel::ERROR);
             return Err(());
         }
@@ -358,9 +363,10 @@ pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
 }
 
 pub fn get_template_folder(export_dir: &PathBuf) -> Option<PathBuf> {
-    let p = export_dir.join("templates");
+    let mut p: PathBuf = PathBuf::from(export_dir);
+    p.push("templates");
     if !p.exists() {
-        if let Err(error) = fs::create_dir(&p) {
+        if let Err(error) = fs::create_dir(p.clone()) {
             log_write(format!("Error creating template folder: '{error}'"), LogLevel::ERROR);
             return None;
         }
