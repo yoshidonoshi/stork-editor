@@ -217,6 +217,21 @@ pub fn draw_sprite(
                     rects.append(&mut end);
                     rects
                 }
+                0x01 => { // Going up
+                    let mut rects = vec![];
+                    let start_rect = rect.left_top() + Vec2::new(0.0, -16.0);
+                    let mut start = gra.render_sprite_frame(ui,3,&pal,&start_rect,tile_dim,selected);
+                    rects.append(&mut start);
+                    for i in 0..length {
+                        let new_rect = rect.left_top() + Vec2::new(0.0, -16.0 - (i as f32 * 16.0) - 16.0);
+                        let mut mid = gra.render_sprite_frame(ui,4,&pal,&new_rect,tile_dim,selected);
+                        rects.append(&mut mid);
+                    }
+                    let end_rect = rect.left_top() + Vec2::new(0.0, -16.0 - (length as f32 * 16.0) - 16.0);
+                    let mut end = gra.render_sprite_frame(ui,5,&pal,&end_rect,tile_dim,selected);
+                    rects.append(&mut end);
+                    rects
+                }
                 _ => {
                     // You'll need to add handlers for the others too
                     vec![]
@@ -307,7 +322,6 @@ impl SpriteGraphicsSegment {
         selected: bool
     ) -> Vec<Rect> {
         let sprite_frame = &self.sprite_frames[frame_index];
-        let uvs: Rect = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
 
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&self.internal_data);
         rdr.set_position(sprite_frame.build_offset as u64 + sprite_frame._pos);
@@ -321,6 +335,21 @@ impl SpriteGraphicsSegment {
         let x_offset: i16 = rdr.read_i16::<LittleEndian>().expect("render_sprite_frame: x_offset i16");
         let y_offset: i16 = rdr.read_i16::<LittleEndian>().expect("render_sprite_frame: y_offset i16");
         let flags: u16 = rdr.read_u16::<LittleEndian>().expect("render_sprite_frame: flags u16");
+        // Get UVs //
+        // Prior Stork implementation: (flags & 0b0010'0000'0000'0000) != 0
+        let should_flip_v = (flags & 0b0010000000000000) != 0;
+        // Prior Stork implementation: shouldFlipH = (flags & 0b0001'0000'0000'0000) != 0;
+        let should_flip_h = (flags & 0b0001000000000000) != 0;
+        // UV calculation
+        let mut uvs = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+        if should_flip_h && !should_flip_v {
+            uvs = Rect::from_min_max(pos2(1.0, 0.0), pos2(0.0, 1.0));
+        } else if !should_flip_h && should_flip_v {
+            uvs = Rect::from_min_max(pos2(0.0, 1.0), pos2(1.0, 0.0));
+        } else if should_flip_h && should_flip_v{
+            uvs = Rect::from_min_max(pos2(1.0, 1.0), pos2(0.0, 0.0));
+        }
+
         let bframe: SpriteBuildData = SpriteBuildData { tile_offset, x_offset, y_offset, flags };
         let pixels_start_position = bframe.tile_offset << 4;
         rdr.set_position(pixels_start_position as u64);

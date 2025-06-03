@@ -28,6 +28,12 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                     ui.label(format!("X/Y Position: 0x{:X}/0x{:X}",&sprite.x_position,&sprite.y_position));
                     if sprite.settings_length != 0 {
                         match sprite.object_id {
+                            0x23 => {
+                                let mut pipe = spritesettings::GreenPipe::from_sprite(sprite);
+                                pipe.show_ui(ui);
+                                let comp = pipe.compile();
+                                settings_save_check(gui_state, &comp, sprite);
+                            }
                             0x36 | 0x37 | 0x38 | 0x39 => {
                                 let mut shyguy = spritesettings::ShyGuy::from_sprite(sprite);
                                 shyguy.show_ui(ui);

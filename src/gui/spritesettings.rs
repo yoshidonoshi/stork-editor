@@ -140,3 +140,47 @@ impl SpriteSettings for RedArrowSign {
         }
     }
 }
+
+pub struct GreenPipe {
+    pub direction: u16,
+    pub length: u16
+}
+impl SpriteSettings for GreenPipe {
+    fn show_ui(&mut self, ui: &mut egui::Ui) -> egui::Response {
+        ui.label("Direction");
+        egui::ComboBox::new(egui::Id::new("direction_combo_box"), "")
+            .selected_text(match self.direction {
+                0 => "Down".to_string(),
+                1 => "Up".to_string(),
+                2 => "Right".to_string(),
+                3 => "Left".to_string(),
+                _ => format!("Unknown value: 0x{:X}",self.direction)
+            })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.direction, 0, "Down");
+                ui.selectable_value(&mut self.direction, 1, "Up");
+                ui.selectable_value(&mut self.direction, 2, "Right");
+                ui.selectable_value(&mut self.direction, 3, "Left");
+            }            
+        );
+        ui.label("Length");
+        let drag_val = egui::DragValue::new(&mut self.length)
+            .hexadecimal(4, false, true)
+            .range(0..=0xffff);
+        ui.add(drag_val)
+    }
+
+    fn compile(&self) -> Vec<u8> {
+        let mut comp: Vec<u8> = vec![];
+        let _ = comp.write_u16::<LittleEndian>(self.direction);
+        let _ = comp.write_u16::<LittleEndian>(self.length);
+        comp
+    }
+
+    fn from_sprite(spr: &LevelSprite) -> Self {
+        Self {
+            direction: spr.settings[0] as u16, // Technically u16... but only has values 0-3
+            length: spr.settings[2] as u16 + ((spr.settings[3] as u16) << 8)
+        }
+    }
+}
