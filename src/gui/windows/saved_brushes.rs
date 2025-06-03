@@ -4,7 +4,7 @@ use egui::{CursorIcon, TextEdit};
 use egui_extras::{Column, TableBuilder};
 use serde_json::json;
 
-use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::{gui::Gui, windows::brushes::{BrushType, STORED_BRUSHES}}, utils::{log_write, LogLevel}};
+use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::{windows::brushes::{BrushType, STORED_BRUSHES}}, utils::{log_write, LogLevel}};
 
 use super::brushes::{Brush, StoredBrushes};
 
@@ -158,12 +158,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
         });
     ui.horizontal(|ui| {
-        let mut store_enabled = true;
-        let mut reason_disabled: String = String::from("ERROR");
-        if de.current_brush.tiles.is_empty() {
-            store_enabled = false;
-            reason_disabled = String::from("No tiles in current brush");
-        }
+        let store_enabled = !de.current_brush.tiles.is_empty();
         let button_store = ui.add_enabled(store_enabled, egui::Button::new("Store Current Brush"));
         if button_store.clicked() {
             let entered_brush_name = de.brush_settings.pos_brush_name.clone();
@@ -182,7 +177,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if store_enabled {
             ui.text_edit_singleline(&mut de.brush_settings.pos_brush_name);
         } else {
-            ui.add_enabled(false, TextEdit::singleline(&mut reason_disabled));
+            ui.add_enabled(false, TextEdit::singleline(&mut String::from("No tiles in current brush")));
         }
     });
     ui.horizontal(|ui| {
@@ -193,15 +188,9 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.disable();
         let brush_load_button = ui.button("Load Brushes JSON");
         if brush_load_button.clicked() {
-
+            de.load_saved_brushes();
         }
     });
-}
-
-#[allow(dead_code)]
-#[inline]
-fn get_all_brushes(saved_brushes: &Vec<Brush>) -> Box<dyn Iterator<Item = &Brush> + '_> {
-    Box::new(STORED_BRUSHES.brushes.iter().chain(saved_brushes))
 }
 
 pub fn load_stored_brushes() {
@@ -210,7 +199,7 @@ pub fn load_stored_brushes() {
     log_write("Loaded stored brushes successfully", LogLevel::LOG);
 }
 
-const LOCAL_BRUSHES_FILE: &str = "saved_brushes.json";
+const SAVED_BRUSHES_FILE: &str = "saved_brushes.json";
 
 pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
     log_write("Saving loaded Brushes to JSON...", LogLevel::LOG);
@@ -218,16 +207,16 @@ pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
         "brushes": brushes,
     });
     let pretty_string = serde_json::to_string_pretty(&saved_brushes).expect("Brushes should Stringify correctly");
-    let mut output = File::create(LOCAL_BRUSHES_FILE).expect("Can init the Brushes JSON file");
+    let mut output = File::create(SAVED_BRUSHES_FILE).expect("Can init the Brushes JSON file");
     if let Err(error) = write!(output,"{pretty_string}") {
         log_write(format!("Failed to write Brushes JSON: '{error}'"), LogLevel::ERROR);
     }
 }
 
 fn load_saved_brushes() -> Result<Vec<Brush>,Box<dyn Error>> {
-    let file = match File::open(LOCAL_BRUSHES_FILE) {
+    let file = match File::open(SAVED_BRUSHES_FILE) {
         Err(error) => {
-            log_write(format!("Could not open {LOCAL_BRUSHES_FILE}: '{error}'"), LogLevel::WARN);
+            log_write(format!("Could not open {SAVED_BRUSHES_FILE}: '{error}'"), LogLevel::WARN);
             return Ok(Vec::new());
         }
         Ok(f) => f,
@@ -237,7 +226,7 @@ fn load_saved_brushes() -> Result<Vec<Brush>,Box<dyn Error>> {
     Ok(saved_brushes.brushes)
 }
 
-impl Gui {
+impl DisplayEngine {
     pub fn load_saved_brushes(&mut self) {
         log_write("Loading Saved brushes...", LogLevel::DEBUG);
         match load_saved_brushes() {
@@ -245,7 +234,7 @@ impl Gui {
                 log_write(format!("Failed to load brushes from JSON: '{error}'"), LogLevel::ERROR);
             }
             Ok(brushes_load_attempt) => {
-                self.display_engine.saved_brushes = brushes_load_attempt;
+                self.saved_brushes = brushes_load_attempt;
                 log_write("Loaded saved brushes successfully", LogLevel::LOG);
             }
         }
