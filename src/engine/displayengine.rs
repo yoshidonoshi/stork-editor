@@ -637,10 +637,20 @@ impl DisplayEngine {
     pub fn update_graphics_from_mapdata(&mut self) {
         // Initialize palettes //
         let mut pal_index: usize = 0;
-        const UNIPAL_ADDR: u64 = 0x000d6f40;
+        let unipal_addr: u64 = match self.game_version.expect("GameVersion loaded") {
+            // To find, look for 68 50 15 00 32 0a d0 01..
+            GameVersion::USA10 => 0x0d6f40, // 0x020d6f40
+            GameVersion::USA11 => 0x0d7198, // 0x020d7198
+            GameVersion::USAXX => todo!(),
+            GameVersion::EUR10 => todo!(),
+            GameVersion::EUR11 => todo!(),
+            GameVersion::EURXX => todo!(),
+            GameVersion::JAP => todo!(),
+            GameVersion::UNKNOWN => todo!(),
+        }; 
         if let Some(arm9_binary) = &self.loaded_arm9 {
             let mut cur = Cursor::new(arm9_binary);
-            cur.set_position(UNIPAL_ADDR);
+            cur.set_position(unipal_addr);
             let pal = Palette::from_cur(&mut cur,16);
             self.bg_palettes[pal_index] = pal;
         } else {
