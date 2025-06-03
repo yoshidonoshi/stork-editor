@@ -53,8 +53,14 @@ impl Brush {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum BrushType {
+    Stored,
+    Saved,
+}
+
 pub struct BrushSettings {
-    pub cur_selected_brush: Option<usize>,
+    pub cur_selected_brush: Option<(BrushType, usize)>,
     pub pos_brush_name: String,
     pub cur_search_string: String,
     pub only_show_same_tileset: bool

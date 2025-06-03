@@ -1,10 +1,10 @@
-use std::{error::Error, fs::File, io::{BufReader, Write}, sync::LazyLock};
+use std::{cmp::Ordering, error::Error, fs::File, io::{BufReader, Write}, ops::Deref, sync::LazyLock};
 
 use egui::{CursorIcon, TextEdit};
 use egui_extras::{Column, TableBuilder};
 use serde_json::json;
 
-use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::{gui::Gui, windows::brushes::STORED_BRUSHES}, utils::{log_write, LogLevel}};
+use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::{gui::Gui, windows::brushes::{BrushType, STORED_BRUSHES}}, utils::{log_write, LogLevel}};
 
 use super::brushes::{Brush, StoredBrushes};
 
@@ -56,9 +56,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         .drag_to_scroll(false)
         .max_scroll_height(400.0)
         .body(|mut body| {
-            let stored_brushes_size = STORED_BRUSHES.brushes.len();
-
-            let mut create_brush_row = |i, brush_index, stamp: &Brush, saved_brushes: Option<&mut Vec<Brush>>| {
+            let mut create_brush_row = |i, brush_type, stamp: &Brush, saved_brushes: Option<&mut Vec<Brush>>| {
                 // Tileset check
                 if de.brush_settings.only_show_same_tileset {
                     if tileset_name != stamp.tileset {
@@ -75,9 +73,9 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
                 let tileset_match = tileset_name == stamp.tileset;
                 body.row(20.0, |mut row| {
-                    if let Some(sel_stamp) = &de.brush_settings.cur_selected_brush {
+                    if let Some(selected_brush) = de.brush_settings.cur_selected_brush {
                         if tileset_match { // Don't let them select the wrong one
-                            row.set_selected(*sel_stamp == brush_index);
+                            row.set_selected(selected_brush == (brush_type, i));
                         }
                     } // Otherwise nothing selected
                     
@@ -89,7 +87,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         let label_name = ui.label(&stamp.name);
                         if label_name.clicked() {
                             if tileset_match {
-                                de.brush_settings.cur_selected_brush = Some(brush_index);
+                                de.brush_settings.cur_selected_brush = Some((brush_type, i));
                                 de.current_brush = stamp.clone();
                             }
                         }
@@ -102,7 +100,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         let tileset_label = ui.label(&stamp.tileset);
                         if tileset_label.clicked() {
                             if tileset_match {
-                                de.brush_settings.cur_selected_brush = Some(brush_index);
+                                de.brush_settings.cur_selected_brush = Some((brush_type, i));
                                 de.current_brush = stamp.clone();
                             }
                         }
@@ -112,17 +110,37 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
                     if response.clicked() {
                         if tileset_match {
-                            de.brush_settings.cur_selected_brush = Some(brush_index);
+                            de.brush_settings.cur_selected_brush = Some((brush_type, i));
                             de.current_brush = stamp.clone();
                         }
                     }
 
                     response.context_menu(|ui| {
                         ui.add_enabled_ui(saved_brushes.is_some(), |ui| {
-                            if ui.button("Delete").clicked() {
-                                if let Some(saved_brushes) = saved_brushes {
+                            let overwrite = ui.add_enabled_ui(
+                                de.brush_settings.cur_selected_brush.is_some(),
+                                |ui| ui.button("Overwrite")
+                            ).inner;
+                            let delete = ui.button("Delete");
+
+                            if let Some(saved_brushes) = saved_brushes {
+                                if overwrite.clicked() {
+                                    let name = std::mem::take(&mut saved_brushes[i].name);
+                                    saved_brushes[i] = de.current_brush.clone(); // this also clones the string name :/
+                                    saved_brushes[i].name = name;
+                                    save_brushes_to_file(saved_brushes);
+                                }
+                                if delete.clicked() {
                                     saved_brushes.remove(i);
-                                    save_brushes_to_file(&saved_brushes);
+                                    save_brushes_to_file(saved_brushes);
+                                    // update selected brush index
+                                    if let Some((_, ref mut sel_i)) = de.brush_settings.cur_selected_brush {
+                                        match sel_i.deref().cmp(&i) {
+                                            Ordering::Greater => *sel_i -= 1, // underflow is unreachable
+                                            Ordering::Equal => de.brush_settings.cur_selected_brush = None,
+                                            Ordering::Less => {}
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -133,10 +151,10 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             };
 
             for (i, stamp) in STORED_BRUSHES.brushes.iter().enumerate() {
-                create_brush_row(i, i, stamp, None)
+                create_brush_row(i, BrushType::Stored, stamp, None)
             }
             for (i, stamp) in de.saved_brushes.clone().into_iter().enumerate() {
-                create_brush_row(i, i + stored_brushes_size, &stamp, Some(&mut de.saved_brushes));
+                create_brush_row(i, BrushType::Saved, &stamp, Some(&mut de.saved_brushes));
             }
         });
     ui.horizontal(|ui| {
