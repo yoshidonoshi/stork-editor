@@ -276,7 +276,7 @@ fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             continue;
         }
         let palette = &de.bg_palettes[render_pal_id];
-        let pixel_tiles = bg.pixel_tiles_preview.clone().expect("There should be pixel tiles on the background with COLZ");
+        let pixel_tiles = bg.pixel_tiles_preview.as_ref().expect("There should be pixel tiles on the background with COLZ");
         draw_blkz_tile(tile, palette, &pixel_tiles, &true_rect,ui.ctx(),ui.painter());
         // Placement is good!
         //ui.painter().rect_filled(true_rect, 0.0, Color32::RED);
@@ -358,7 +358,7 @@ const PATH_SELECTION_DISTANCE: f32 = 20.0;
 
 fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
-    let arm9 = de.loaded_arm9.clone().expect("ARM9 must exist");
+    let arm9 = de.loaded_arm9.as_ref().expect("ARM9 must exist");
     let top_left: Pos2 = ui.min_rect().min;
     if let Some(path_database) = &de.path_data {
         for line in &path_database.lines {
@@ -533,7 +533,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
         // No render for it, do square (or do it anyway)
         if drawn_rects.is_empty() || de.display_settings.show_box_for_rendered {
             // We want the source rect to be clickable too
-            drawn_rects.push(rect.clone());
+            drawn_rects.push(rect);
 
             if de.selected_sprite_uuids.contains(&level_sprite.uuid) {
                 ui.painter().rect_filled(rect, 0.0, SPRITE_BG_COLOR_SELECTED);
@@ -543,7 +543,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
             ui.painter().text(
                 true_pos, Align2::LEFT_TOP,
                 format!("{:02X}",level_sprite.object_id),
-                FONT.clone(), Color32::WHITE
+                FONT, Color32::WHITE
             );
         }
 
@@ -679,20 +679,20 @@ fn draw_background(
     let uppermost_tile = vrect.top() / TILE_HEIGHT_PX;
     let bottommost_tile = vrect.bottom() / TILE_HEIGHT_PX;
     #[allow(unused_assignments)] // Unknown why this is needed
-    let mut bg_layer_opt: &Option<BackgroundData> = &Option::None;
+    let mut bg_layer_opt: Option<&BackgroundData> = Option::None;
     #[allow(unused_assignments)] // Same here
     let mut tc: Option<&mut TileCache> = Option::None;
     match whichbg {
         1 => {
-            bg_layer_opt = &de.bg_layer_1;
+            bg_layer_opt = de.bg_layer_1.as_ref();
             tc = Some(&mut de.tile_cache_bg1);
         }
         2 => {
-            bg_layer_opt = &de.bg_layer_2;
+            bg_layer_opt = de.bg_layer_2.as_ref();
             tc = Some(&mut de.tile_cache_bg2);
         }
         3 => {
-            bg_layer_opt = &de.bg_layer_3;
+            bg_layer_opt = de.bg_layer_3.as_ref();
             tc = Some(&mut de.tile_cache_bg3);
         }
         _ => {
@@ -874,7 +874,7 @@ fn draw_background(
                                 }
                             }
                         } else { // Replace
-                            de.bg_sel_data.selected_map_indexes = temp_selected_indexes.clone();
+                            de.bg_sel_data.selected_map_indexes = std::mem::take(&mut temp_selected_indexes);
                             de.bg_sel_data.selected_map_indexes.sort();
                             de.bg_sel_data.selected_map_indexes.dedup();
                         }

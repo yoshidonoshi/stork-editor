@@ -18,7 +18,7 @@ impl PltbData {
 }
 
 impl ScenSegment for PltbData {
-    fn compile(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         let mut ret: Vec<u8> = vec![];
 
         for p in &self.palettes {
@@ -29,8 +29,8 @@ impl ScenSegment for PltbData {
         ret
     }
 
-    fn wrap(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
-        segment_wrap(&self.compile(&Option::None), self.header())
+    fn wrap(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
+        segment_wrap(&self.compile(Option::None), self.header())
     }
 
     fn header(&self) -> String {

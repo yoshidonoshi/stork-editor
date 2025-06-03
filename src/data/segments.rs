@@ -33,8 +33,8 @@ impl DataSegment {
         if let Err(_) = rdr.read_to_end(&mut inner_data) {
             utils::log_write(String::from("Could not read to end of data"), utils::LogLevel::ERROR);
         }
-        let inside_len = &inner_data.len();
-        if *inside_len != size {
+        let inside_len = inner_data.len();
+        if inside_len != size {
             println!("Mismatch in file specified internal size vs actual: 0x{:05X} vs 0x{:05X}", size, inside_len);
         }
         Self {

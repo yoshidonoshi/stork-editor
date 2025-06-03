@@ -162,7 +162,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     };
     // MUSIC //
     let selected_map_data = &mut de.loaded_course.level_map_data[selected_map_index];
-    let old_map_music_val = selected_map_data.map_music.clone();
+    let old_map_music_val = selected_map_data.map_music;
     ui.heading("Music");
     egui::ComboBox::from_label("")
         .selected_text(format!("0x{:02X} - {}",selected_map_data.map_music,get_course_music_name(selected_map_data.map_music)))
@@ -368,10 +368,10 @@ fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &V
     };
     let selected_exit_stored = selected_exit.clone();
     let _exit_target_map_dropdown = egui::ComboBox::from_label("Target Map")
-        .selected_text(course.label.clone())
+        .selected_text(&course.label)
         .show_ui(ui, |ui| {
             for map in maps {
-                ui.selectable_value(&mut selected_exit.target_map, map.uuid, map.label.clone());
+                ui.selectable_value(&mut selected_exit.target_map, map.uuid, &map.label);
             }
         });
     if selected_exit_stored != *selected_exit {
@@ -401,7 +401,7 @@ fn show_exit_target_entrance(ui: &mut egui::Ui, selected_exit: &mut MapExit, map
         .selected_text(&cur_entrance.label)
         .show_ui(ui, |ui| {
             for enter in &course.map_entrances {
-                ui.selectable_value(&mut selected_exit.target_map_entrance, enter.uuid, enter.label.clone());
+                ui.selectable_value(&mut selected_exit.target_map_entrance, enter.uuid, &enter.label);
             }
         });
 }
