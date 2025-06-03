@@ -2,11 +2,10 @@ use std::{collections::HashMap, error::Error, fmt, fs::{self, DirEntry, File}, i
 
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
-use serde_json::Value;
 use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
-use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -282,7 +281,9 @@ impl Gui {
         let de: Result<DisplayEngine, DisplayEngineError> = DisplayEngine::new(path.clone());
         match de {
             Ok(de) => {
+                let saved_brushes = std::mem::take(&mut self.display_engine.saved_brushes);
                 self.display_engine = de; // Move it on in!
+                self.display_engine.saved_brushes = saved_brushes;
             }
             Err(e) => {
                 self.do_alert(&e.cause);
@@ -320,18 +321,6 @@ impl Gui {
         }
         self.needs_bg_tile_refresh = true;
         self.project_open = true;
-        // Load brushes
-        match self.load_brushes_json() {
-            Err(error) => {
-                let brush_db_err = format!("Brush database load error: '{error}'");
-                log_write(brush_db_err.clone(), LogLevel::ERROR);
-                self.do_alert(&brush_db_err);
-            }
-            Ok(brushes) => {
-                log_write("Brush database loaded successfully", LogLevel::LOG);
-                self.display_engine.saved_brushes = brushes;
-            }
-        }
     }
     pub fn export_rom_file(&mut self, path: String) {
         log_write(format!("Exporting ROM to '{}'",path), LogLevel::LOG);
@@ -582,18 +571,6 @@ impl Gui {
             log_write(format!("No BG Layer found when caching layer '{}'",which_bg), LogLevel::LOG);
             Vec::new()
         }
-    }
-
-    pub fn load_brushes_json(&mut self) -> Result<Vec<Brush>, Box<dyn Error>> {
-        const BRUSHES_JSON: &str = include_str!("../../assets/stored_brushes.json");
-        let j: Value = serde_json::from_str(BRUSHES_JSON).expect("Should load Brushes JSON");
-        let brush_json_array = j["brushes"].as_array().expect("Brushes JSON array created");
-        let mut out_array: Vec<Brush> = Vec::new();
-        for brush_value in brush_json_array {
-            let b: Brush = serde_json::from_value(brush_value.clone())?;
-            out_array.push(b);
-        }
-        Ok(out_array)
     }
 
     pub fn load_sprite_csv(&mut self) -> Result<(), Box<dyn Error>> {

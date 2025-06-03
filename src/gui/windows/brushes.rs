@@ -1,9 +1,20 @@
-use std::fmt;
+use std::{fmt, sync::LazyLock};
 
 use egui::{Color32, Painter, Pos2, Rect, Response, RichText, Stroke, Vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::{data::types::{MapTileRecordData, Palette}, engine::displayengine::DisplayEngine, utils::{color_image_from_pal, get_pixel_bytes_16, get_uvs_from_tile, log_write, pixel_byte_array_to_nibbles, LogLevel}};
+
+#[derive(Serialize,Deserialize,Clone,Debug)]
+pub struct StoredBrushes {
+    pub brushes: Vec<Brush>
+}
+
+pub static STORED_BRUSHES: LazyLock<StoredBrushes> = LazyLock::new(|| {
+    let value = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/stored_brushes.json"));
+    // log_write("Loaded stored brushes JSON, not parsed yet", LogLevel::DEBUG);
+    serde_json::from_str(value).expect("Valid stored_brushes.json file")
+});
 
 #[derive(Serialize,Deserialize,Clone,Debug)]
 pub struct Brush {
