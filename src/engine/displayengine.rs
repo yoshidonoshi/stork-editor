@@ -90,7 +90,7 @@ pub struct DisplayEngineError {
 impl DisplayEngineError {
     pub fn new(cause: String) -> Self {
         Self {
-            cause: cause.clone()
+            cause,
         }
     }
 }
@@ -369,11 +369,11 @@ impl DisplayEngine {
         }
 
         // Version checks //
-        let got_contents = de.loaded_arm9.clone().expect("ARM9 was loaded properly");
+        let got_contents = de.loaded_arm9.as_ref().expect("ARM9 was loaded properly");
         let game_version = de.game_version.expect("Must be a version");
         match game_version {
             GameVersion::USA10 => {
-                let found_str = utils::read_fixed_string(&got_contents, 0xe1e6e, 6);
+                let found_str = utils::read_fixed_string(got_contents, 0xe1e6e, 6);
                 if !found_str.eq("1-1_D3") {
                     let unk_ver1 = "Could not find 1-1_D3 in USA 1.0".to_string();
                     log_write(unk_ver1.clone(), LogLevel::ERROR);
@@ -381,7 +381,7 @@ impl DisplayEngine {
                 }
             },
             GameVersion::USA11 => {
-                let found_str2 = utils::read_fixed_string(&got_contents, 0x0e20ae, 6);
+                let found_str2 = utils::read_fixed_string(got_contents, 0x0e20ae, 6);
                 if !found_str2.eq("1-1_D3") {
                     let unk_ver2 = "Could not find 1-1_D3 in USA 1.1".to_string();
                     log_write(unk_ver2.clone(), LogLevel::ERROR);
@@ -657,7 +657,7 @@ impl DisplayEngine {
                     bg_data._pal_offset = pal_index as u8 - 1; // -1 to deal with universal palette
                     for p in &palette.palettes {
                         if pal_index < 16 {
-                            self.bg_palettes[pal_index] = p.clone();
+                            self.bg_palettes[pal_index] = *p;
                         }
                         // else { // For some reason, there's more. But not used?
                         //     log_write(format!("Palette Overflow, discarding"), LogLevel::WARN);

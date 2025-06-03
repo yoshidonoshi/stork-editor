@@ -16,11 +16,11 @@ impl RastData {
 }
 
 impl ScenSegment for RastData {
-    fn compile(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         self._raw.clone()
     }
 
-    fn wrap(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile(info);
         segment_wrap(&comp_bytes, self.header())
     }

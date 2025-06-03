@@ -15,10 +15,10 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.disable();
     }
     let which_bg = de.display_settings.current_layer as u8;
-    let layer: &Option<BackgroundData> = match which_bg {
-        1 => &de.bg_layer_1,
-        2 => &de.bg_layer_2,
-        3 => &de.bg_layer_3,
+    let layer: Option<&BackgroundData> = match which_bg {
+        1 => de.bg_layer_1.as_ref(),
+        2 => de.bg_layer_2.as_ref(),
+        3 => de.bg_layer_3.as_ref(),
         _ => {
             ui.label(format!("Current layer is not a BG layer: '{:?}'",&de.display_settings.current_layer));
             return;
@@ -26,8 +26,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     };
     let mut tileset_name = String::from("N/A");
     if let Some(bg_layer) = &layer {
-        let imbz_noext = &bg_layer.get_info().expect("saved_brushes layer has info").imbz_filename_noext;
-        if let Some(imbz_name) = &imbz_noext {
+        let imbz_noext = bg_layer.get_info().expect("saved_brushes layer has info").imbz_filename_noext.as_ref();
+        if let Some(imbz_name) = imbz_noext {
             tileset_name = imbz_name.clone();
         } else {
             ui.label("Non-IMBZ layers not yet supported");
@@ -70,8 +70,8 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                         }
                     } // Otherwise nothing selected
 
-                    let stamp_name = stamp.name.clone().to_lowercase();
-                    let cur_search_string = &de.brush_settings.cur_search_string.clone().to_lowercase();
+                    let stamp_name = stamp.name.to_lowercase();
+                    let cur_search_string = &de.brush_settings.cur_search_string.to_lowercase();
                     if !stamp_name.contains(cur_search_string.trim()) {
                         return;
                     }
@@ -132,8 +132,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
             de.current_brush.name = entered_brush_name;
             de.current_brush.tileset = tileset_name.clone();
-            // This is so janky... Damnit Rust
-            de.current_brush.palette_offset = layer.clone().expect("Layer should load in Stamps")._pal_offset;
+            de.current_brush.palette_offset = layer.expect("Layer should load in Stamps")._pal_offset;
             // Height, Width, Tiles already set in Brush window
             de.saved_brushes.push(de.current_brush.clone());
             de.brush_settings.pos_brush_name.clear();

@@ -108,7 +108,7 @@ impl Default for MapData {
 impl MapData {
     pub fn new(filename_abs: &PathBuf, project_folder: &PathBuf) -> Result<Self,String> {
         let mut ret: MapData = MapData::default();
-        ret.src_file = filename_abs.clone().to_str().unwrap().to_owned();
+        ret.src_file = filename_abs.to_string_lossy().to_string();
         if matches!(fs::exists(&filename_abs), Err(_) | Ok(false)) {
             let file_exists_err = format!("File does not exist: '{}'",&filename_abs.display());
             log_write(file_exists_err.clone(), LogLevel::ERROR);
@@ -209,8 +209,8 @@ impl MapData {
                 }
                 _ => {
                     log_write(format!("Level DataSegment header '{}' unhandled",&seg_header), LogLevel::WARN);
-                    ret.unhandled_headers.push(seg_header.clone());
                     let unkn = GenericTopLevelSegment::new(&segment.internal_data, &seg_header);
+                    ret.unhandled_headers.push(seg_header);
                     ret.segments.push(TopLevelSegmentWrapper::UNKN(unkn));
                 }
             }

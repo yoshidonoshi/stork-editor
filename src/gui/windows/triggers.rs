@@ -98,7 +98,7 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
         de.trigger_settings.selected_uuid = Uuid::nil();
         return;
     };
-    let trigger_before = t.clone();
+    let trigger_before = *t;
     // Left X
     ui.horizontal(|ui| {
         let left_x = egui::DragValue::new(&mut t.left_x)
