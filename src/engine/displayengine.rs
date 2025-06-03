@@ -444,8 +444,6 @@ impl DisplayEngine {
     }
 
     /// This function found at 0x02050000 in USA 1.0. Modified as little as possible.
-    /// 
-    /// TODO: Make real errors
     fn get_level_filename_usa(&self, world_index: &u32, level_index: &u32, game_version: GameVersion) -> Result<String,String> {
         if world_index + 1 > 5 {
             let world_fail = "World 5 is the highest World";
@@ -489,12 +487,14 @@ impl DisplayEngine {
         if level_id > 99 {
             return Err(">99 unknown multi".to_owned());
         }
-        const LEVEL_ARRAY_ADDR_USA11: u32 = 0x000d9178; // 0x020d9178
-        const LEVEL_ARRAY_ADDR_USA10: u32 = 0x000d8f20; // 0x000d8e58;
-        let mut level_array_addr = LEVEL_ARRAY_ADDR_USA10;
-        if game_version == GameVersion::USA11 {
-            level_array_addr = LEVEL_ARRAY_ADDR_USA11;
-        }
+        let level_array_addr = match game_version {
+            GameVersion::USA10 => 0x000d8f20,
+            GameVersion::USA11 => 0x000d9178,
+            _ => {
+                log_write(format!("Attempted to use version {} in USA level loader",get_gameversion_prettyname(&game_version)), LogLevel::FATAL);
+                unreachable!()
+            }
+        };
         let offset = level_id * 4; // u32 = 4 bytes
         let array_internal_address = level_array_addr + offset;
         // Make this the smarter way eventually
@@ -637,16 +637,15 @@ impl DisplayEngine {
     pub fn update_graphics_from_mapdata(&mut self) {
         // Initialize palettes //
         let mut pal_index: usize = 0;
-        let unipal_addr: u64 = match self.game_version.expect("GameVersion loaded") {
+        let gv = self.game_version.expect("GameVersion loaded");
+        let unipal_addr: u64 = match gv {
             // To find, look for 68 50 15 00 32 0a d0 01..
             GameVersion::USA10 => 0x0d6f40, // 0x020d6f40
             GameVersion::USA11 => 0x0d7198, // 0x020d7198
-            GameVersion::USAXX => todo!(),
-            GameVersion::EUR10 => todo!(),
-            GameVersion::EUR11 => todo!(),
-            GameVersion::EURXX => todo!(),
-            GameVersion::JAP => todo!(),
-            GameVersion::UNKNOWN => todo!(),
+            _ => {
+                log_write(format!("Attempting to update graphics with unsupported version '{}'",get_gameversion_prettyname(&gv)), LogLevel::FATAL);
+                unreachable!()
+            }
         }; 
         if let Some(arm9_binary) = &self.loaded_arm9 {
             let mut cur = Cursor::new(arm9_binary);
