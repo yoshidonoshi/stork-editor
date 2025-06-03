@@ -117,7 +117,7 @@ impl ScenInfoData {
 }
 
 impl ScenSegment for ScenInfoData {
-    fn compile(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         let mut comp: Vec<u8> = vec![];
         let _ = comp.write_u16::<LittleEndian>(self.layer_width);
         let _ = comp.write_u16::<LittleEndian>(self.layer_height);
@@ -151,8 +151,8 @@ impl ScenSegment for ScenInfoData {
         comp
     }
 
-    fn wrap(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
-        let comped = self.compile(&Option::None);
+    fn wrap(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
+        let comped = self.compile(Option::None);
         segment_wrap(&comped, self.header())
     }
 

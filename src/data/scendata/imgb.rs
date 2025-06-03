@@ -16,11 +16,11 @@ impl ImgbData {
 }
 
 impl ScenSegment for ImgbData {
-    fn compile(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         self.pixel_tiles.clone()
     }
 
-    fn wrap(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         segment_wrap(&self.compile(info), self.header())
     }
 

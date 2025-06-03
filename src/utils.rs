@@ -285,7 +285,7 @@ pub fn color_image_from_pal(pal: &Palette, pal_indexes: &Vec<u8>) -> ColorImage 
             let col32: Color32 = Color32::TRANSPARENT;
             ret.push(col32);
         } else {
-            let col32: Color32 = pal.colors[*n as usize].color.clone();
+            let col32: Color32 = pal.colors[*n as usize].color;
             ret.push(col32);
         }
     }

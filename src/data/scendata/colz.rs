@@ -76,11 +76,11 @@ impl CollisionData {
 }
 
 impl ScenSegment for CollisionData {
-    fn compile(&self, _info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         self.col_tiles.clone()
     }
 
-    fn wrap(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let compiled = self.compile(info);
         let compressed = lamezip77_lz10_recomp(&compiled);
         segment_wrap(&compressed, self.header())

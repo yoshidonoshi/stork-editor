@@ -147,7 +147,7 @@ impl MapTileRecordData {
         short_val
     }
     pub fn get_render_pal_id(&self, layer_pal_offset: u8, color_mode: u32) -> usize {
-        let mut pal_index = self.palette_id.clone() as usize;
+        let mut pal_index = self.palette_id as usize;
         pal_index += layer_pal_offset as usize;
         // Pretty sure 0x2 is this
         if color_mode == 0x0 || color_mode == 0x2 {
@@ -195,16 +195,16 @@ pub fn wipe_tile_cache(tc: &mut TileCache) {
     }
 }
 
-pub fn get_cached_texture(tc: &TileCache, global_palette_index: usize, tile_index: usize) -> &Option<TextureHandle> {
+pub fn get_cached_texture(tc: &TileCache, global_palette_index: usize, tile_index: usize) -> Option<&TextureHandle> {
     if global_palette_index >= 16 {
         log_write(format!("texture cache: global_palette_index out of bounds: {}",global_palette_index), utils::LogLevel::ERROR);
-        return &Option::None;
+        return Option::None;
     }
     if tile_index >= 1024 {
         log_write(format!("texture cache: tile_index out of bounds: {}",tile_index), utils::LogLevel::ERROR);
-        return &Option::None;
+        return Option::None;
     }
-    &tc[global_palette_index][tile_index]
+    tc[global_palette_index][tile_index].as_ref()
 }
 
 pub fn set_cached_texture(tc: &mut TileCache, global_palette_index: usize, tile_index: usize, tex: TextureHandle) {

@@ -38,17 +38,17 @@ pub enum ScenSegmentWrapper {
 
 pub trait ScenSegment {
     /// Creates a byte vector, uncompressed
-    fn compile(&self, info: &Option<ScenInfoData>) -> Vec<u8>;
+    fn compile(&self, info: Option<&ScenInfoData>) -> Vec<u8>;
     /// Creates a byte vector, with container and possible compression
-    fn wrap(&self, info: &Option<ScenInfoData>) -> Vec<u8>;
+    fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8>;
     /// Get the header
     fn header(&self) -> String;
 }
 
 impl ScenSegment for ScenSegmentWrapper {
-    fn compile(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn compile(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         match self {
-            Self::INFO(info_base) => info_base.compile(&Option::None),
+            Self::INFO(info_base) => info_base.compile(Option::None),
             Self::COLZ(colz) => colz.compile(info),
             Self::PLTB(pltb) => pltb.compile(info),
             Self::SCRL(scrl) => scrl.compile(info),
@@ -61,9 +61,9 @@ impl ScenSegment for ScenSegmentWrapper {
         }
     }
 
-    fn wrap(&self, info: &Option<ScenInfoData>) -> Vec<u8> {
+    fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         match self {
-            Self::INFO(info_base) => info_base.wrap(&Option::None),
+            Self::INFO(info_base) => info_base.wrap(Option::None),
             Self::COLZ(colz) => colz.wrap(info),
             Self::PLTB(pltb) => pltb.wrap(info),
             Self::SCRL(scrl) => scrl.wrap(info),

@@ -320,8 +320,7 @@ impl Compilable for CourseMapInfo {
         // Music ID
         let _ = comp.write_u8(self.map_music);
         // MPDZ name
-        let mut str_vec = self.map_filename_noext.clone().into_bytes();
-        comp.append(&mut str_vec);
+        for b in self.map_filename_noext.bytes() { comp.push(b) }
         comp.push(0x00); // Null terminator
         // Why there are 8 bytes here, I know not
         for _spacer in 0..8 {

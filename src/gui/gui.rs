@@ -6,6 +6,7 @@ use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
 use crate::{data::{backgrounddata::BackgroundData, mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::windows::brushes::Brush, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -128,7 +129,7 @@ impl BgSelectData {
             let rel_x = tile_abs_x - top_abs_x;
             let rel_y = tile_abs_y - top_abs_y;
             let clip = BgClipboardSelectedTile {
-                tile: map_tiles[*selected_map_index as usize].clone(),
+                tile: map_tiles[*selected_map_index as usize],
                 x_offset: rel_x,
                 y_offset: rel_y
             };
@@ -472,7 +473,7 @@ impl Gui {
         let file_name = file_name.to_string_lossy().to_string();
         let time = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time Travel").as_secs();
         backup_folder.push(format!("{}.{:?}.bak",file_name,time));
-        let _copy_res = fs::copy(&mut self.display_engine.loaded_map.src_file.clone(), &mut backup_folder);
+        let _copy_res = fs::copy(&self.display_engine.loaded_map.src_file, &backup_folder);
         log_write(format!("Backed up {} to {}",&self.display_engine.loaded_map.src_file,backup_folder.display()), LogLevel::LOG);
         Ok(backup_folder)
     }
@@ -498,14 +499,14 @@ impl Gui {
     }
     pub fn generate_bg_cache(&self, ctx: &egui::Context, which_bg: u8, bg_pal: &Palette) -> Vec<TextureHandle> {
         puffin::profile_function!();
-        let layer: &Option<BackgroundData> = match which_bg {
-            0x1 => &self.display_engine.bg_layer_1,
-            0x2 => &self.display_engine.bg_layer_2,
-            0x3 => &self.display_engine.bg_layer_3,
+        let layer= match which_bg {
+            0x1 => self.display_engine.bg_layer_1.as_ref(),
+            0x2 => self.display_engine.bg_layer_2.as_ref(),
+            0x3 => self.display_engine.bg_layer_3.as_ref(),
             _ => {
                 // This should be impossible
                 log_write("Invalid bg index in generate_bg_cache", LogLevel::FATAL);
-                &Option::None
+                Option::None
             }
         };
         if let Some(layer_data) = &layer {
@@ -783,7 +784,7 @@ impl Gui {
 
     fn create_map_templates(&mut self) {
         log_write("Creating Map templates", LogLevel::LOG);
-        let map_filenames: Vec<String> = self.display_engine.course_settings.map_templates.values().map(|x| x.clone()).collect();
+        let map_filenames: Vec<String> = self.display_engine.course_settings.map_templates.values().cloned().collect();
         // Only one error in get_template_folder, so Option not Result
         let Some(template_dir) = get_template_folder(&self.export_directory) else {
             log_write("Failed to get or create template directory", LogLevel::ERROR);
@@ -876,11 +877,10 @@ impl Gui {
         if self.display_engine.display_settings.current_layer == CurrentLayer::Sprites {
             // Replace copied sprites
             self.display_engine.clipboard.sprite_clip.sprites.clear();
-            let uuids_copy = self.display_engine.selected_sprite_uuids.clone();
             // Find the top left one
             // This is LevelObject space, not GameFine or GUI Space
             let mut top_left_most: Pos2 = Pos2::new(999999.0, 999999.0);
-            for spr_id in &uuids_copy {
+            for spr_id in &self.display_engine.selected_sprite_uuids {
                 let Some(lsprite) = self.display_engine.get_loaded_sprite_by_uuid(spr_id) else {
                     log_write(format!("Sprite UUID '{}' did not have an associated loaded Sprite",spr_id), LogLevel::ERROR);
                     continue;
@@ -908,7 +908,7 @@ impl Gui {
             if let Some(bg) = bg_res {
                 if let Some(tiles) = bg.get_mpbz() {
                     let clips = self.display_engine.bg_sel_data.to_clipboard_tiles(
-                        bg.get_info().expect("Copy BG info guarantee").layer_width, &tiles.tiles.clone());
+                        bg.get_info().expect("Copy BG info guarantee").layer_width, &tiles.tiles);
                     self.display_engine.clipboard.bg_clip.tiles = clips;
                     log_write(format!("Copied {} MapTiles to clipboard",
                         self.display_engine.clipboard.bg_clip.tiles.len()
@@ -977,7 +977,7 @@ impl Gui {
             if let Some(bg) = bg_res {
                 let width = bg.get_info().expect("Guaranteed INFO in BG").layer_width;
                 if let Some(tiles) = bg.get_mpbz_mut() {
-                    let clips = self.display_engine.bg_sel_data.to_clipboard_tiles(width, &tiles.tiles.clone());
+                    let clips = self.display_engine.bg_sel_data.to_clipboard_tiles(width, &tiles.tiles);
                     self.display_engine.clipboard.bg_clip.tiles = clips;
                     // Delete tiles that were selected
                     for tile_index in &self.display_engine.bg_sel_data.selected_map_indexes {
@@ -1194,7 +1194,7 @@ impl eframe::App for Gui {
                             ui.selectable_value(radio, bg, format!("{bg:?}"));
                         }
                     });
-                let cur_palette = self.tile_preview_pal.clone();
+                let cur_palette = self.tile_preview_pal;
                 egui::ComboBox::from_label("Palette")
                     .selected_text(format!("{:X}",self.tile_preview_pal))
                     .show_ui(ui, |ui| {
@@ -1660,7 +1660,7 @@ impl eframe::App for Gui {
                         map_keys.sort();
                         for map_name in map_keys {
                             ui.selectable_value(&mut self.display_engine.course_settings.add_map_selected,
-                                map_name.clone(), map_name.clone());
+                                map_name.clone(), &map_name);
                         }
                     }
                 );

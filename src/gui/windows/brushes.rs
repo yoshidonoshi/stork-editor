@@ -204,7 +204,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     log_write("Cannot load selected tiles, nothing selected", LogLevel::WARN);
                     return;
                 }
-                let maptiles = layer.get_mpbz().clone().expect("maptiles should be Some'd on a layer");
+                let maptiles = layer.get_mpbz().expect("maptiles should be Some'd on a layer");
                 de.current_brush.tiles.clear();
                 if de.bg_sel_data.selection_width >= u8::MAX as u16 {
                     log_write("Selection width higher than u8 able", LogLevel::ERROR);

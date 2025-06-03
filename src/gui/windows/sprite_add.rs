@@ -16,7 +16,7 @@ pub fn sprite_add_window_show(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &
         .auto_shrink(false)
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)
         .show(ui, |ui| {
-            create_table(ui, de, meta, &de.sprite_search_query.clone().trim().to_lowercase().to_string());
+            create_table(ui, de, meta, &de.sprite_search_query.trim().to_lowercase());
         });
 }
 
