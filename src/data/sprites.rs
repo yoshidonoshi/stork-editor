@@ -364,13 +364,24 @@ impl SpriteGraphicsSegment {
             let color_image: ColorImage = color_image_from_pal(pal, &nibbles_64);
             let tex: TextureHandle = ui.ctx().load_texture("sprite_tex", color_image, egui::TextureOptions::NEAREST);
             // Generate Rect from top_left
-            let mut position: Pos2 = top_left.clone();
+            let mut position: Pos2 = *top_left;
             // First do the per-position ones
             position.x += bframe.x_offset as f32;
             position.y += bframe.y_offset as f32;
             // Then do the tile offset ones
-            let index_offset_x: f32 = (n as f32) % dims.x;
-            let index_offset_y: f32 = ((n as f32) / dims.x).floor();
+            let mut index_offset_x: f32 = (n as f32) % dims.x;
+            if should_flip_h {
+                // Untested so far
+                index_offset_x = dims.x - 1.0 - index_offset_x;
+            }
+            let mut index_offset_y: f32 = ((n as f32) / dims.x).floor();
+            if should_flip_v {
+                // Works with width 4 height 2 flipped
+                // let min_y = 0.0; // Always
+                // let max_y = dims.y - 1.0;
+                // index_offset_y = max_y - (index_offset_y - min_y);
+                index_offset_y = dims.y - 1.0 - index_offset_y;
+            }
             //println!("Index: x={},y={}",index_offset_x,index_offset_y);
             position.x += index_offset_x * tile_dim;
             position.y += index_offset_y * tile_dim;
