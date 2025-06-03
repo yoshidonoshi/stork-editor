@@ -383,7 +383,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     egui::StrokeKind::Outside
                 );
                 if point.distance >= 0 && point.distance != 0 {
-                    let test_val = utils::get_sin_cos_table_value(&arm9, point.angle as u16);
+                    let test_val = utils::get_sin_cos_table_value(&arm9, point.angle as u16,de.game_version.expect("Version loaded"));
                     let x_offset = ((test_val.x as i32) * (point.distance as i32)) >> 12; // Note: this includes the tile width
                     let y_offset = ((test_val.y as i32) * (point.distance as i32)) >> 12; // This will need changing once zoom is added
                     //println!("test_val: {:?}", test_val);

@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
 use egui::{pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
 
-use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, gui::windows::paths_win::PathAngle, CLI_ARGS};
+use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, engine::displayengine::{get_gameversion_prettyname, GameVersion}, gui::windows::paths_win::PathAngle, CLI_ARGS};
 
 pub mod profile;
 
@@ -70,15 +70,29 @@ pub fn print_vector_u8(byte_vector: &Vec<u8>) {
     }
 }
 
-pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16) -> PathAngle {
-    const TABLE_ADDR: u32 = 0x0d1878; //0x020d1878;
+pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16, v: GameVersion) -> PathAngle {
+    let table_addr: u32 = match v {
+        // To find: look up 00 00 51 00 a3 00 f4 00 46...
+        GameVersion::USA10 => 0x0d1878, // 020d1878
+        GameVersion::USA11 => 0x0d5ad0, // 020d5ad0
+        GameVersion::USAXX => 0xDEADBEEF,
+        GameVersion::EUR10 => 0xDEADBEEF,
+        GameVersion::EUR11 => 0xDEADBEEF,
+        GameVersion::EURXX => 0xDEADBEEF,
+        GameVersion::JAP => 0xDEADBEEF,
+        GameVersion::UNKNOWN => 0xDEADBEEF
+    };
+    if table_addr == 0xDEADBEEF {
+        log_write(format!("Attempted to get sincos talble for {}",get_gameversion_prettyname(&v)), LogLevel::FATAL);
+        unreachable!()
+    }
     let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9);
     // Value 1
-    let pos1 = TABLE_ADDR + ((value as u32 >> 4) * 2 + 1) * 2;
+    let pos1 = table_addr + ((value as u32 >> 4) * 2 + 1) * 2;
     rdr.set_position(pos1 as u64);
     let sh1 = rdr.read_i16::<LittleEndian>().expect("Reading SinCos value 1");
     // Value 2
-    let pos2 = TABLE_ADDR + ((value as u32 >> 4) * 2 + 0) * 2;
+    let pos2 = table_addr + ((value as u32 >> 4) * 2 + 0) * 2;
     rdr.set_position(pos2 as u64);
     let sh2 = rdr.read_i16::<LittleEndian>().expect("Reading SinCos value 2");
     PathAngle { x: sh1, y: sh2 }

@@ -387,7 +387,7 @@ impl DisplayEngine {
                     log_write(unk_ver2.clone(), LogLevel::ERROR);
                     return Err(DisplayEngineError::new(unk_ver2));
                 }
-                log_write("USA 1.1 is poorly supported, likely to crash", LogLevel::WARN);
+                log_write("USA 1.1 is poorly supported, proceed with caution", LogLevel::WARN);
             }
             GameVersion::USAXX => {
                 let unk_ver3 = "Unknown USA version".to_string();
