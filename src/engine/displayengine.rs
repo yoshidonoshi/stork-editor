@@ -30,8 +30,8 @@ pub struct DisplaySettings {
 impl Default for DisplaySettings {
     fn default() -> Self {
         Self {
-            // Start on BG2
-            current_layer: CurrentLayer::BG2,
+            // Start on Sprites
+            current_layer: CurrentLayer::Sprites,
             show_bg1: true,
             show_bg2: true,
             show_bg3: true,

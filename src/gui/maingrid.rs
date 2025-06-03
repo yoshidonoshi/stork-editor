@@ -27,14 +27,14 @@ pub fn render_primary_grid(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Re
     draw_background(ui, de, vrect, 3, de.display_settings.show_bg3);
     draw_background(ui, de, vrect, 2, de.display_settings.show_bg2);
     draw_background(ui, de, vrect, 1, de.display_settings.show_bg1);
-    if de.display_settings.show_col {
-        draw_collision_layer(ui, de, vrect);
-    }
     if de.display_settings.show_breakable_rock {
         draw_breakable_rock(ui, de);
     }
     if de.display_settings.show_sprites {
         draw_sprites(ui, de, vrect);
+    }
+    if de.display_settings.show_col { // Goes over Sprites since some work with collision
+        draw_collision_layer(ui, de, vrect);
     }
     if de.display_settings.show_paths {
         draw_paths(ui, de);
@@ -565,6 +565,11 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     if de.selected_sprite_uuids.len() == 1 {
                         de.latest_sprite_settings = utils::settings_to_string(&level_sprite.settings);
                     }
+                }
+                // Debug
+                if click_response.middle_clicked() {
+                    println!("== Middle Clicked Sprite {} ==",level_sprite.uuid);
+                    println!("- {}",level_sprite);
                 }
                 // If selected
                 if de.selected_sprite_uuids.contains(&level_sprite.uuid) {

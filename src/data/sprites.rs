@@ -1,10 +1,10 @@
 use std::{fmt, io::{Cursor, Read, Write}};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use egui::{emath, pos2, Color32, ColorImage, Pos2, Rect, TextureHandle};
+use egui::{emath, pos2, Color32, ColorImage, Pos2, Rect, TextureHandle, Vec2};
 use uuid::Uuid;
 
-use crate::{engine::{compression::segment_wrap, displayengine::DisplayEngine}, utils::{color_image_from_pal, log_write, pixel_byte_array_to_nibbles, LogLevel}};
+use crate::{engine::{compression::segment_wrap, displayengine::DisplayEngine}, utils::{self, color_image_from_pal, log_write, pixel_byte_array_to_nibbles, LogLevel}};
 
 use super::{segments::DataSegment, types::Palette, TopLevelSegment};
 
@@ -31,8 +31,8 @@ impl Default for LevelSprite {
 }
 impl fmt::Display for LevelSprite {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"LevelSprite [ id=0x{:X}, uuid={}, x_pos=0x{:X}, y_pos=0x{:X}, settings={:?}",
-            self.object_id, self.uuid, self.x_position, self.y_position, self.settings)
+        write!(f,"LevelSprite [ id=0x{:X}, uuid={}, x_pos=0x{:X}, y_pos=0x{:X}, settings=[{}] ]",
+            self.object_id, self.uuid, self.x_position, self.y_position, utils::settings_to_string(&self.settings))
     }
 }
 impl LevelSprite {
@@ -193,7 +193,51 @@ pub fn draw_sprite(
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
             return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
-        },
+        }
+        0x23 => {
+            const PIPE_PALETTE: usize = 0x89;
+            let direction: u16 = sprite.settings[0] as u16 + ((sprite.settings[1] as u16) << 8);
+            let length: u16 = sprite.settings[2] as u16 + ((sprite.settings[3] as u16) << 8);
+            // 0 and 1 is up and down, 2 and 3 is left and right
+            let tileset_offset: usize = if direction < 2 { 0x13 } else { 0x12 }; // 02042e80, ~02042e9c
+            let gra = get_graphics_segment(de, "objset.arcz".to_owned(), tileset_offset);
+            let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), PIPE_PALETTE, 0, 16);
+            match direction {
+                0x00 => { // Going down
+                    let mut rects = vec![];
+                    let mut top = gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+                    for i in 0..length {
+                        let new_rect = rect.left_top() + Vec2::new(0.0, (i as f32 * 16.0) + 16.0);
+                        let mut mid = gra.render_sprite_frame(ui,1,&pal,&new_rect,tile_dim,selected);
+                        rects.append(&mut mid);
+                    }
+                    let end_rect = rect.left_top() + Vec2::new(0.0, (length as f32 * 16.0) + 16.0);
+                    let mut end = gra.render_sprite_frame(ui,2,&pal,&end_rect,tile_dim,selected);
+                    rects.append(&mut top);
+                    rects.append(&mut end);
+                    rects
+                }
+                0x01 => { // Going up
+                    let mut rects = vec![];
+                    let start_rect = rect.left_top() + Vec2::new(0.0, -16.0);
+                    let mut start = gra.render_sprite_frame(ui,3,&pal,&start_rect,tile_dim,selected);
+                    rects.append(&mut start);
+                    for i in 0..length {
+                        let new_rect = rect.left_top() + Vec2::new(0.0, -16.0 - (i as f32 * 16.0) - 16.0);
+                        let mut mid = gra.render_sprite_frame(ui,4,&pal,&new_rect,tile_dim,selected);
+                        rects.append(&mut mid);
+                    }
+                    let end_rect = rect.left_top() + Vec2::new(0.0, -16.0 - (length as f32 * 16.0) - 16.0);
+                    let mut end = gra.render_sprite_frame(ui,5,&pal,&end_rect,tile_dim,selected);
+                    rects.append(&mut end);
+                    rects
+                }
+                _ => {
+                    // You'll need to add handlers for the others too
+                    vec![]
+                }
+            }
+        }
         0x28 => { // Flower Collectible
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x16);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x9b, 0, 16);
@@ -278,7 +322,6 @@ impl SpriteGraphicsSegment {
         selected: bool
     ) -> Vec<Rect> {
         let sprite_frame = &self.sprite_frames[frame_index];
-        let uvs: Rect = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
 
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&self.internal_data);
         rdr.set_position(sprite_frame.build_offset as u64 + sprite_frame._pos);
@@ -292,6 +335,21 @@ impl SpriteGraphicsSegment {
         let x_offset: i16 = rdr.read_i16::<LittleEndian>().expect("render_sprite_frame: x_offset i16");
         let y_offset: i16 = rdr.read_i16::<LittleEndian>().expect("render_sprite_frame: y_offset i16");
         let flags: u16 = rdr.read_u16::<LittleEndian>().expect("render_sprite_frame: flags u16");
+        // Get UVs //
+        // Prior Stork implementation: (flags & 0b0010'0000'0000'0000) != 0
+        let should_flip_v = (flags & 0b0010000000000000) != 0;
+        // Prior Stork implementation: shouldFlipH = (flags & 0b0001'0000'0000'0000) != 0;
+        let should_flip_h = (flags & 0b0001000000000000) != 0;
+        // UV calculation
+        let mut uvs = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+        if should_flip_h && !should_flip_v {
+            uvs = Rect::from_min_max(pos2(1.0, 0.0), pos2(0.0, 1.0));
+        } else if !should_flip_h && should_flip_v {
+            uvs = Rect::from_min_max(pos2(0.0, 1.0), pos2(1.0, 0.0));
+        } else if should_flip_h && should_flip_v{
+            uvs = Rect::from_min_max(pos2(1.0, 1.0), pos2(0.0, 0.0));
+        }
+
         let bframe: SpriteBuildData = SpriteBuildData { tile_offset, x_offset, y_offset, flags };
         let pixels_start_position = bframe.tile_offset << 4;
         rdr.set_position(pixels_start_position as u64);
@@ -306,13 +364,24 @@ impl SpriteGraphicsSegment {
             let color_image: ColorImage = color_image_from_pal(pal, &nibbles_64);
             let tex: TextureHandle = ui.ctx().load_texture("sprite_tex", color_image, egui::TextureOptions::NEAREST);
             // Generate Rect from top_left
-            let mut position: Pos2 = top_left.clone();
+            let mut position: Pos2 = *top_left;
             // First do the per-position ones
             position.x += bframe.x_offset as f32;
             position.y += bframe.y_offset as f32;
             // Then do the tile offset ones
-            let index_offset_x: f32 = n as f32 % dims.x;
-            let index_offset_y: f32 = (n as f32 / dims.y).floor();
+            let mut index_offset_x: f32 = (n as f32) % dims.x;
+            if should_flip_h {
+                // Untested so far
+                index_offset_x = dims.x - 1.0 - index_offset_x;
+            }
+            let mut index_offset_y: f32 = ((n as f32) / dims.x).floor();
+            if should_flip_v {
+                // Works with width 4 height 2 flipped
+                // let min_y = 0.0; // Always
+                // let max_y = dims.y - 1.0;
+                // index_offset_y = max_y - (index_offset_y - min_y);
+                index_offset_y = dims.y - 1.0 - index_offset_y;
+            }
             //println!("Index: x={},y={}",index_offset_x,index_offset_y);
             position.x += index_offset_x * tile_dim;
             position.y += index_offset_y * tile_dim;
