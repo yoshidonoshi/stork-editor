@@ -387,7 +387,7 @@ impl DisplayEngine {
                     log_write(unk_ver2.clone(), LogLevel::ERROR);
                     return Err(DisplayEngineError::new(unk_ver2));
                 }
-                log_write("USA 1.1 is poorly supported, likely to crash", LogLevel::WARN);
+                log_write("USA 1.1 is poorly supported, proceed with caution", LogLevel::WARN);
             }
             GameVersion::USAXX => {
                 let unk_ver3 = "Unknown USA version".to_string();
@@ -444,8 +444,6 @@ impl DisplayEngine {
     }
 
     /// This function found at 0x02050000 in USA 1.0. Modified as little as possible.
-    /// 
-    /// TODO: Make real errors
     fn get_level_filename_usa(&self, world_index: &u32, level_index: &u32, game_version: GameVersion) -> Result<String,String> {
         if world_index + 1 > 5 {
             let world_fail = "World 5 is the highest World";
@@ -489,12 +487,14 @@ impl DisplayEngine {
         if level_id > 99 {
             return Err(">99 unknown multi".to_owned());
         }
-        const LEVEL_ARRAY_ADDR_USA11: u32 = 0x000d9178; // 0x020d9178
-        const LEVEL_ARRAY_ADDR_USA10: u32 = 0x000d8f20; // 0x000d8e58;
-        let mut level_array_addr = LEVEL_ARRAY_ADDR_USA10;
-        if game_version == GameVersion::USA11 {
-            level_array_addr = LEVEL_ARRAY_ADDR_USA11;
-        }
+        let level_array_addr = match game_version {
+            GameVersion::USA10 => 0x000d8f20,
+            GameVersion::USA11 => 0x000d9178,
+            _ => {
+                log_write(format!("Attempted to use version {} in USA level loader",get_gameversion_prettyname(&game_version)), LogLevel::FATAL);
+                unreachable!()
+            }
+        };
         let offset = level_id * 4; // u32 = 4 bytes
         let array_internal_address = level_array_addr + offset;
         // Make this the smarter way eventually
@@ -637,10 +637,19 @@ impl DisplayEngine {
     pub fn update_graphics_from_mapdata(&mut self) {
         // Initialize palettes //
         let mut pal_index: usize = 0;
-        const UNIPAL_ADDR: u64 = 0x000d6f40;
+        let gv = self.game_version.expect("GameVersion loaded");
+        let unipal_addr: u64 = match gv {
+            // To find, look for 68 50 15 00 32 0a d0 01..
+            GameVersion::USA10 => 0x0d6f40, // 0x020d6f40
+            GameVersion::USA11 => 0x0d7198, // 0x020d7198
+            _ => {
+                log_write(format!("Attempting to update graphics with unsupported version '{}'",get_gameversion_prettyname(&gv)), LogLevel::FATAL);
+                unreachable!()
+            }
+        }; 
         if let Some(arm9_binary) = &self.loaded_arm9 {
             let mut cur = Cursor::new(arm9_binary);
-            cur.set_position(UNIPAL_ADDR);
+            cur.set_position(unipal_addr);
             let pal = Palette::from_cur(&mut cur,16);
             self.bg_palettes[pal_index] = pal;
         } else {

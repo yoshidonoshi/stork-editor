@@ -10,8 +10,6 @@ Stork Editor
 
 > Stork is a ROM hacking tool for Yoshi's Island DS. YIDS has an immensely powerful engine, while having the same charming graphics and platforming as the original game. It can be used for both minor modifications to the base game, to completely new ROM hack campaigns.
 
-The game version used for development is **USA 1.0** (aka r0), please rip legally. Support for other versions is in progress.
-
 ## Features
 
 - View and edit 100% of levels
@@ -28,6 +26,12 @@ The game version used for development is **USA 1.0** (aka r0), please rip legall
 2. Read the [Manual](https://github.com/yoshidonoshi/stork-editor/wiki/Stork-Editor) for how to use it properly
 3. Acquire a legal copy of the game (USA r0 is best supported)
 4. Run the software. It should require no dependencies
+
+## Versions Supported
+
+- Primary development and support is for **USA 1.0** (aka r0), please acquire legally
+- Partial support is available for **USA 1.1** (aka r1), but not every change is documented
+- Other versions will eventually have partial support
 
 ## Building
 
