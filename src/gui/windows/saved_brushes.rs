@@ -4,7 +4,7 @@ use egui::{CursorIcon, TextEdit};
 use egui_extras::{Column, TableBuilder};
 use serde_json::json;
 
-use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::{windows::brushes::{BrushType, STORED_BRUSHES}}, utils::{log_write, LogLevel}};
+use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::windows::brushes::{BrushType, STORED_BRUSHES}, utils::{is_debug, log_write, LogLevel}};
 
 use super::brushes::{Brush, StoredBrushes};
 
@@ -157,6 +157,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 create_brush_row(i, BrushType::Saved, &stamp, Some(&mut de.saved_brushes));
             }
         });
+    ui.add_space(5.0);
     ui.horizontal(|ui| {
         let store_enabled = !de.current_brush.tiles.is_empty();
         let button_store = ui.add_enabled(store_enabled, egui::Button::new("Store Current Brush"));
@@ -180,17 +181,19 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             ui.add_enabled(false, TextEdit::singleline(&mut String::from("No tiles in current brush")));
         }
     });
-    ui.horizontal(|ui| {
-        let brush_export_button = ui.button("Export Brushes JSON");
-        if brush_export_button.clicked() {
-            save_brushes_to_file(&de.saved_brushes);
-        }
-        ui.disable();
-        let brush_load_button = ui.button("Load Brushes JSON");
-        if brush_load_button.clicked() {
-            de.load_saved_brushes();
-        }
-    });
+    if is_debug() {
+        ui.horizontal(|ui| {
+            let brush_export_button = ui.button("Export Brushes JSON");
+            if brush_export_button.clicked() {
+                save_brushes_to_file(&de.saved_brushes);
+            }
+            ui.disable();
+            let brush_load_button = ui.button("Load Brushes JSON");
+            if brush_load_button.clicked() {
+                de.load_saved_brushes();
+            }
+        });
+    }
 }
 
 pub fn load_stored_brushes() {
