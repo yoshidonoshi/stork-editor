@@ -67,5 +67,5 @@ fn initial_load(gui: &mut Gui) {
         log_write("Sprite database loaded successfully", LogLevel::LOG);
     }
     load_stored_brushes();
-    gui.load_saved_brushes();
+    gui.display_engine.load_saved_brushes();
 }
