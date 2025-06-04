@@ -72,20 +72,14 @@ pub fn print_vector_u8(byte_vector: &Vec<u8>) {
 
 pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16, v: GameVersion) -> PathAngle {
     let table_addr: u32 = match v {
-        // To find: look up 00 00 51 00 a3 00 f4 00 46...
+        // To find: look up 00 00 00 10 06 00 00 10 0d 00 00 10...
         GameVersion::USA10 => 0x0d1878, // 020d1878
-        GameVersion::USA11 => 0x0d5ad0, // 020d5ad0
-        GameVersion::USAXX => 0xDEADBEEF,
-        GameVersion::EUR10 => 0xDEADBEEF,
-        GameVersion::EUR11 => 0xDEADBEEF,
-        GameVersion::EURXX => 0xDEADBEEF,
-        GameVersion::JAP => 0xDEADBEEF,
-        GameVersion::UNKNOWN => 0xDEADBEEF
+        GameVersion::USA11 => 0x0d1ad0, // 020d1ad0
+        _ => {
+            log_write(format!("Attempted to get sincos table for {}",get_gameversion_prettyname(&v)), LogLevel::FATAL);
+            unreachable!()
+        }
     };
-    if table_addr == 0xDEADBEEF {
-        log_write(format!("Attempted to get sincos talble for {}",get_gameversion_prettyname(&v)), LogLevel::FATAL);
-        unreachable!()
-    }
     let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9);
     // Value 1
     let pos1 = table_addr + ((value as u32 >> 4) * 2 + 1) * 2;
