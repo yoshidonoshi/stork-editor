@@ -291,7 +291,7 @@ impl Gui {
             }
         }
         
-        let game_version = self.display_engine.game_version.expect("Game version cannot be not set here");
+        let game_version = self.display_engine.game_version;
         if game_version != GameVersion::USA10 {
             let game_version_pretty = get_gameversion_prettyname(&game_version);
             let unsupported_alert = format!("You are using an unsupported version '{game_version_pretty}', saves will likely break. Supported versions: USA 1.0");
@@ -1269,7 +1269,7 @@ impl eframe::App for Gui {
             .min_width(300.0)
             .drag_to_scroll(false)
             .show(ctx, |ui| {
-                show_course_settings_window(ui, &mut self.display_engine);
+                show_course_settings_window(ui, &mut self.display_engine, self.project_open);
             });
         egui::Window::new("Triggers")
             .open(&mut self.area_window_open)
