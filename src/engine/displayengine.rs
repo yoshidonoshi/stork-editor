@@ -633,7 +633,7 @@ impl DisplayEngine {
     pub fn update_graphics_from_mapdata(&mut self) {
         // Initialize palettes //
         let mut pal_index: usize = 0;
-        let gv = self.game_version.expect("GameVersion loaded");
+        let gv = self.game_version;
         let unipal_addr: u64 = match gv {
             // To find, look for 68 50 15 00 32 0a d0 01..
             GameVersion::USA10 => 0x0d6f40, // 0x020d6f40
