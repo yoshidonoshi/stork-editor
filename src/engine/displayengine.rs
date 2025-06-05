@@ -193,7 +193,7 @@ pub struct DisplayEngine {
     pub path_settings: PathSettings,
     pub loaded_archives: HashMap<String,RenderArchive>,
     pub loaded_arm9: Option<Vec<u8>>,
-    pub game_version: Option<GameVersion>,
+    pub game_version: GameVersion,
     pub display_settings: DisplaySettings,
     pub selected_sprite_uuids: Vec<Uuid>,
     pub selected_sprite_to_place: Option<u16>,
@@ -227,7 +227,7 @@ impl Default for DisplayEngine {
             bg_palettes: Default::default(),
             bg_layer_1: Option::None, bg_layer_2: Option::None, bg_layer_3: Option::None,
             loaded_arm9: Option::None,
-            game_version: Option::None,
+            game_version: GameVersion::UNKNOWN,
             tile_cache_bg1: vec![vec![Option::None;1024];16],
             tile_cache_bg2: vec![vec![Option::None;1024];16],
             tile_cache_bg3: vec![vec![Option::None;1024];16],
@@ -298,7 +298,7 @@ impl DisplayEngine {
                 _=> GameVersion::UNKNOWN
             };
             log_write(format!("Found game version header: '{}'",game_code), LogLevel::DEBUG);
-            de.game_version = Some(game_ver);
+            de.game_version = game_ver;
         }
         if let Some(maker_code) = yaml["makercode"].as_str() {
             if maker_code == "01" {
@@ -333,21 +333,21 @@ impl DisplayEngine {
         de.loaded_arm9 = Some(contents);
 
         // Get Revision
-        let gamever = de.game_version.expect("Gameversion set"); // Copies
+        let gamever = de.game_version; // Copies
         match gamever {
             GameVersion::USAXX => {
-                de.game_version = Some(match build_date.as_str() {
+                de.game_version = match build_date.as_str() {
                     "061110.1620" => GameVersion::USA11,
                     "061009.0352" => GameVersion::USA10,
                     _ => GameVersion::USAXX
-                });
+                };
             }
             GameVersion::EURXX => {
-                de.game_version = Some(match build_date.as_str() {
+                de.game_version = match build_date.as_str() {
                     "061009.0352" => GameVersion::EUR10,
                     "061110.1620" => GameVersion::EUR11,
                     _ => GameVersion::EURXX
-                });
+                };
             }
             GameVersion::UNKNOWN => {
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unknown game");
@@ -370,7 +370,7 @@ impl DisplayEngine {
 
         // Version checks //
         let got_contents = de.loaded_arm9.as_ref().expect("ARM9 was loaded properly");
-        let game_version = de.game_version.expect("Must be a version");
+        let game_version = de.game_version;
         match game_version {
             GameVersion::USA10 => {
                 let found_str = utils::read_fixed_string(got_contents, 0xe1e6e, 6);
@@ -418,11 +418,7 @@ impl DisplayEngine {
     }
 
     fn get_level_filename(&self, world_index: &u32, level_index: &u32) -> String {
-        let Some(game_ver) = self.game_version else {
-            // Should be impossible
-            log_write("Attempted to call get_level_filename before game opened", LogLevel::FATAL);
-            unreachable!();
-        };
+        let game_ver = self.game_version;
         let filename_res = match game_ver {
             GameVersion::USA10 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA10),
             GameVersion::USA11 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA11),
@@ -637,7 +633,7 @@ impl DisplayEngine {
     pub fn update_graphics_from_mapdata(&mut self) {
         // Initialize palettes //
         let mut pal_index: usize = 0;
-        let gv = self.game_version.expect("GameVersion loaded");
+        let gv = self.game_version;
         let unipal_addr: u64 = match gv {
             // To find, look for 68 50 15 00 32 0a d0 01..
             GameVersion::USA10 => 0x0d6f40, // 0x020d6f40

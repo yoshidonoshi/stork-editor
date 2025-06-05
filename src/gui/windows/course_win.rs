@@ -58,14 +58,14 @@ fn get_course_music_name(music: u8) -> String {
     String::from(name)
 }
 
-pub fn show_course_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+pub fn show_course_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine, project_open: bool) {
     puffin::profile_function!();
     StripBuilder::new(ui)
         .size(Size::exact(100.0))
         .size(Size::remainder())
         .horizontal(|mut strip| {
             strip.cell(|ui| {
-                draw_map_section(ui, de);
+                draw_map_section(ui, de, project_open);
             });
             strip.cell(|ui| {
                 draw_settings_section(ui, de);
@@ -73,9 +73,9 @@ pub fn show_course_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         });
 }
 
-fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
+fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine, project_open: bool) {
     ui.horizontal(|ui| {
-        if de.game_version.is_none() {
+        if !project_open {
             ui.disable(); // Project is closed
         }
         let new_button = ui.button("New");
