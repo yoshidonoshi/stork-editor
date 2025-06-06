@@ -616,14 +616,14 @@ impl DisplayEngine {
         Ok(()) // Could something useful be returned?
     }
 
-    pub fn get_render_archive(&mut self, archive_name_local: &String) -> &RenderArchive {
+    pub fn get_render_archive(&mut self, archive_name_local: &str) -> &RenderArchive {
         if self.loaded_archives.contains_key(archive_name_local) {
             let arc_opt = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get");
             arc_opt
         } else {
             let archive_name_full = nitrofs_abs(&self.export_folder, archive_name_local).display().to_string();
             let rarc = RenderArchive::new(archive_name_full, &self.export_folder);
-            self.loaded_archives.insert(archive_name_local.clone(), rarc);
+            self.loaded_archives.insert(archive_name_local.to_string(), rarc);
             let ret = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get post creation");
             ret
         }

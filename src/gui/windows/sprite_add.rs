@@ -23,7 +23,7 @@ pub fn sprite_add_window_show(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &
         });
 }
 
-fn create_table(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,SpriteMetadata>, query: &String) {
+fn create_table(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,SpriteMetadata>, query: &str) {
     let _table = TableBuilder::new(ui)
     .striped(true)
     .resizable(false)

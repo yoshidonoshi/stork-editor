@@ -8,9 +8,9 @@ pub struct RomExtractError {
     pub cause: String
 }
 impl RomExtractError {
-    pub fn new(cause: &String) -> Self {
+    pub fn new(cause: &str) -> Self {
         Self {
-            cause: cause.clone()
+            cause: cause.to_string()
         }
     }
 }
@@ -48,7 +48,7 @@ pub fn extract_rom_files(nds_file: &PathBuf, output_dir: &PathBuf) -> Result<Pat
 // Only a placeholder for now
 pub struct RomGenerateError{}
 
-pub fn generate_rom(config: &String, new_nds_file: &String) -> Result<(),RomGenerateError> {
+pub fn generate_rom(config: &str, new_nds_file: &str) -> Result<(),RomGenerateError> {
     log_write("This will take a long time (in debug mode)...", LogLevel::DEBUG);
     let Ok(rom) = Rom::load(&config, RomLoadOptions::default()) else {
         utils::log_write(format!("Failed to load directory '{}'",&config), utils::LogLevel::ERROR);

@@ -131,7 +131,7 @@ pub fn settings_to_string(settings: &Vec<u8>) -> String {
     }).collect::<String>().trim().to_string()
 }
 
-pub fn string_to_settings(settings_string: &String) -> Result<Vec<u8>,String> {
+pub fn string_to_settings(settings_string: &str) -> Result<Vec<u8>,String> {
     let split: Vec<&str> = settings_string.trim().split(' ').collect();
     let mut new_settings: Vec<u8> = Vec::new();
     for str8 in split {
@@ -350,7 +350,7 @@ pub fn write_vec_test_file(byte_vector: &Vec<u8>,filename: String) {
     }
 }
 
-pub fn nitrofs_abs(export_dir: &PathBuf,filename_local: &String) -> PathBuf {
+pub fn nitrofs_abs(export_dir: &PathBuf,filename_local: &str) -> PathBuf {
     let mut p: PathBuf = export_dir.clone();
     p.push("files");
     p.push("file");

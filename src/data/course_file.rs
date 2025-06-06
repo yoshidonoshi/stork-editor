@@ -38,7 +38,7 @@ impl Compilable for CourseInfo {
     }
 }
 impl CourseInfo {
-    pub fn new(abs_path: &PathBuf, label: &String) -> Self {
+    pub fn new(abs_path: &PathBuf, label: &str) -> Self {
         // It is uncompressed
         let file_bytes = match fs::read(abs_path) {
             Err(error) => {
@@ -133,7 +133,7 @@ impl CourseInfo {
         let mut ret = CourseInfo {
             level_map_data: cscn_vec,
             src_filename: abs_path.to_str().unwrap_or("UNWRAP FAILURE").to_owned(),
-            label: label.clone()
+            label: label.to_string()
         };
         ret.update_exit_uuids();
         ret

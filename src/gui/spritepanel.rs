@@ -94,7 +94,7 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
 
 }
 
-fn is_settings_string_valid(settings_string: &String, ideal_len: usize) -> bool {
+fn is_settings_string_valid(settings_string: &str, ideal_len: usize) -> bool {
     let mut test_settings: Vec<u8> = Vec::new();
     let split: Vec<&str> = settings_string.split(' ').collect();
     for str8 in split {

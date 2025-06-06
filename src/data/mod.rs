@@ -43,8 +43,8 @@ pub struct GenericTopLevelSegment {
 }
 
 impl GenericTopLevelSegment {
-    pub fn new(data: &Vec<u8>, header: &String) -> Self {
-        Self { raw_bytes: data.clone(), header: header.clone() }
+    pub fn new(data: &Vec<u8>, header: &str) -> Self {
+        Self { raw_bytes: data.clone(), header: header.to_string() }
     }
 }
 

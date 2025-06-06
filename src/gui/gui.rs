@@ -270,9 +270,9 @@ impl Gui {
             log_write("Did not get folder path", LogLevel::WARN);
         }
     }
-    pub fn do_alert(&mut self, alert_text: &String) {
+    pub fn do_alert(&mut self, alert_text: &str) {
         log_write(format!("Launching alert window with message '{}'",alert_text), LogLevel::DEBUG);
-        self.general_alert_popup = Some(alert_text.clone());
+        self.general_alert_popup = Some(alert_text.to_string());
     }
     fn open_project(&mut self, path: PathBuf) {
         log_write(format!("Opening Project at '{}'",path.display()), LogLevel::LOG);
