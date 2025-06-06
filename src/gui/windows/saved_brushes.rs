@@ -4,7 +4,7 @@ use egui::{CursorIcon, TextEdit};
 use egui_extras::{Column, TableBuilder};
 use serde_json::json;
 
-use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::windows::brushes::{BrushType, STORED_BRUSHES}, utils::{is_debug, log_write, LogLevel}};
+use crate::{data::backgrounddata::BackgroundData, engine::displayengine::DisplayEngine, gui::windows::brushes::{BrushType, STORED_BRUSHES}, utils::{is_debug, log_write, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::brushes::{Brush, StoredBrushes};
 
@@ -46,7 +46,10 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     }
     ui.horizontal(|ui| {
         ui.label("Filter:");
-        ui.add_enabled(true, egui::TextEdit::singleline(&mut de.brush_settings.cur_search_string));
+        let fl = ui.add_enabled(true, egui::TextEdit::singleline(&mut de.brush_settings.cur_search_string));
+        if fl.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
     });
     let _table = TableBuilder::new(ui)
         .striped(true)
@@ -176,7 +179,10 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             save_brushes_to_file(&de.saved_brushes);
         }
         if store_enabled {
-            ui.text_edit_singleline(&mut de.brush_settings.pos_brush_name);
+            let sl = ui.text_edit_singleline(&mut de.brush_settings.pos_brush_name);
+            if sl.has_focus() {
+                *NON_MAIN_FOCUSED.lock().unwrap() = true;
+            }
         } else {
             ui.add_enabled(false, TextEdit::singleline(&mut String::from("No tiles in current brush")));
         }

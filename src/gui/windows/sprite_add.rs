@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use egui::{Hyperlink, ScrollArea};
 use egui_extras::{Column, TableBuilder};
 
-use crate::{data::{sprites::SpriteMetadata, types::CurrentLayer}, engine::displayengine::DisplayEngine};
+use crate::{data::{sprites::SpriteMetadata, types::CurrentLayer}, engine::displayengine::DisplayEngine, NON_MAIN_FOCUSED};
 
 pub fn sprite_add_window_show(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &HashMap<u16,SpriteMetadata>) {
     puffin::profile_function!();
@@ -11,7 +11,10 @@ pub fn sprite_add_window_show(ui: &mut egui::Ui, de: &mut DisplayEngine, meta: &
     if de.display_settings.current_layer != CurrentLayer::Sprites {
         ui.disable();
     }
-    let _search_bar = ui.text_edit_singleline(&mut de.sprite_search_query);
+    let search_bar = ui.text_edit_singleline(&mut de.sprite_search_query);
+    if search_bar.has_focus() {
+        *NON_MAIN_FOCUSED.lock().unwrap() = true;
+    }
     ScrollArea::vertical()
         .auto_shrink(false)
         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)

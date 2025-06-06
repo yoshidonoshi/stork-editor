@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![recursion_limit = "2048"]
 
-use std::sync::LazyLock;
+use std::sync::{LazyLock, Mutex};
 
 use clap::Parser;
 use egui::Vec2;
@@ -25,6 +25,7 @@ pub struct Args {
 }
 
 static CLI_ARGS: LazyLock<Args> = LazyLock::new(|| Args::parse());
+static NON_MAIN_FOCUSED: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
 
 fn main() -> eframe::Result {
     let _ = simple_logging::log_to_file("stork.log", LevelFilter::Info);

@@ -3,7 +3,7 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::{area::{Trigger, TriggerData}, mapfile::TopLevelSegmentWrapper, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::{area::{Trigger, TriggerData}, mapfile::TopLevelSegmentWrapper, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}, NON_MAIN_FOCUSED};
 
 pub fn show_triggers_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
@@ -104,7 +104,10 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
         let left_x = egui::DragValue::new(&mut t.left_x)
             .hexadecimal(4, false, true)
             .range(0..=(t.right_x-1));
-        ui.label("Left X");
+        let lxres = ui.label("Left X");
+        if lxres.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         ui.add(left_x);
     });
     // Top Y
@@ -112,7 +115,10 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
         let top_y = egui::DragValue::new(&mut t.top_y)
             .hexadecimal(4, false, true)
             .range(0..=(t.bottom_y-1));
-        ui.label("Top Y");
+        let tyres = ui.label("Top Y");
+        if tyres.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         ui.add(top_y);
     });
     // Right X
@@ -120,7 +126,10 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
         let right_x = egui::DragValue::new(&mut t.right_x)
             .hexadecimal(4, false, true)
             .range((t.left_x+1)..=0xffff);
-        ui.label("Right X");
+        let rxres = ui.label("Right X");
+        if rxres.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         ui.add(right_x);
     });
     // Bottom Y
@@ -128,7 +137,10 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
         let bottom_y = egui::DragValue::new(&mut t.bottom_y)
             .hexadecimal(4, false, true)
             .range((t.top_y+1)..=0xffff);
-        ui.label("Bottom Y");
+        let byres = ui.label("Bottom Y");
+        if byres.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         ui.add(bottom_y);
     });
     if *t != trigger_before {

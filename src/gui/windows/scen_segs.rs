@@ -1,6 +1,6 @@
 use egui::Color32;
 
-use crate::{data::{scendata::{info::ScenInfoData, ScenSegment, ScenSegmentWrapper}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::{scendata::{info::ScenInfoData, ScenSegment, ScenSegmentWrapper}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}, NON_MAIN_FOCUSED};
 
 pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, layer: &CurrentLayer) {
     puffin::profile_function!();
@@ -179,7 +179,10 @@ fn show_info_segment(ui: &mut egui::Ui, info: &mut ScenInfoData) -> bool {
         let color_mode_drag = egui::DragValue::new(&mut info.color_mode)
             .speed(1)
             .range(0..=3);
-        ui.add_enabled(false,color_mode_drag);
+        let cmres = ui.add_enabled(false,color_mode_drag);
+        if cmres.has_focus() { // for the future
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         ui.label("Color Mode");
     });
     if let Some(imbz_filename_noext) = &info.imbz_filename_noext {
