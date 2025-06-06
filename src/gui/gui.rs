@@ -5,7 +5,7 @@ use rfd::FileDialog;
 use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
-use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}};
+use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -624,6 +624,7 @@ impl Gui {
         if self.project_open { // Don't make loading the level an undo
             self.undoer.feed_state(ctx.input(|input| input.time), &self.display_engine.loaded_map);
         }
+        let main_grid_focused = !*NON_MAIN_FOCUSED.lock().unwrap();
         // Stupid workaround for text copy crashing in input_mut
         let mut should_copy = false;
         ctx.input_mut(|i| {
@@ -631,16 +632,16 @@ impl Gui {
             //     println!("{:?}",i.events);
             // }
 
-            if i.events.contains(&egui::Event::Copy) {
+            if i.events.contains(&egui::Event::Copy) && main_grid_focused {
                 self.do_copy();
                 should_copy = true;
             }
-            if i.events.contains(&egui::Event::Cut) {
+            if i.events.contains(&egui::Event::Cut) && main_grid_focused {
                 self.do_cut();
                 should_copy = true;
             }
             // God DAMN this is fucking janky, why Egui why
-            if i.events.iter().any(|e| matches!(e, egui::Event::Paste(_))) {
+            if i.events.iter().any(|e| matches!(e, egui::Event::Paste(_))) && main_grid_focused {
                 self.do_paste();
             }
             // Save
@@ -661,80 +662,83 @@ impl Gui {
                 self.do_open_project();
                 return;
             }
-            // Undo
-            if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Z)) {
-                self.do_undo();
-                return;
-            }
-            // Redo
-            if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Y)) {
-                self.do_redo();
-                return;
-            }
-            // Deselect all
-            if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::D)) {
-                self.do_select_all();
-                return;
-            }
-            // Select all
-            if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::A)) {
-                self.do_select_all();
-                return;
-            }
-            // SPRITE CONTROLS //
-            if
-                self.display_engine.display_settings.current_layer == CurrentLayer::Sprites
-                && !self.display_engine.selected_sprite_uuids.is_empty()
-            {
-                let mut should_update: bool = false;
-                let mut should_deselect: bool = false;
-                for s in &self.display_engine.selected_sprite_uuids {
-                    if let Ok(s) = &self.display_engine.loaded_map.get_sprite_by_uuid(*s) {
-                        if i.key_pressed(egui::Key::ArrowUp) {
-                            self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position, s.y_position - 1);
-                            should_update = true;
-                            self.display_engine.unsaved_changes = true;
-                        } else if i.key_pressed(egui::Key::ArrowLeft) {
-                            self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position - 1, s.y_position);
-                            should_update = true;
-                            self.display_engine.unsaved_changes = true;
-                        } else if i.key_pressed(egui::Key::ArrowRight) {
-                            self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position + 1, s.y_position);
-                            should_update = true;
-                            self.display_engine.unsaved_changes = true;
-                        } else if i.key_pressed(egui::Key::ArrowDown) {
-                            self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position, s.y_position + 1);
-                            should_update = true;
-                            self.display_engine.unsaved_changes = true;
-                        } else if i.key_pressed(egui::Key::Delete) {
-                            let _ = self.display_engine.loaded_map.delete_sprite_by_uuid(s.uuid);
-                            should_deselect = true;
-                            should_update = true;
-                            self.display_engine.unsaved_changes = true;
+            // These all work normally outside of the main grid
+            if main_grid_focused {
+                // Undo
+                if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Z)) {
+                    self.do_undo();
+                    return;
+                }
+                // Redo
+                if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Y)) {
+                    self.do_redo();
+                    return;
+                }
+                // Deselect all
+                if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::D)) {
+                    self.do_select_all();
+                    return;
+                }
+                // Select all
+                if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::A)) {
+                    self.do_select_all();
+                    return;
+                }
+                // SPRITE CONTROLS //
+                if
+                    self.display_engine.display_settings.current_layer == CurrentLayer::Sprites
+                    && !self.display_engine.selected_sprite_uuids.is_empty()
+                {
+                    let mut should_update: bool = false;
+                    let mut should_deselect: bool = false;
+                    for s in &self.display_engine.selected_sprite_uuids {
+                        if let Ok(s) = &self.display_engine.loaded_map.get_sprite_by_uuid(*s) {
+                            if i.key_pressed(egui::Key::ArrowUp) {
+                                self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position, s.y_position - 1);
+                                should_update = true;
+                                self.display_engine.unsaved_changes = true;
+                            } else if i.key_pressed(egui::Key::ArrowLeft) {
+                                self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position - 1, s.y_position);
+                                should_update = true;
+                                self.display_engine.unsaved_changes = true;
+                            } else if i.key_pressed(egui::Key::ArrowRight) {
+                                self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position + 1, s.y_position);
+                                should_update = true;
+                                self.display_engine.unsaved_changes = true;
+                            } else if i.key_pressed(egui::Key::ArrowDown) {
+                                self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position, s.y_position + 1);
+                                should_update = true;
+                                self.display_engine.unsaved_changes = true;
+                            } else if i.key_pressed(egui::Key::Delete) {
+                                let _ = self.display_engine.loaded_map.delete_sprite_by_uuid(s.uuid);
+                                should_deselect = true;
+                                should_update = true;
+                                self.display_engine.unsaved_changes = true;
+                            }
+                        } else {
+                            log_write("Something is very wrong in handle_input, sprite_data unwrap failed", LogLevel::ERROR);
                         }
-                    } else {
-                        log_write("Something is very wrong in handle_input, sprite_data unwrap failed", LogLevel::ERROR);
+                    }
+                    if should_update {
+                        self.display_engine.graphics_update_needed = true;
+                    }
+                    if should_deselect {
+                        self.display_engine.selected_sprite_uuids.clear();
                     }
                 }
-                if should_update {
-                    self.display_engine.graphics_update_needed = true;
-                }
-                if should_deselect {
-                    self.display_engine.selected_sprite_uuids.clear();
-                }
-            }
-            // BG CONTROLS //
-            if self.is_cur_layer_bg() {
-                if !self.display_engine.bg_sel_data.selected_map_indexes.is_empty() && !self.display_engine.bg_sel_data.dragging {
-                    if i.key_pressed(egui::Key::Delete) {
-                        log_write(format!("Deleting selection with {} tiles",self.display_engine.bg_sel_data.selected_map_indexes.len()), LogLevel::LOG);
-                        for tile_index in &self.display_engine.bg_sel_data.selected_map_indexes {
-                            self.display_engine.loaded_map.delete_bg_tile_by_map_index(
-                                self.display_engine.display_settings.current_layer as u8, *tile_index);
+                // BG CONTROLS //
+                if self.is_cur_layer_bg() {
+                    if !self.display_engine.bg_sel_data.selected_map_indexes.is_empty() && !self.display_engine.bg_sel_data.dragging {
+                        if i.key_pressed(egui::Key::Delete) {
+                            log_write(format!("Deleting selection with {} tiles",self.display_engine.bg_sel_data.selected_map_indexes.len()), LogLevel::LOG);
+                            for tile_index in &self.display_engine.bg_sel_data.selected_map_indexes {
+                                self.display_engine.loaded_map.delete_bg_tile_by_map_index(
+                                    self.display_engine.display_settings.current_layer as u8, *tile_index);
+                            }
+                            self.display_engine.bg_sel_data.clear();
+                            self.display_engine.graphics_update_needed = true;
+                            self.display_engine.unsaved_changes = true;
                         }
-                        self.display_engine.bg_sel_data.clear();
-                        self.display_engine.graphics_update_needed = true;
-                        self.display_engine.unsaved_changes = true;
                     }
                 }
             }
@@ -1142,6 +1146,7 @@ impl eframe::App for Gui {
         }
         // Keyboard input
         self.handle_input(ctx);
+        *NON_MAIN_FOCUSED.lock().unwrap() = false; // Reset
 
         // Tile storage //
         if self.needs_bg_tile_refresh {

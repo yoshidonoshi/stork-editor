@@ -1,6 +1,6 @@
 use egui::Color32;
 
-use crate::{engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}, NON_MAIN_FOCUSED};
 
 #[derive(Default)]
 pub struct ResizeSettings {
@@ -47,14 +47,20 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         let width = egui::DragValue::new(&mut settings.new_width)
             .hexadecimal(4, false, true)
             .range(0..=0xffff);
-        ui.add(width);
+        let wres = ui.add(width);
+        if wres.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         ui.label("Width")
     });
     ui.horizontal(|ui| {
         let height = egui::DragValue::new(&mut settings.new_height)
             .hexadecimal(4, false, true)
             .range(0..=0xffff);
-        ui.add(height);
+        let lres = ui.add(height);
+        if lres.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         ui.label("Height");
     });
     ui.add_space(5.0);

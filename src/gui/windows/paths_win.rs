@@ -3,7 +3,7 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::{mapfile::TopLevelSegmentWrapper, path::{PathDatabase, PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::{mapfile::TopLevelSegmentWrapper, path::{PathDatabase, PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}, NON_MAIN_FOCUSED};
 
 const CHANGE_RATE: u32 = 0x1000;
 
@@ -213,13 +213,19 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let angle = egui::DragValue::new(&mut point.angle)
                     .speed(0x10)
                     .hexadecimal(5, false, true);
-                ui.add(angle);
+                let angleres = ui.add(angle);
+                if angleres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.label("Angle");
             });
             ui.horizontal(|ui| {
                 let distance = egui::DragValue::new(&mut point.distance)
                     .hexadecimal(4, false,true);
-                ui.add(distance);
+                let distres = ui.add(distance);
+                if distres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.label("Distance");
             });
             // Then X and Y
@@ -228,7 +234,10 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     .hexadecimal(8, false, true)
                     .speed(CHANGE_RATE)
                     .range(0..=u32::MAX);
-                ui.label("X (Fine)");
+                let xres = ui.label("X (Fine)");
+                if xres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.add(x_drag);
             });
             ui.horizontal(|ui| {
@@ -236,7 +245,10 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     .hexadecimal(8, false, true)
                     .speed(CHANGE_RATE)
                     .range(0..=u32::MAX);
-                ui.label("Y (Fine)");
+                let yres = ui.label("Y (Fine)");
+                if yres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.add(y_drag);
             });
             if point_before != *point {

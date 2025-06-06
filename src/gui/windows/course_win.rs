@@ -4,7 +4,7 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, nitrofs_abs, LogLevel}};
+use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, nitrofs_abs, LogLevel}, NON_MAIN_FOCUSED};
 
 pub struct CourseSettings {
     pub selected_map: Option<usize>,
@@ -244,11 +244,17 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let drag_value_x = egui::DragValue::new(&mut selected_entrance.entrance_x)
                     .hexadecimal(4, false, true)
                     .range(0..=0xffff);
-                ui.add(drag_value_x);
+                let dvx = ui.add(drag_value_x);
+                if dvx.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 let drag_value_y = egui::DragValue::new(&mut selected_entrance.entrance_y)
                     .hexadecimal(4, false, true)
                     .range(0..=0xffff);
-                ui.add(drag_value_y);
+                let dvy = ui.add(drag_value_y);
+                if dvy.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
             });
             show_selected_entrance_settings(ui, selected_entrance);
         });
@@ -342,11 +348,17 @@ fn show_exit_pos(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
         let drag_value_x = egui::DragValue::new(&mut selected_exit.exit_x)
             .hexadecimal(4, false, true)
             .range(0..=0xffff);
-        ui.add(drag_value_x);
+        let dvx = ui.add(drag_value_x);
+        if dvx.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         let drag_value_y = egui::DragValue::new(&mut selected_exit.exit_y)
             .hexadecimal(4, false, true)
             .range(0..=0xffff);
-        ui.add(drag_value_y);
+        let dvy = ui.add(drag_value_y);
+        if dvy.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
     });
 }
 

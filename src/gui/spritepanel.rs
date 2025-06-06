@@ -3,7 +3,7 @@ use std::f32;
 use egui::ScrollArea;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 
-use crate::{data::sprites::{LevelSprite, SpriteMetadata}, gui::{spritesettings, SpriteSettings}, utils::{self, is_debug, log_write, settings_to_string, string_to_settings, LogLevel}};
+use crate::{data::sprites::{LevelSprite, SpriteMetadata}, gui::{spritesettings, SpriteSettings}, utils::{self, is_debug, log_write, settings_to_string, string_to_settings, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::gui::Gui;
 
@@ -53,7 +53,10 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                                 settings_save_check(gui_state, &comp, sprite);
                             }
                             _ => { // Anything we don't know
-                                ui.add(egui::TextEdit::multiline(&mut gui_state.display_engine.latest_sprite_settings).desired_width(120.0));
+                                let ml = ui.add(egui::TextEdit::multiline(&mut gui_state.display_engine.latest_sprite_settings).desired_width(120.0));
+                                if ml.has_focus() {
+                                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                                }
                                 let res = ui.add_enabled(
                                     is_settings_string_valid(
                                         &gui_state.display_engine.latest_sprite_settings,
