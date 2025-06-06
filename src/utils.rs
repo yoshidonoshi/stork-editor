@@ -210,9 +210,9 @@ pub fn string_to_header(header: String) -> u32 {
     match rdr.read_u32::<LittleEndian>() {
         Err(error) => {
             log_write(format!("Failed to read u32 in string_to_header: {}", error), LogLevel::ERROR);
-            return 0xFFFFFFFF;
+            0xFFFFFFFF
         },
-        Ok(read_res) => read_res,
+        Ok(read_res) => read_res
     }
 }
 
@@ -223,8 +223,7 @@ pub fn color_from_u16(val: &u16) -> Color32 {
     let red = (red as f32) * 8.2;
     let green = (green as f32) * 8.2;
     let blue = (blue as f32) * 8.2;
-    let color = Color32::from_rgb(red as u8, green as u8, blue as u8);
-    color
+    Color32::from_rgb(red as u8, green as u8, blue as u8)
 }
 
 pub fn read_c_string(rdr: &mut Cursor<&Vec<u8>>) -> String {
@@ -456,8 +455,7 @@ pub fn get_pixel_bytes_16(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
         log_write(format!("get_pixel_bytes_16 draw overflow, offending tile_id: 0x{:X}/{}",tile_id,tile_id), LogLevel::ERROR);
         return [1;64].to_vec();
     }
-    let byte_array = pixel_tiles[array_start..array_end].to_vec();
-    byte_array
+    pixel_tiles[array_start..array_end].to_vec()
 }
 
 pub fn get_pixel_bytes_256(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
@@ -469,8 +467,7 @@ pub fn get_pixel_bytes_256(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
             array_end,pixel_tiles.len(),tile_id,tile_id), LogLevel::ERROR);
         return [16;64].to_vec();
     }
-    let byte_array = pixel_tiles[array_start..array_end].to_vec();
-    byte_array
+    pixel_tiles[array_start..array_end].to_vec()
 }
 
 pub fn get_x_pos_of_map_index(map_index: u32, map_width: &u32) -> u16 {

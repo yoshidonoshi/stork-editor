@@ -561,8 +561,7 @@ impl Gui {
                     }
                 }
                 // Generate
-                let cache: Vec<TextureHandle> = generate_bg_tile_cache(ctx, color_imgs);
-                return cache;
+                generate_bg_tile_cache(ctx, color_imgs)
             } else {
                 log_write(format!("generate_bg_cache: Failed to retrieve pix_tiles for bg '{}'",which_bg), LogLevel::WARN);
                 Vec::new()
@@ -813,7 +812,6 @@ impl Gui {
             },
             Err(e) => {
                 log_write(format!("Error reading map directory for templates: '{}'",e), LogLevel::ERROR);
-                return;
             }
         }
     }
@@ -1357,8 +1355,7 @@ impl eframe::App for Gui {
                     ui.set_width(200.0);
                     ui.heading("Alert");
                     ui.label(alert.as_str());
-                    let clicked_ok = ui.button("Okay").clicked();
-                    clicked_ok
+                    ui.button("Okay").clicked()
                 });
             alert_modal.inner
         });
