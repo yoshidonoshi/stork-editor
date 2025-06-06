@@ -43,7 +43,7 @@ impl Default for DisplaySettings {
             // Since it's just a copy overlay
             show_breakable_rock: false,
             show_triggers: true,
-            stork_theme: StorkTheme::AUTO,
+            stork_theme: StorkTheme::Auto,
             show_box_for_rendered: true
         }
     }
@@ -68,7 +68,7 @@ pub enum GameVersion {
     /// AYWJ
     JAP,
     /// What?
-    UNKNOWN
+    Unknown
 }
 pub fn get_gameversion_prettyname(gv: &GameVersion) -> String {
     match gv {
@@ -79,7 +79,7 @@ pub fn get_gameversion_prettyname(gv: &GameVersion) -> String {
         GameVersion::USA10 => String::from("USA 1.0"),
         GameVersion::USA11 => String::from("USA 1.1 (rev1)"),
         GameVersion::USAXX => String::from("Unknown USA"),
-        GameVersion::UNKNOWN => String::from("Unknown Game Version")
+        GameVersion::Unknown => String::from("Unknown Game Version")
     }
 }
 
@@ -227,7 +227,7 @@ impl Default for DisplayEngine {
             bg_palettes: Default::default(),
             bg_layer_1: Option::None, bg_layer_2: Option::None, bg_layer_3: Option::None,
             loaded_arm9: Option::None,
-            game_version: GameVersion::UNKNOWN,
+            game_version: GameVersion::Unknown,
             tile_cache_bg1: vec![vec![Option::None;1024];16],
             tile_cache_bg2: vec![vec![Option::None;1024];16],
             tile_cache_bg3: vec![vec![Option::None;1024];16],
@@ -295,7 +295,7 @@ impl DisplayEngine {
                 "AYWE"=> GameVersion::USAXX,
                 "AYWP"=> GameVersion::EURXX,
                 "AYWJ"=> GameVersion::JAP, // Only one Japanese version
-                _=> GameVersion::UNKNOWN
+                _=> GameVersion::Unknown
             };
             log_write(format!("Found game version header: '{}'",game_code), LogLevel::DEBUG);
             de.game_version = game_ver;
@@ -349,7 +349,7 @@ impl DisplayEngine {
                     _ => GameVersion::EURXX
                 };
             }
-            GameVersion::UNKNOWN => {
+            GameVersion::Unknown => {
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unknown game");
                 let unsupported_msg = "Game Version is unknown, canceling load".to_owned();
                 log_write(unsupported_msg.clone(), LogLevel::ERROR);

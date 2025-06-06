@@ -38,7 +38,7 @@ pub enum TopLevelSegmentWrapper {
     ALPH(AlphaData),
     BLKZ(SoftRockBackdrop),
     BRAK(BrakData),
-    UNKN(GenericTopLevelSegment)
+    Unknown(GenericTopLevelSegment)
 }
 
 impl TopLevelSegment for TopLevelSegmentWrapper {
@@ -52,7 +52,7 @@ impl TopLevelSegment for TopLevelSegmentWrapper {
             Self::ALPH(alph) => alph.compile(),
             Self::BLKZ(blkz) => blkz.compile(),
             Self::BRAK(brak) => brak.compile(),
-            Self::UNKN(unkn) => unkn.compile()
+            Self::Unknown(unkn) => unkn.compile()
         }
     }
 
@@ -66,7 +66,7 @@ impl TopLevelSegment for TopLevelSegmentWrapper {
             Self::ALPH(alph) => alph.wrap(),
             Self::BLKZ(blkz) => blkz.wrap(),
             Self::BRAK(brak) => brak.wrap(),
-            Self::UNKN(unkn) => unkn.wrap()
+            Self::Unknown(unkn) => unkn.wrap()
         }
     }
 
@@ -80,7 +80,7 @@ impl TopLevelSegment for TopLevelSegmentWrapper {
             Self::ALPH(alph) => alph.header(),
             Self::BLKZ(blkz) => blkz.header(),
             Self::BRAK(brak) => brak.header(),
-            Self::UNKN(unkn) => unkn.header()
+            Self::Unknown(unkn) => unkn.header()
         }
     }
 }
@@ -211,7 +211,7 @@ impl MapData {
                     log_write(format!("Level DataSegment header '{}' unhandled",&seg_header), LogLevel::WARN);
                     let unkn = GenericTopLevelSegment::new(&segment.internal_data, &seg_header);
                     ret.unhandled_headers.push(seg_header);
-                    ret.segments.push(TopLevelSegmentWrapper::UNKN(unkn));
+                    ret.segments.push(TopLevelSegmentWrapper::Unknown(unkn));
                 }
             }
         } // End loop for segments

@@ -5,7 +5,7 @@ use rfd::FileDialog;
 use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
-use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BGVALUE}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
+use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BgValue}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -13,16 +13,16 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Clone,Copy,PartialEq,Eq,EnumIter)]
 pub enum StorkTheme {
-    DARK,
-    LIGHT,
-    AUTO
+    Dark,
+    Light,
+    Auto
 }
 impl fmt::Display for StorkTheme {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
-            StorkTheme::DARK => "Dark",
-            StorkTheme::LIGHT => "Light",
-            StorkTheme::AUTO => "System",
+            StorkTheme::Dark => "Dark",
+            StorkTheme::Light => "Light",
+            StorkTheme::Auto => "System",
         };
         write!(f,"{}",text)
     }
@@ -195,7 +195,7 @@ pub struct Gui {
     pub bg1_tile_preview_cache: Vec<TextureHandle>,
     pub bg2_tile_preview_cache: Vec<TextureHandle>,
     pub bg3_tile_preview_cache: Vec<TextureHandle>,
-    pub selected_tile_preview_bg: BGVALUE,
+    pub selected_tile_preview_bg: BgValue,
     pub sprite_metadata: HashMap<u16,SpriteMetadata>,
     // Tools
     pub undoer: Undoer<MapData>,
@@ -225,7 +225,7 @@ impl Default for Gui {
             bg1_tile_preview_cache: Vec::new(),
             bg2_tile_preview_cache: Vec::new(),
             bg3_tile_preview_cache: Vec::new(),
-            selected_tile_preview_bg: BGVALUE::BG2, // 1-1's main ground is this
+            selected_tile_preview_bg: BgValue::BG2, // 1-1's main ground is this
             sprite_metadata: HashMap::new(),
             exit_changes_open: false,
             saving_progress: Option::None,
@@ -1192,7 +1192,7 @@ impl eframe::App for Gui {
                 egui::ComboBox::from_label("Background")
                     .selected_text(format!("{radio:?}"))
                     .show_ui(ui, |ui| {
-                        for bg in BGVALUE::iter() {
+                        for bg in BgValue::iter() {
                             ui.selectable_value(radio, bg, format!("{bg:?}"));
                         }
                     });
@@ -1215,13 +1215,13 @@ impl eframe::App for Gui {
                         ui.add_space(1400.0); // Number is arbitrary, just enough to fit max tile count
                         // TODO: In the future, add custom UI spacing inside tiles_window_show to make that uneeded
                         match *radio {
-                            BGVALUE::BG1 => {
+                            BgValue::BG1 => {
                                 tiles_window_show(ui, &self.bg1_tile_preview_cache);
                             }
-                            BGVALUE::BG2 => {
+                            BgValue::BG2 => {
                                 tiles_window_show(ui, &self.bg2_tile_preview_cache);
                             }
-                            BGVALUE::BG3 => {
+                            BgValue::BG3 => {
                                 tiles_window_show(ui, &self.bg3_tile_preview_cache);
                             }
                         }

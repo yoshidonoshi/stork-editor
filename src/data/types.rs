@@ -166,7 +166,7 @@ impl MapTileRecordData {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, EnumIter)]
-pub enum BGVALUE {
+pub enum BgValue {
     BG1,
     BG2,
     BG3
