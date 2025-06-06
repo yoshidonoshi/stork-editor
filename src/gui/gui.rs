@@ -300,7 +300,7 @@ impl Gui {
         self.display_engine.export_folder = self.export_directory.clone();
         // Pre-load some common files
         self.display_engine.update_sprite_metadata(&self.sprite_metadata);
-        self.display_engine.get_render_archive(&"objset.arcz".to_owned());
+        self.display_engine.get_render_archive("objset.arcz");
         // Load the first level
         // 1 0 3 for BRAK and BLKZ
         // 1 4 0 for SCRL
@@ -782,7 +782,7 @@ impl Gui {
                 return Ok(());
             }
         }
-        Err(RomExtractError::new(&"Open ROM failed".to_string()))
+        Err(RomExtractError::new("Open ROM failed"))
     }
 
     fn create_map_templates(&mut self) {

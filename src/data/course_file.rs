@@ -196,7 +196,7 @@ impl CourseInfo {
                         exit.target_map_entrance_raw = ent_index;
                     }
                 } else {
-                    log_write(format!("No index found for entrance with uuid {}, setting to first",exit.target_map_entrance.to_string()), LogLevel::ERROR);
+                    log_write(format!("No index found for entrance with uuid {}, setting to first",exit.target_map_entrance), LogLevel::ERROR);
                     exit.target_map_entrance_raw = 0;
                 }
             }

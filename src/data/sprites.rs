@@ -192,7 +192,7 @@ pub fn draw_sprite(
         0x00 => { // Yellow Coin
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
-            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
         }
         0x23 => {
             const PIPE_PALETTE: usize = 0x89;
@@ -241,17 +241,17 @@ pub fn draw_sprite(
         0x28 => { // Flower Collectible
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x16);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x9b, 0, 16);
-            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
         }
         0x3b => { // Red Coin
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
-            return gra.render_sprite_frame(ui,6,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,6,&pal,&rect.left_top(),tile_dim,selected)
         }
         0x9F => { // Hint Block
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x5d);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0xa9, 0, 16);
-            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
         }
         _ => vec![]
     }

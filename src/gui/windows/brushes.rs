@@ -89,7 +89,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let top_left = ui.min_rect().min;
     ui.allocate_space(Vec2 { x:260.0, y: 000.0 });
     let cur_layer = de.display_settings.current_layer as u8;
-    if cur_layer < 1 || cur_layer > 3 {
+    if !de.display_settings.is_cur_layer_bg() {
         ui.label("Not on a BG layer");
         return;
     }
