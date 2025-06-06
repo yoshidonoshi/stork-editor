@@ -75,6 +75,7 @@ pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16, v: GameVersion) -> Pa
         // To find: look up 00 00 00 10 06 00 00 10 0d 00 00 10...
         GameVersion::USA10 => 0x0d1878, // 020d1878
         GameVersion::USA11 => 0x0d1ad0, // 020d1ad0
+        GameVersion::JAP => 0xD15A8, // Located by reliefland
         _ => {
             log_write(format!("Attempted to get sincos table for {}",get_gameversion_prettyname(&v)), LogLevel::FATAL);
             unreachable!()
