@@ -276,6 +276,7 @@ fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], ti
                     let tile: MapTileRecordData = MapTileRecordData::new(&brush.tiles[index]);
                     // Check if out of bounds (subtract palette offset, +1 for universal palette)
                     let pal_id_signed = tile.palette_id as i32 + *pal_offset as i32 + 1;
+                    #[allow(clippy::manual_range_contains)]
                     if pal_id_signed < 0 || pal_id_signed >= 16 {
                         log_write(format!("Palette ID out of range: {}",pal_id_signed), LogLevel::Error);
                         continue;

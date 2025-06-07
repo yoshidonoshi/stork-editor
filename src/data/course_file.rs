@@ -1,4 +1,4 @@
-use std::{fs, io::Cursor, path::PathBuf};
+use std::{fs, io::Cursor, path::{Path, PathBuf}};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use uuid::Uuid;
 
@@ -240,10 +240,10 @@ impl CourseInfo {
         self.update_exit_uuids();
     }
 
-    pub fn add_template(&mut self, template_file: &str, template_folder: &PathBuf) {
+    pub fn add_template(&mut self, template_file: &str, template_folder: &Path) {
         log_write(format!("Adding new template map: '{}'",template_file), LogLevel::Log);
         let root_path = template_folder.parent().expect("Every possible path has a parent");
-        let mut source_file_path = template_folder.clone();
+        let mut source_file_path = template_folder.to_path_buf();
         source_file_path.push(template_file);
         match fs::exists(&source_file_path) {
             Err(error) => {
@@ -261,7 +261,7 @@ impl CourseInfo {
         loop {
             four_num += 1;
             let new_file_name = format!("{}{:04}.mpdz",&template_file[0..3],four_num);
-            let new_path = utils::nitrofs_abs(&root_path.to_path_buf(), &new_file_name);
+            let new_path = utils::nitrofs_abs(root_path.to_path_buf(), &new_file_name);
             let Ok(new_path_exists) = fs::exists(&new_path) else {
                 log_write("New Template path existence check failed", LogLevel::Error);
                 continue;
@@ -351,12 +351,10 @@ impl CourseMapInfo {
         segment_wrap(uncomped_bytes, "CSCN".to_owned())
     }
     pub fn get_entrance_index(&self, entrance_uuid: &Uuid) -> Option<u8> {
-        let mut index: u8 = 0;
-        for enter in &self.map_entrances {
+        for (index, enter) in self.map_entrances.iter().enumerate() {
             if enter.uuid == *entrance_uuid {
-                return Some(index);
+                return Some(index as u8);
             }
-            index += 1;
         }
         Option::None
     }

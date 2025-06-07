@@ -277,7 +277,7 @@ fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         }
         let palette = &de.bg_palettes[render_pal_id];
         let pixel_tiles = bg.pixel_tiles_preview.as_ref().expect("There should be pixel tiles on the background with COLZ");
-        draw_blkz_tile(tile, palette, &pixel_tiles, &true_rect,ui.ctx(),ui.painter());
+        draw_blkz_tile(tile, palette, pixel_tiles, &true_rect,ui.ctx(),ui.painter());
         // Placement is good!
         //ui.painter().rect_filled(true_rect, 0.0, Color32::RED);
         tile_index += 1;
@@ -383,7 +383,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     egui::StrokeKind::Outside
                 );
                 if point.distance >= 0 && point.distance != 0 {
-                    let test_val = utils::get_sin_cos_table_value(&arm9, point.angle as u16,de.game_version);
+                    let test_val = utils::get_sin_cos_table_value(arm9, point.angle as u16,de.game_version);
                     let x_offset = ((test_val.x as i32) * (point.distance as i32)) >> 12; // Note: this includes the tile width
                     let y_offset = ((test_val.y as i32) * (point.distance as i32)) >> 12; // This will need changing once zoom is added
                     //println!("test_val: {:?}", test_val);
@@ -470,28 +470,26 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     }
                 }
             }
-            if click_response.secondary_clicked() {
-                if !de.path_settings.selected_line.is_nil(){
-                    if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-                        let local_pos = pointer_pos - ui.min_rect().min;
-                        let x_fine = ((local_pos.x / TILE_WIDTH_PX) as u32) << 15;
-                        let y_fine = ((local_pos.y / TILE_HEIGHT_PX) as u32) << 15;
-                        // You are adding it on the end, therefore distance defaults to 0
-                        let p = PathPoint::new(0, 0, x_fine, y_fine);
-                        let puuid = p.uuid; // Copies
-                        let Some(path_data) = de.loaded_map.get_path() else {
-                            log_write("Failed to get PathDatabase", LogLevel::Error);
-                            return;
-                        };
-                        let line = path_data.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
-                        if let Some(l) = line {
-                            l.points.push(p);
-                            de.path_settings.selected_point = puuid;
-                            de.graphics_update_needed = true;
-                            de.unsaved_changes = true;
-                        } else {
-                            log_write("Failed to get PathLine for new PathPoint", LogLevel::Error);
-                        }
+            if click_response.secondary_clicked() && !de.path_settings.selected_line.is_nil() {
+                if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                    let local_pos = pointer_pos - ui.min_rect().min;
+                    let x_fine = ((local_pos.x / TILE_WIDTH_PX) as u32) << 15;
+                    let y_fine = ((local_pos.y / TILE_HEIGHT_PX) as u32) << 15;
+                    // You are adding it on the end, therefore distance defaults to 0
+                    let p = PathPoint::new(0, 0, x_fine, y_fine);
+                    let puuid = p.uuid; // Copies
+                    let Some(path_data) = de.loaded_map.get_path() else {
+                        log_write("Failed to get PathDatabase", LogLevel::Error);
+                        return;
+                    };
+                    let line = path_data.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
+                    if let Some(l) = line {
+                        l.points.push(p);
+                        de.path_settings.selected_point = puuid;
+                        de.graphics_update_needed = true;
+                        de.unsaved_changes = true;
+                    } else {
+                        log_write("Failed to get PathLine for new PathPoint", LogLevel::Error);
                     }
                 }
             }
@@ -563,7 +561,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     de.selected_sprite_uuids.dedup();
                     // If length is one, handle gui
                     if de.selected_sprite_uuids.len() == 1 {
-                        de.latest_sprite_settings = utils::settings_to_string(&level_sprite.settings);
+                        de.latest_sprite_settings = utils::bytes_to_hex_string(&level_sprite.settings);
                     }
                 }
                 // Debug
@@ -649,7 +647,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     let base_tile_x: u16 = (local_pos.x/TILE_WIDTH_PX) as u16;
                     let base_tile_y: u16 = (local_pos.y/TILE_HEIGHT_PX) as u16;
                     let new_uuid = de.loaded_map.add_new_sprite_at(new_sprite_id, base_tile_x, base_tile_y, &de.sprite_metadata_copy);
-                    log_write(format!("Placed sprite with UUID {}",new_uuid.to_string()), LogLevel::Debug);
+                    log_write(format!("Placed sprite with UUID {new_uuid}"), LogLevel::Debug);
                     de.selected_sprite_uuids = vec![new_uuid]; // Select only it
                     de.unsaved_changes = true;
                     update_map = true;
@@ -786,19 +784,17 @@ fn draw_background(
                                 map_tile, cur_pal, ctx, pixel_tiles,
                                 painter, tilecache,
                                 &true_rect, selected,dim);
-                        } else {
-                            if let Some(pltb) = layer.get_pltb() {
-                                if pltb.palettes.is_empty() {
-                                    log_write("PLTB palettes were empty when trying to draw 256 tile!".to_owned(), LogLevel::Error);
-                                } else {
-                                    draw_tile_256(
-                                        map_tile, &pltb.palettes[0], ctx,
-                                        pixel_tiles, painter, tilecache,
-                                        &true_rect, selected, dim);
-                                }
+                        } else if let Some(pltb) = layer.get_pltb() {
+                            if pltb.palettes.is_empty() {
+                                log_write("PLTB palettes were empty when trying to draw 256 tile!".to_owned(), LogLevel::Error);
                             } else {
-                                log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::Error);
+                                draw_tile_256(
+                                    map_tile, &pltb.palettes[0], ctx,
+                                    pixel_tiles, painter, tilecache,
+                                    &true_rect, selected, dim);
                             }
+                        } else {
+                            log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::Error);
                         }
                         
                     }

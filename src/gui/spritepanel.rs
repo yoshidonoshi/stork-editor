@@ -3,7 +3,7 @@ use std::f32;
 use egui::ScrollArea;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 
-use crate::{data::sprites::{LevelSprite, SpriteMetadata}, gui::{spritesettings, SpriteSettings}, utils::{self, is_debug, log_write, settings_to_string, string_to_settings, LogLevel}, NON_MAIN_FOCUSED};
+use crate::{data::sprites::{LevelSprite, SpriteMetadata}, gui::{spritesettings, SpriteSettings}, utils::{self, is_debug, log_write, bytes_to_hex_string, string_to_settings, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::gui::Gui;
 
@@ -27,6 +27,7 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                     ui.label(&sprite_meta.description);
                     ui.label(format!("X/Y Position: 0x{:X}/0x{:X}",&sprite.x_position,&sprite.y_position));
                     if sprite.settings_length != 0 {
+                        #[allow(clippy::manual_range_patterns)]
                         match sprite.object_id {
                             0x23 => {
                                 let mut pipe = spritesettings::GreenPipe::from_sprite(sprite);
@@ -61,7 +62,7 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                                     is_settings_string_valid(
                                         &gui_state.display_engine.latest_sprite_settings,
                                         sprite.settings_length as usize
-                                    ) && gui_state.display_engine.latest_sprite_settings != settings_to_string(&sprite.settings),
+                                    ) && gui_state.display_engine.latest_sprite_settings != bytes_to_hex_string(&sprite.settings),
                                     egui::Button::new("Update Settings")
                                 );
                                 if res.clicked() {

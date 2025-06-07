@@ -137,7 +137,7 @@ impl MapTileRecordData {
             tile_id
         }
     }
-    pub fn to_short(&self) -> u16 {
+    pub fn to_short(self) -> u16 {
         let mut short_val: u16 = self.tile_id | ((self.flip_h as u16) << 10) | ((self.flip_v as u16) << 11);
         // Palette Id is unused in 256 mode
         // https://problemkaputt.de/gbatek.htm#lcdvrambgscreendataformatbgmap

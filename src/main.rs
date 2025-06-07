@@ -1,6 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![recursion_limit = "2048"]
 
+// Clippy warnings
+#![allow(clippy::too_many_arguments)]
+
 use std::sync::{LazyLock, Mutex};
 
 use clap::Parser;
@@ -24,7 +27,7 @@ pub struct Args {
     debug: bool
 }
 
-static CLI_ARGS: LazyLock<Args> = LazyLock::new(|| Args::parse());
+static CLI_ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 static NON_MAIN_FOCUSED: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
 
 fn main() -> eframe::Result {

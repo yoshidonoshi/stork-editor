@@ -268,7 +268,7 @@ impl DisplayEngine {
 
         // Build Stamp //
         let rc_path: PathBuf = PathBuf::from(&extract_dir);
-        let stamp_rc_path = nitrofs_abs(&rc_path, &"stamp.rc".to_owned());
+        let stamp_rc_path = nitrofs_abs(rc_path, "stamp.rc");
         let build_date = match read_to_string(stamp_rc_path) {
             Err(error) => {
                 let rc_err1 = format!("Failed to open stamp.rc: {error}");
@@ -458,6 +458,7 @@ impl DisplayEngine {
         // That would mean 1-1 (indexes 0-0) leads to 0-1 not 1-1
         // So the +1 makes it skip that
         let level_id: u32 = world_index * 10 + level_index + 1;
+        #[allow(clippy::manual_range_contains)]
         if level_id < 0x7b || level_id > 0x7e {
             // 02050024 (some function that takes in 0), does not break
         }
@@ -518,6 +519,7 @@ impl DisplayEngine {
     fn get_level_filename_eur_11(&self, world_index: &u32, level_index: &u32) -> Result<String,String> {
         // 1-1 filename location: 0xe21ae
         let level_id: u32 = world_index * 10 + level_index;// + 1 maybe not here?
+        #[allow(clippy::manual_range_contains)]
         if (level_id < 0x7b) || (0x7e < level_id) {
             //func_02017e88(0);
         }
@@ -576,7 +578,7 @@ impl DisplayEngine {
         self.map_index = Some(map_index as usize);
         let mut initial_level_name = self.get_level_filename(&world_index, &level_index);
         initial_level_name.push_str(".crsb");
-        let crsb_path = nitrofs_abs(&self.export_folder, &initial_level_name);
+        let crsb_path = nitrofs_abs(self.export_folder.to_path_buf(), &initial_level_name);
         let crsb = CourseInfo::new(&crsb_path,&format!("Course {}-{}",world_index+1,level_index+1));
         log_write(format!("Loaded Course '{}' from '{}'",&crsb.label,&crsb.src_filename), LogLevel::Log);
         if (map_index as usize) >= crsb.level_map_data.len() {
@@ -591,8 +593,8 @@ impl DisplayEngine {
         let loaded_course_store = self.loaded_course.clone(); // Backup
         self.loaded_course = crsb;
         map_name.push_str(".mpdz");
-        let map_path = nitrofs_abs(&self.export_folder, &map_name);
-        let loaded_map_res = match MapData::new(&map_path,&self.export_folder) {
+        let map_path = nitrofs_abs(self.export_folder.to_path_buf(), &map_name);
+        let loaded_map_res = match MapData::new(&map_path, &self.export_folder) {
             Ok(x) => x,
             Err(e) => {
                 let err_msg = format!("Failed to load MapData: '{}'",e);
@@ -622,8 +624,8 @@ impl DisplayEngine {
             let arc_opt = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get");
             arc_opt
         } else {
-            let archive_name_full = nitrofs_abs(&self.export_folder, archive_name_local).display().to_string();
-            let rarc = RenderArchive::new(archive_name_full, &self.export_folder);
+            let archive_name_full = nitrofs_abs(self.export_folder.to_path_buf(), archive_name_local).display().to_string();
+            let rarc = RenderArchive::new(archive_name_full, self.export_folder.to_path_buf());
             self.loaded_archives.insert(archive_name_local.to_string(), rarc);
             let ret = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get post creation");
             ret
@@ -711,21 +713,12 @@ impl DisplayEngine {
     }
 
     pub fn get_loaded_sprite_by_uuid(&self, uuid: &Uuid) -> Option<&LevelSprite> {
-        for sprite in &self.level_sprites {
-            if sprite.uuid == *uuid {
-                return Some(sprite);
-            }
-        }
-        Option::None
+        self.level_sprites.iter().find(|&sprite| sprite.uuid == *uuid)
     }
 
     pub fn get_selected_exit_mut(&mut self) -> Option<&mut MapExit> {
-        let Some(selected_exit_uuid) = self.course_settings.selected_exit else {
-            return Option::None;
-        };
-        let Some(selected_map_index) = self.course_settings.selected_map else {
-            return Option::None;
-        };
+        let selected_exit_uuid = self.course_settings.selected_exit?;
+        let selected_map_index = self.course_settings.selected_map?;
         if selected_map_index >= self.loaded_course.level_map_data.len() {
             self.course_settings.selected_map = Option::None;
             log_write("Selected map index out of bounds", LogLevel::Warn);

@@ -32,17 +32,19 @@ impl Default for LevelSprite {
 impl fmt::Display for LevelSprite {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,"LevelSprite [ id=0x{:X}, uuid={}, x_pos=0x{:X}, y_pos=0x{:X}, settings=[{}] ]",
-            self.object_id, self.uuid, self.x_position, self.y_position, utils::settings_to_string(&self.settings))
+            self.object_id, self.uuid, self.x_position, self.y_position, utils::bytes_to_hex_string(&self.settings))
     }
 }
 impl LevelSprite {
     pub fn from_cursor<T: ReadBytesExt>(rdr: &mut T)  -> Self {
-        let mut spr = LevelSprite::default();
-        spr.object_id = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.settings_length = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.x_position = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.y_position = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.uuid = Uuid::new_v4();
+        let mut spr = LevelSprite {
+            object_id: rdr.read_u16::<LittleEndian>().unwrap(),
+            settings_length: rdr.read_u16::<LittleEndian>().unwrap(),
+            x_position: rdr.read_u16::<LittleEndian>().unwrap(),
+            y_position: rdr.read_u16::<LittleEndian>().unwrap(),
+            uuid: Uuid::new_v4(),
+            ..Default::default()
+        };
         let mut setting_index: u16 = 0;
         while setting_index < spr.settings_length {
             let setting_byte = rdr.read_u8().unwrap();
@@ -290,8 +292,10 @@ impl SpriteGraphicsSegment {
     pub fn from_data_segment(segment: &DataSegment) -> Self {
         //println!("from_data_segment");
         // Read Frames
-        let mut ret: SpriteGraphicsSegment = SpriteGraphicsSegment::default();
-        ret.internal_data = segment.internal_data.clone();
+        let mut ret: SpriteGraphicsSegment = SpriteGraphicsSegment {
+            internal_data: segment.internal_data.clone(),
+            ..Default::default()
+        };
         //print_vector_u8(&ret.internal_data);
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&segment.internal_data);
         let mut overflow_index: usize = 0;

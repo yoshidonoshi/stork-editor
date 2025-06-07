@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::consts::PI, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
+use std::{collections::HashMap, f32::consts::PI, fmt::Write, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
@@ -49,17 +49,16 @@ pub fn log_write(msg: impl Into<String>, level: LogLevel) {
 
 #[allow(dead_code)] // May not be used in final
 pub fn print_vector_u8(byte_vector: &[u8]) {
-    let vec_length: usize = byte_vector.len();
-    if vec_length == 0 {
+    if byte_vector.is_empty() {
         log_write("print_vector_u8: vector is empty", LogLevel::Log);
     }
     let mut i: usize = 0;
-    while i < vec_length {
+    while i < byte_vector.len() {
         let mut end: usize = i+0x10;
         if end > byte_vector.len() {
             end = byte_vector.len();
         }
-        let hex_line: String = byte_vector[i..end].iter().map(|b| format!("{:02X} ",b)).collect();
+        let hex_line: String = bytes_to_hex_string(&byte_vector[i..end]);
         let starting_string = format!("0x{:05X}",i);
         println!("{starting_string} | {hex_line}");
         i += 0x10;
@@ -86,6 +85,7 @@ pub fn get_sin_cos_table_value(arm9: &[u8], value: u16, v: GameVersion) -> PathA
     rdr.set_position(pos1 as u64);
     let sh1 = rdr.read_i16::<LittleEndian>().expect("Reading SinCos value 1");
     // Value 2
+    #[allow(clippy::identity_op)]
     let pos2 = table_addr + ((value as u32 >> 4) * 2 + 0) * 2;
     rdr.set_position(pos2 as u64);
     let sh2 = rdr.read_i16::<LittleEndian>().expect("Reading SinCos value 2");
@@ -113,22 +113,26 @@ pub fn compare_vector_u8s(byte_vector_1: &[u8], byte_vector_2: &[u8]) {
 }
 
 pub fn header_to_string(header: &u32) -> String {
-    let char0 = (header >> 24) % 0x100;
-    let char1 = (header >> 16) % 0x100;
-    let char2 = (header >> 8) % 0x100;
-    let char3 = (header >> 0) % 0x100;
-    let char0 = std::char::from_u32(char0).unwrap_or('�');
-    let char1 = std::char::from_u32(char1).unwrap_or('�');
-    let char2 = std::char::from_u32(char2).unwrap_or('�');
-    let char3 = std::char::from_u32(char3).unwrap_or('�');
-    let str = format!("{char3}{char2}{char1}{char0}");
-    str
+    (0..4)
+        .rev()
+        .map(|i| std::char::from_u32((header >> (i * 8)) % 0x100).unwrap_or('�'))
+        .collect()
 }
 
-pub fn settings_to_string(settings: &[u8]) -> String {
-    settings.iter().map(|f| {
-        format!("{:02X} ",f)
-    }).collect::<String>().trim().to_string()
+pub fn bytes_to_hex_string(settings: &[u8]) -> String {
+    settings
+        .iter()
+        .enumerate()
+        .fold(
+            String::with_capacity(settings.len() * 3),
+            |mut string, (i, f)| {
+                let _ = write!(&mut string, "{f:02X}");
+                if i + 1 < settings.len() {
+                    let _ = write!(&mut string, " ");    
+                }
+                string
+            }
+        )
 }
 
 pub fn string_to_settings(settings_string: &str) -> Result<Vec<u8>,String> {
@@ -349,8 +353,8 @@ pub fn write_vec_test_file(byte_vector: &[u8],filename: String) {
     }
 }
 
-pub fn nitrofs_abs(export_dir: &PathBuf,filename_local: &str) -> PathBuf {
-    let mut p: PathBuf = export_dir.clone();
+pub fn nitrofs_abs(export_dir: PathBuf, filename_local: &str) -> PathBuf {
+    let mut p = export_dir;
     p.push("files");
     p.push("file");
     p.push(filename_local);
@@ -557,7 +561,7 @@ mod tests_utils {
         correct.push("files");
         correct.push("file");
         correct.push("test.bin");
-        let maybe = nitrofs_abs(&PathBuf::from("yids_extract"),&"test.bin".to_owned());
+        let maybe = nitrofs_abs(PathBuf::from("yids_extract"),&"test.bin".to_owned());
         assert_eq!(correct,maybe);
     }
 }

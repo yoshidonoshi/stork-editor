@@ -13,8 +13,8 @@ pub fn enable_profiling() {
                 .arg("--url")
                 .arg(&server_addr_http)
                 .spawn();
-            if let Err(_) = child {
-                log_write(format!("Failed to run `puffin_viewer`. Run `cargo install puffin_viewer` if you didn't install it"), LogLevel::Error);
+            if child.is_err() {
+                log_write("Failed to run `puffin_viewer`. Run `cargo install puffin_viewer` if you didn't install it", LogLevel::Error);
             }
             std::mem::forget(server);
         },

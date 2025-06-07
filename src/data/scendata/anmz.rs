@@ -35,8 +35,10 @@ impl AnmzDataSegment {
     pub fn from_decomp(an_decomp: Vec<u8>) -> Option<AnmzDataSegment> {
         let decomp_len: usize = an_decomp.len();
         //println!("Creating ANMZ from decomp with size of 0x'{:X}' bytes",decomp_len);
-        let mut anmz = AnmzDataSegment::default();
-        anmz._raw_decomp = an_decomp;
+        let mut anmz = AnmzDataSegment {
+            _raw_decomp: an_decomp,
+            ..Default::default()
+        };
         let mut rdr = Cursor::new(&anmz._raw_decomp);
         anmz.frame_count = utils::read_u8(&mut rdr)?;
         anmz.unk1 = utils::read_u8(&mut rdr)?;

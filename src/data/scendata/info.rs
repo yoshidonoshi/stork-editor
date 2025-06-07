@@ -89,7 +89,7 @@ impl ScenInfoData {
         })
     }
 
-    pub fn get_imbz_pixels(&self, proj_dir: &PathBuf) -> Option<Vec<u8>> {
+    pub fn get_imbz_pixels(&self, proj_dir: PathBuf) -> Option<Vec<u8>> {
         let mut imbz_withext: String = self.imbz_filename_noext.clone().expect("imbz filename exists");
         imbz_withext.push_str(".imbz");
         let p: PathBuf = nitrofs_abs(proj_dir, &imbz_withext);

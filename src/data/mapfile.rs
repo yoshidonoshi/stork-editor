@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use std::fs;
 use std::io::Cursor;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use byteorder::{LittleEndian, ReadBytesExt};
 use uuid::Uuid;
 use crate::engine::compression::{lamezip77_lz10_recomp, segment_wrap_u32};
@@ -107,10 +107,12 @@ impl Default for MapData {
     }
 }
 impl MapData {
-    pub fn new(filename_abs: &PathBuf, project_folder: &PathBuf) -> Result<Self,String> {
-        let mut ret: MapData = MapData::default();
-        ret.src_file = filename_abs.to_string_lossy().to_string();
-        if matches!(fs::exists(&filename_abs), Err(_) | Ok(false)) {
+    pub fn new(filename_abs: &PathBuf, project_folder: &Path) -> Result<Self,String> {
+        let mut ret: MapData = MapData {
+            src_file: filename_abs.to_string_lossy().to_string(),
+            ..Default::default()
+        };
+        if matches!(fs::exists(filename_abs), Err(_) | Ok(false)) {
             let file_exists_err = format!("File does not exist: '{}'",&filename_abs.display());
             log_write(file_exists_err.clone(), LogLevel::Error);
             return Err(file_exists_err);
@@ -138,10 +140,7 @@ impl MapData {
         while rdr.position() < file_end_pos {
             let section_head: u32 = rdr.read_u32::<LittleEndian>().unwrap();
             let section_size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;
-            let mut internal_vec: Vec<u8> = vec![0;section_size];
-            for i in 0..section_size {
-                internal_vec[i] = rdr.read_u8().unwrap();
-            }
+            let internal_vec = (0..section_size).map(|_| rdr.read_u8().unwrap()).collect();
             let cur_segment: DataSegment = DataSegment { header: section_head, internal_data: internal_vec };
             segments.push(cur_segment);
         }
@@ -152,7 +151,7 @@ impl MapData {
             log_write(format!("Parsing top level Segment '{}' with size 0x{:X}",seg_header,segment.internal_data.len()), LogLevel::Debug);
             match seg_header.as_str() {
                 "SCEN" => {
-                    if let Ok(bg) = BackgroundData::new(&segment.internal_data,project_folder) {
+                    if let Ok(bg) = BackgroundData::new(&segment.internal_data, project_folder) {
                         ret.segments.push(TopLevelSegmentWrapper::SCEN(bg));
                     } else {
                         let bg_fail_msg = "Failed to generate BackgroundData in MapData".to_string();
@@ -387,18 +386,17 @@ impl MapData {
 
     pub fn delete_sprite_by_uuid(&mut self, sprite_uuid: Uuid) -> Result<bool,()> {
         let sprite_set = self.get_setd().expect("Expected SETD to exist");
-        let mut index: usize = 0;
-        for spr in &mut sprite_set.sprites {
+        for (index, spr) in &mut sprite_set.sprites.iter_mut().enumerate() {
             if spr.uuid == sprite_uuid {
                 sprite_set.sprites.remove(index);
                 return Ok(true);
             }
-            index += 1;
         }
         Err(())
     }
 
     pub fn set_col_tile(&mut self, which_background: u8, tile_index: u16, new_type: u8) -> Result<(),()> {
+        #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
             log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::Error);
             return Err(())
@@ -416,6 +414,7 @@ impl MapData {
     }
 
     pub fn delete_bg_tile_by_map_index(&mut self, which_background: u8, map_index: u32) -> bool {
+        #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
             log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::Error);
             return false;
@@ -437,6 +436,7 @@ impl MapData {
     }
 
     pub fn place_bg_tile_at_map_index(&mut self, which_background: u8, map_index: u32, tile: &u16) -> bool {
+        #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
             log_write(format!("Extremely unusual which_background value in place_bg_tile_at_map_index: '{}'",which_background), LogLevel::Error);
             return false;

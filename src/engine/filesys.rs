@@ -1,4 +1,4 @@
-use std::{fmt::Display, path::PathBuf};
+use std::{fmt::Display, path::{Path, PathBuf}};
 
 use ds_rom::rom::{raw, Rom, RomLoadOptions};
 use crate::utils::{self, log_write, LogLevel};
@@ -20,7 +20,7 @@ impl Display for RomExtractError {
     }
 }
 
-pub fn extract_rom_files(nds_file: &PathBuf, output_dir: &PathBuf) -> Result<PathBuf,RomExtractError> {
+pub fn extract_rom_files(nds_file: &Path, output_dir: &Path) -> Result<PathBuf,RomExtractError> {
     let Ok(raw_rom) = raw::Rom::from_file(nds_file) else {
         let open_fail = format!("Failed to open ROM file '{}'", &nds_file.display());
         log_write(open_fail.clone(), utils::LogLevel::Error);
@@ -31,10 +31,10 @@ pub fn extract_rom_files(nds_file: &PathBuf, output_dir: &PathBuf) -> Result<Pat
         log_write(extract_err.clone(), utils::LogLevel::Error);
         return Err(RomExtractError::new(&extract_err));
     };
-    match rom.save(&output_dir, None) {
+    match rom.save(output_dir, None) {
         Ok(_) => {
             log_write(format!("ROM contents extracted to '{}' successfully", &output_dir.display()), utils::LogLevel::Log);
-            let ret_dir = output_dir.clone();
+            let ret_dir = output_dir.to_path_buf();
             Ok(ret_dir)
         }
         Err(_) => {
@@ -50,8 +50,8 @@ pub struct RomGenerateError{}
 
 pub fn generate_rom(config: &str, new_nds_file: &str) -> Result<(),RomGenerateError> {
     log_write("This will take a long time (in debug mode)...", LogLevel::Debug);
-    let Ok(rom) = Rom::load(&config, RomLoadOptions::default()) else {
-        utils::log_write(format!("Failed to load directory '{}'",&config), utils::LogLevel::Error);
+    let Ok(rom) = Rom::load(config, RomLoadOptions::default()) else {
+        utils::log_write(format!("Failed to load directory '{config}'"), utils::LogLevel::Error);
         return Err(RomGenerateError{});
     };
     log_write("Config processed successfully", LogLevel::Log);

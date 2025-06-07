@@ -110,7 +110,7 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine, project_open: boo
             }
             log_write("Deleting selected Map", LogLevel::Log);
             let file_name = &de.loaded_course.level_map_data[selected_map_index].map_filename_noext;
-            let file_to_delete = nitrofs_abs(&de.export_folder, &format!("{}.mpdz",file_name));
+            let file_to_delete = nitrofs_abs(de.export_folder.to_path_buf(), &format!("{}.mpdz",file_name));
             let _did_delete = de.loaded_course.delete_map_info_by_index(selected_map_index);
             log_write(format!("Deleting file '{}'...",&file_to_delete.display()), LogLevel::Debug);
             let del_res = fs::remove_file(&file_to_delete);

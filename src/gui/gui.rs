@@ -5,7 +5,7 @@ use rfd::FileDialog;
 use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
-use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BgValue}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, settings_to_string, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
+use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BgValue}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, bytes_to_hex_string, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -110,6 +110,7 @@ impl BgSelectData {
         Some(Pos2::new(x as f32, y as f32))
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_clipboard_tiles(&mut self, map_width: u16, map_tiles: &[MapTileRecordData]) -> Vec<BgClipboardSelectedTile> {
         let mut ret: Vec<BgClipboardSelectedTile> = Vec::new();
         if self.selected_map_indexes.is_empty() {
@@ -826,7 +827,7 @@ impl Gui {
         self.display_engine.selected_sprite_uuids.clear();
         self.display_engine.selected_sprite_uuids.push(*sprite_uuid);
         if let Ok(spr_res) = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid) {
-            self.display_engine.latest_sprite_settings = settings_to_string(&spr_res.settings);
+            self.display_engine.latest_sprite_settings = bytes_to_hex_string(&spr_res.settings);
         } else {
             log_write("Failed to get sprite by UUID in select_sprite_from_list", LogLevel::Error);
         }
@@ -1498,8 +1499,7 @@ impl eframe::App for Gui {
 
                 let crsb = self.display_engine.loaded_course.level_map_data.clone();
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    let mut map_index = 0;
-                    for map in &crsb {
+                    for (map_index, map) in crsb.iter().enumerate() {
                         let mut but = ui.button(&map.map_filename_noext);
                         if map.map_filename_noext == self.display_engine.loaded_map.map_name {
                             but = but.highlight();
@@ -1509,10 +1509,9 @@ impl eframe::App for Gui {
                             self.save_course();
                             // This is to be used once support for ALL map selection is working
                             self.map_change_selected_map = map.map_filename_noext.clone();
-                            self.change_map(map_index);
+                            self.change_map(map_index as u32);
                             self.change_map_open = false;
                         }
-                        map_index += 1;
                     }
                 });
                 
@@ -1655,7 +1654,7 @@ impl eframe::App for Gui {
             add_map_modal.show(ctx, |ui| {
                 ui.heading("Choose a Map template");
                 egui::ComboBox::new(egui::Id::new("add_map_combo_box"), "")
-                    .selected_text(format!("{}",&self.display_engine.course_settings.add_map_selected))
+                    .selected_text(&self.display_engine.course_settings.add_map_selected)
                     .show_ui(ui, |ui| {
                         let mut map_keys: Vec<String> = self.display_engine.course_settings.map_templates.keys().cloned().collect();
                         map_keys.sort();
@@ -1681,7 +1680,7 @@ impl eframe::App for Gui {
                             log_write("Failed to get template directory", LogLevel::Error);
                             return;
                         };
-                        self.display_engine.loaded_course.add_template(&level_file,&template_path);
+                        self.display_engine.loaded_course.add_template(level_file, &template_path);
                         self.display_engine.course_settings.add_window_open = false;
                         self.display_engine.unsaved_changes = true;
                         self.display_engine.graphics_update_needed = true;

@@ -101,7 +101,7 @@ pub fn show_map_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 fn show_scen_data(ui: &mut egui::Ui, scen: &mut BackgroundData) {
     let info = scen.get_info().expect("INFO is guaranteed");
     ui.label(format!("BG Index: {}",info.which_bg));
-    let charset = info.imbz_filename_noext.as_ref().map(|v| v.as_str()).unwrap_or("N/A");
+    let charset = info.imbz_filename_noext.as_deref().unwrap_or("N/A");
     ui.label(format!("Charset: {charset}"));
     ui.label(format!("X Scroll Speed: 0x{:X}",info.x_scroll));
     ui.label(format!("Y Scroll Speed: 0x{:X}",info.y_scroll));

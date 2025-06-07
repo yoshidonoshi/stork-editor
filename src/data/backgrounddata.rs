@@ -5,7 +5,7 @@
 // Saving will require recompiling it and saving it
 //   back on top of the segment inside MapData
 
-use std::{fmt, io::{Cursor, Read}, path::PathBuf};
+use std::{fmt, io::{Cursor, Read}, path::Path};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -29,7 +29,7 @@ impl fmt::Display for BackgroundData {
     }
 }
 impl BackgroundData {
-    pub fn new(vec: &[u8], project_directory: &PathBuf) -> Result<BackgroundData,String> {
+    pub fn new(vec: &[u8], project_directory: &Path) -> Result<BackgroundData,String> {
         // Since the issue is commonly tied to a specific background, this should stick out
         log_write("> Creating SCEN...", LogLevel::Debug);
         let mut ret: BackgroundData = BackgroundData::default();
@@ -56,7 +56,7 @@ impl BackgroundData {
                     // Is there IMBZ data to retrieve?
                     if info.imbz_filename_noext.is_some() {
                         // There is IMBZ data to retrieve. Fetch!
-                        if let Some(pixels_decomped) = info.get_imbz_pixels(project_directory) {
+                        if let Some(pixels_decomped) = info.get_imbz_pixels(project_directory.to_path_buf()) {
                             ret.pixel_tiles_preview = Some(pixels_decomped);
                         } else {
                             log_write(format!("Failed to get IMBZ from INFO on BG layer {}", info.which_bg), LogLevel::Error);
@@ -368,7 +368,7 @@ impl TopLevelSegment for BackgroundData {
         let mut compiled: Vec<u8> = Vec::new();
         let info_c = self.get_info().expect("There is always INFO");
         for segment in &self.scen_segments {
-            let mut seg_comp = segment.wrap(Some(&info_c));
+            let mut seg_comp = segment.wrap(Some(info_c));
             compiled.append(&mut seg_comp);
         }
 
