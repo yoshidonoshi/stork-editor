@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use std::fs;
 use std::io::Cursor;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use byteorder::{LittleEndian, ReadBytesExt};
 use uuid::Uuid;
 use crate::engine::compression::{lamezip77_lz10_recomp, segment_wrap_u32};
@@ -28,6 +28,7 @@ use super::sprites::{LevelSprite, LevelSpriteSet, SpriteMetadata};
 use super::types::MapTileRecordData;
 use super::{GenericTopLevelSegment, TopLevelSegment};
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone,PartialEq,Debug)]
 pub enum TopLevelSegmentWrapper {
     SETD(LevelSpriteSet),
@@ -38,7 +39,7 @@ pub enum TopLevelSegmentWrapper {
     ALPH(AlphaData),
     BLKZ(SoftRockBackdrop),
     BRAK(BrakData),
-    UNKN(GenericTopLevelSegment)
+    Unknown(GenericTopLevelSegment)
 }
 
 impl TopLevelSegment for TopLevelSegmentWrapper {
@@ -52,7 +53,7 @@ impl TopLevelSegment for TopLevelSegmentWrapper {
             Self::ALPH(alph) => alph.compile(),
             Self::BLKZ(blkz) => blkz.compile(),
             Self::BRAK(brak) => brak.compile(),
-            Self::UNKN(unkn) => unkn.compile()
+            Self::Unknown(unkn) => unkn.compile()
         }
     }
 
@@ -66,7 +67,7 @@ impl TopLevelSegment for TopLevelSegmentWrapper {
             Self::ALPH(alph) => alph.wrap(),
             Self::BLKZ(blkz) => blkz.wrap(),
             Self::BRAK(brak) => brak.wrap(),
-            Self::UNKN(unkn) => unkn.wrap()
+            Self::Unknown(unkn) => unkn.wrap()
         }
     }
 
@@ -80,7 +81,7 @@ impl TopLevelSegment for TopLevelSegmentWrapper {
             Self::ALPH(alph) => alph.header(),
             Self::BLKZ(blkz) => blkz.header(),
             Self::BRAK(brak) => brak.header(),
-            Self::UNKN(unkn) => unkn.header()
+            Self::Unknown(unkn) => unkn.header()
         }
     }
 }
@@ -106,12 +107,14 @@ impl Default for MapData {
     }
 }
 impl MapData {
-    pub fn new(filename_abs: &PathBuf, project_folder: &PathBuf) -> Result<Self,String> {
-        let mut ret: MapData = MapData::default();
-        ret.src_file = filename_abs.to_string_lossy().to_string();
-        if matches!(fs::exists(&filename_abs), Err(_) | Ok(false)) {
+    pub fn new(filename_abs: &PathBuf, project_folder: &Path) -> Result<Self,String> {
+        let mut ret: MapData = MapData {
+            src_file: filename_abs.to_string_lossy().to_string(),
+            ..Default::default()
+        };
+        if matches!(fs::exists(filename_abs), Err(_) | Ok(false)) {
             let file_exists_err = format!("File does not exist: '{}'",&filename_abs.display());
-            log_write(file_exists_err.clone(), LogLevel::ERROR);
+            log_write(file_exists_err.clone(), LogLevel::Error);
             return Err(file_exists_err);
         }
         let file_bytes: Vec<u8> = compression::decompress_file(filename_abs);
@@ -119,7 +122,7 @@ impl MapData {
         let file_header = match rdr.read_u32::<LittleEndian>() {
             Err(_) => {
                 let master_header_err = "Error getting master header from MapData".to_owned();
-                log_write(&master_header_err, LogLevel::ERROR);
+                log_write(&master_header_err, LogLevel::Error);
                 return Err(master_header_err);
             }
             Ok(h) => h,
@@ -128,7 +131,7 @@ impl MapData {
         let header_string = &header_to_string(&file_header)[0..3];
         if header_string != "SET" {
             let set_missing_msg = format!("MapData master header was not 'SET', was instead '{}'",&header_string);
-            log_write(set_missing_msg.clone(), LogLevel::ERROR);
+            log_write(set_missing_msg.clone(), LogLevel::Error);
             return Err(set_missing_msg);
         }
         let _ = rdr.read_u32::<LittleEndian>().unwrap();
@@ -137,10 +140,7 @@ impl MapData {
         while rdr.position() < file_end_pos {
             let section_head: u32 = rdr.read_u32::<LittleEndian>().unwrap();
             let section_size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;
-            let mut internal_vec: Vec<u8> = vec![0;section_size];
-            for i in 0..section_size {
-                internal_vec[i] = rdr.read_u8().unwrap();
-            }
+            let internal_vec = (0..section_size).map(|_| rdr.read_u8().unwrap()).collect();
             let cur_segment: DataSegment = DataSegment { header: section_head, internal_data: internal_vec };
             segments.push(cur_segment);
         }
@@ -148,28 +148,28 @@ impl MapData {
         for segment in &segments {
             let seg_header: u32 = segment.header;
             let seg_header = utils::header_to_string(&seg_header);
-            log_write(format!("Parsing top level Segment '{}' with size 0x{:X}",seg_header,segment.internal_data.len()), LogLevel::DEBUG);
+            log_write(format!("Parsing top level Segment '{}' with size 0x{:X}",seg_header,segment.internal_data.len()), LogLevel::Debug);
             match seg_header.as_str() {
                 "SCEN" => {
-                    if let Ok(bg) = BackgroundData::new(&segment.internal_data,project_folder) {
+                    if let Ok(bg) = BackgroundData::new(&segment.internal_data, project_folder) {
                         ret.segments.push(TopLevelSegmentWrapper::SCEN(bg));
                     } else {
                         let bg_fail_msg = "Failed to generate BackgroundData in MapData".to_string();
-                        log_write(bg_fail_msg.clone(), LogLevel::ERROR);
+                        log_write(bg_fail_msg.clone(), LogLevel::Error);
                         return Err(bg_fail_msg);
                     }
                 }
                 "SETD" => {
                     let setd = LevelSpriteSet::new(&segment.internal_data);
                     let scount = setd.sprites.len();
-                    log_write(format!("Loaded {}/0x{:X} Sprites for the level",scount,scount), LogLevel::DEBUG);
+                    log_write(format!("Loaded {}/0x{:X} Sprites for the level",scount,scount), LogLevel::Debug);
                     ret.segments.push(TopLevelSegmentWrapper::SETD(setd));
                 }
                 "GRAD" => {
                     let grad = match GradientData::new(&segment.internal_data) {
                         Some(g) => g,
                         None => {
-                            log_write("Failed to load GRAD", LogLevel::ERROR);
+                            log_write("Failed to load GRAD", LogLevel::Error);
                             continue;
                         },
                     };
@@ -187,7 +187,7 @@ impl MapData {
                     let alph = match AlphaData::new(&segment.internal_data) {
                         Some(a) => a,
                         None => {
-                            log_write("Failed to load ALPH", LogLevel::ERROR);
+                            log_write("Failed to load ALPH", LogLevel::Error);
                             continue;
                         },
                     };
@@ -197,21 +197,21 @@ impl MapData {
                     let blkz = match SoftRockBackdrop::new(&segment.internal_data) {
                         Some(b) => b,
                         None => {
-                            log_write("failed to load BLKZ", LogLevel::ERROR);
+                            log_write("failed to load BLKZ", LogLevel::Error);
                             continue;
                         },
                     };
                     ret.segments.push(TopLevelSegmentWrapper::BLKZ(blkz));
                 }
                 "BRAK" => {
-                    let brak = BrakData::new(&segment.internal_data);
+                    let brak = BrakData::new(segment.internal_data.clone());
                     ret.segments.push(TopLevelSegmentWrapper::BRAK(brak));
                 }
                 _ => {
-                    log_write(format!("Level DataSegment header '{}' unhandled",&seg_header), LogLevel::WARN);
-                    let unkn = GenericTopLevelSegment::new(&segment.internal_data, &seg_header);
+                    log_write(format!("Level DataSegment header '{}' unhandled",&seg_header), LogLevel::Warn);
+                    let unkn = GenericTopLevelSegment::new(segment.internal_data.clone(), &seg_header);
                     ret.unhandled_headers.push(seg_header);
-                    ret.segments.push(TopLevelSegmentWrapper::UNKN(unkn));
+                    ret.segments.push(TopLevelSegmentWrapper::Unknown(unkn));
                 }
             }
         } // End loop for segments
@@ -317,7 +317,7 @@ impl MapData {
     /// be written to an MPDZ file
     pub fn package(&self) -> Vec<u8> {
         let interior = self.compile();
-        let wrapped = segment_wrap_u32(&interior, 0x00544553);
+        let wrapped = segment_wrap_u32(interior, 0x00544553);
         lamezip77_lz10_recomp(&wrapped)
     }
 
@@ -342,7 +342,7 @@ impl MapData {
             if spr.uuid == sprite_uuid {
                 if spr.settings_length as usize != new_settings.len() {
                     log_write(format!("Attempted to update sprite settings with vec len {}, standard len is {}",
-                        new_settings.len(),spr.settings_length), LogLevel::ERROR);
+                        new_settings.len(),spr.settings_length), LogLevel::Error);
                     return;
                 }
                 spr.settings = new_settings;
@@ -360,11 +360,11 @@ impl MapData {
     pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16, meta: &HashMap<u16,SpriteMetadata>) -> Uuid {
         let Some(sprite_set) = self.get_setd() else {
             // This really shouldn't be possible
-            log_write("SETD not loaded when placing sprite".to_owned(),LogLevel::ERROR);
+            log_write("SETD not loaded when placing sprite".to_owned(),LogLevel::Error);
             return Uuid::nil();
         };
         let Some(sprite_meta) = meta.get(&sprite_id) else {
-            log_write(format!("No Sprite metadata found for 0x{sprite_id:X}"),LogLevel::ERROR);
+            log_write(format!("No Sprite metadata found for 0x{sprite_id:X}"),LogLevel::Error);
             return Uuid::nil();
         };
         let new_sprite = LevelSprite::new(sprite_id, x, y, vec![0;sprite_meta.default_settings_len as usize]);
@@ -386,24 +386,23 @@ impl MapData {
 
     pub fn delete_sprite_by_uuid(&mut self, sprite_uuid: Uuid) -> Result<bool,()> {
         let sprite_set = self.get_setd().expect("Expected SETD to exist");
-        let mut index: usize = 0;
-        for spr in &mut sprite_set.sprites {
+        for (index, spr) in &mut sprite_set.sprites.iter_mut().enumerate() {
             if spr.uuid == sprite_uuid {
                 sprite_set.sprites.remove(index);
                 return Ok(true);
             }
-            index += 1;
         }
         Err(())
     }
 
     pub fn set_col_tile(&mut self, which_background: u8, tile_index: u16, new_type: u8) -> Result<(),()> {
+        #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
-            log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::ERROR);
+            log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::Error);
             return Err(())
         }
         let Some(bg) = self.get_background(which_background) else {
-            log_write(format!("Failed to get_background '{}' in delete_bg_tile_by_map_index",which_background), LogLevel::ERROR);
+            log_write(format!("Failed to get_background '{}' in delete_bg_tile_by_map_index",which_background), LogLevel::Error);
             return Err(())
         };
         if let Some(col) = bg.get_colz_mut() {
@@ -415,17 +414,18 @@ impl MapData {
     }
 
     pub fn delete_bg_tile_by_map_index(&mut self, which_background: u8, map_index: u32) -> bool {
+        #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
-            log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::ERROR);
+            log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::Error);
             return false;
         }
         let Some(bg) = self.get_background(which_background) else {
-            log_write(format!("Failed to get_background '{}' in delete_bg_tile_by_map_index",which_background), LogLevel::ERROR);
+            log_write(format!("Failed to get_background '{}' in delete_bg_tile_by_map_index",which_background), LogLevel::Error);
             return false;
         };
         if let Some(tiles_segment) = bg.get_mpbz_mut() {
             if (map_index as usize) > tiles_segment.tiles.len() {
-                log_write(format!("Overflow in delete_bg_tile_by_map_index: {} >= {}",&map_index,&tiles_segment.tiles.len()), LogLevel::ERROR);
+                log_write(format!("Overflow in delete_bg_tile_by_map_index: {} >= {}",&map_index,&tiles_segment.tiles.len()), LogLevel::Error);
                 return false;
             }
             let empty_record: MapTileRecordData = MapTileRecordData::default();
@@ -436,23 +436,24 @@ impl MapData {
     }
 
     pub fn place_bg_tile_at_map_index(&mut self, which_background: u8, map_index: u32, tile: &u16) -> bool {
+        #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
-            log_write(format!("Extremely unusual which_background value in place_bg_tile_at_map_index: '{}'",which_background), LogLevel::ERROR);
+            log_write(format!("Extremely unusual which_background value in place_bg_tile_at_map_index: '{}'",which_background), LogLevel::Error);
             return false;
         }
         let Some(bg) = self.get_background(which_background) else {
-            log_write(format!("Failed to get_background '{}' in place_bg_tile_at_map_index",which_background), LogLevel::ERROR);
+            log_write(format!("Failed to get_background '{}' in place_bg_tile_at_map_index",which_background), LogLevel::Error);
             return false;
         };
         if let Some(tiles_segment) = bg.get_mpbz_mut() {
             if (map_index as usize) > tiles_segment.tiles.len() {
                 // May be pasted out of bounds
-                log_write(format!("Overflow in place_bg_tile_at_map_index {} >= {}",&map_index,&tiles_segment.tiles.len()), LogLevel::ERROR);
+                log_write(format!("Overflow in place_bg_tile_at_map_index {} >= {}",&map_index,&tiles_segment.tiles.len()), LogLevel::Error);
                 return false;
             }
             tiles_segment.tiles[map_index as usize] = MapTileRecordData::new(tile);
         } else {
-            log_write(format!("Could not find map tiles for bg '{}' in place_bg_tile_at_map_index",which_background), LogLevel::ERROR);
+            log_write(format!("Could not find map tiles for bg '{}' in place_bg_tile_at_map_index",which_background), LogLevel::Error);
             return false;
         }
         true

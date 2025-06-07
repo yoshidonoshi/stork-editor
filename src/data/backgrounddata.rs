@@ -5,7 +5,7 @@
 // Saving will require recompiling it and saving it
 //   back on top of the segment inside MapData
 
-use std::{fmt, io::{Cursor, Read}, path::PathBuf};
+use std::{fmt, io::{Cursor, Read}, path::Path};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -29,11 +29,11 @@ impl fmt::Display for BackgroundData {
     }
 }
 impl BackgroundData {
-    pub fn new(vec: &Vec<u8>, project_directory: &PathBuf) -> Result<BackgroundData,String> {
+    pub fn new(vec: &[u8], project_directory: &Path) -> Result<BackgroundData,String> {
         // Since the issue is commonly tied to a specific background, this should stick out
-        log_write("> Creating SCEN...", LogLevel::DEBUG);
+        log_write("> Creating SCEN...", LogLevel::Debug);
         let mut ret: BackgroundData = BackgroundData::default();
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(vec);
+        let mut rdr = Cursor::new(vec);
         let file_end_pos: u64 = vec.len().try_into().unwrap();
         let mut test_load_count: usize = 0;
         while rdr.position() < file_end_pos {
@@ -42,7 +42,7 @@ impl BackgroundData {
             let seg_header = rdr.read_u32::<LittleEndian>().unwrap();
             let seg_internal_length = rdr.read_u32::<LittleEndian>().unwrap();
             let seg_header_str = header_to_string(&seg_header);
-            log_write(format!("Reading sub-segment '{}' with size 0x{:X}",seg_header_str,seg_internal_length), LogLevel::DEBUG);
+            log_write(format!("Reading sub-segment '{}' with size 0x{:X}",seg_header_str,seg_internal_length), LogLevel::Debug);
 
             match seg_header_str.as_str() {
                 "INFO" => {
@@ -56,10 +56,10 @@ impl BackgroundData {
                     // Is there IMBZ data to retrieve?
                     if info.imbz_filename_noext.is_some() {
                         // There is IMBZ data to retrieve. Fetch!
-                        if let Some(pixels_decomped) = info.get_imbz_pixels(project_directory) {
+                        if let Some(pixels_decomped) = info.get_imbz_pixels(project_directory.to_path_buf()) {
                             ret.pixel_tiles_preview = Some(pixels_decomped);
                         } else {
-                            log_write(format!("Failed to get IMBZ from INFO on BG layer {}", info.which_bg), LogLevel::ERROR);
+                            log_write(format!("Failed to get IMBZ from INFO on BG layer {}", info.which_bg), LogLevel::Error);
                             continue;
                         }
                     }
@@ -74,26 +74,26 @@ impl BackgroundData {
                 "PLTB" => {
                     let mut pal_vec: Vec<Palette> = Vec::new();
                     if ret.info_ro.color_mode > 0x1 {
-                        log_write(format!("Warning: PLTB color mode {} may be poorly supported",ret.info_ro.color_mode), LogLevel::WARN);
+                        log_write(format!("Warning: PLTB color mode {} may be poorly supported",ret.info_ro.color_mode), LogLevel::Warn);
                     }
                     if !ret.info_ro.is_256_colorpal_mode() {
-                        log_write("Loading PLTB with 16 color format", LogLevel::DEBUG);
+                        log_write("Loading PLTB with 16 color format", LogLevel::Debug);
                         // Palette in 16 mode: each is 16 colors * 2 bytes
                         let count_16: u32 = seg_internal_length / (16*2);
                         let mut index: u32 = 0;
                         while index < count_16 {
-                            let pal = Palette::from_cur(&mut rdr,16);
+                            let pal = Palette::from_cursor(&mut rdr,16);
                             pal_vec.push(pal);
                             index += 1;
                         }
                     } else {
-                        log_write("Loading PLTB with 256 color format", LogLevel::DEBUG);
+                        log_write("Loading PLTB with 256 color format", LogLevel::Debug);
                         // Note: Not every 256 palette has 256 colors
                         // Read forwards, including garbage data (probably don't do this)
                         // But the garbage data will never be read anyway so...
                         // Future issue may be if this is the last segment with nothing after it
                         let start_pos = rdr.position();
-                        pal_vec.push(Palette::from_cur(&mut rdr, 256));
+                        pal_vec.push(Palette::from_cursor(&mut rdr, 256));
                         rdr.set_position(start_pos + seg_internal_length as u64);
                     }
                     let pltb = PltbData::from_pal_vec(pal_vec);
@@ -113,11 +113,11 @@ impl BackgroundData {
                 "IMGB" => {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
-                    let imgb_data = ImgbData::new(&buffer);
+                    let imgb_data = ImgbData::new(buffer.clone());
                     ret.scen_segments.push(ScenSegmentWrapper::IMGB(imgb_data));
                     // Update preview
                     if ret.pixel_tiles_preview.is_some() {
-                        log_write("IMGB: Attempting to write to pixeltiles when already contains data", LogLevel::WARN);
+                        log_write("IMGB: Attempting to write to pixeltiles when already contains data", LogLevel::Warn);
                     }
                     ret.pixel_tiles_preview = Some(buffer); // Hand the actual data into it
                 }
@@ -130,7 +130,7 @@ impl BackgroundData {
                     // Now decompress it for the preview
                     let imbz_decomped = lamezip77_lz10_decomp(&imbz_comped_buffer);
                     if ret.pixel_tiles_preview.is_some() {
-                        log_write("IMBZ: Attempting to write to pixeltiles when already contains data", LogLevel::WARN);
+                        log_write("IMBZ: Attempting to write to pixeltiles when already contains data", LogLevel::Warn);
                     }
                     ret.pixel_tiles_preview = Some(imbz_decomped); // Move it in
                 }
@@ -139,10 +139,10 @@ impl BackgroundData {
                     let _read_res = rdr.read_exact(&mut buffer);
                     let anmz_decomped = lamezip77_lz10_decomp(&buffer);
                     // The real one to use for previews
-                    let anmz_data = match AnmzDataSegment::from_decomp(&anmz_decomped) {
+                    let anmz_data = match AnmzDataSegment::from_decomp(anmz_decomped) {
                         Some(a) => a,
                         None => {
-                            log_write("Error reading ANMZ data", LogLevel::ERROR);
+                            log_write("Error reading ANMZ data", LogLevel::Error);
                             continue;// Already did read, so it should be good to continue
                         },
                     };
@@ -156,20 +156,20 @@ impl BackgroundData {
                 "PLAN" => {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
-                    let plan = AnimatedPaletteData::new(&buffer);
+                    let plan = AnimatedPaletteData::new(buffer);
                     ret.scen_segments.push(ScenSegmentWrapper::PLAN(plan));
                 }
                 "RAST" => {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
-                    let rast = RastData::new(&buffer);
+                    let rast = RastData::new(buffer);
                     ret.scen_segments.push(ScenSegmentWrapper::RAST(rast));
                 }
                 _ => {
                     // I wrote a script to check every single one
                     // This should not be possible
                     let unknown_seg = format!("Unknown segment in SCEN: '{}'",&seg_header_str);
-                    log_write(&unknown_seg, LogLevel::ERROR);
+                    log_write(&unknown_seg, LogLevel::Error);
                     return Err(unknown_seg);
                     // let mut _buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     // let _read_res = rdr.read_exact(&mut _buffer);
@@ -181,7 +181,7 @@ impl BackgroundData {
         if let Some(anmz_data) = ret.get_anmz().cloned() {
             let mut cur_vram_offset: usize = anmz_data.vram_offset as usize;
             if ret.info_ro.color_mode > 0x1 {
-                log_write("Color Modes above 1 may be poorly supported", LogLevel::WARN);
+                log_write("Color Modes above 1 may be poorly supported", LogLevel::Warn);
             }
             if ret.info_ro.is_256_colorpal_mode() {
                 cur_vram_offset *= 64;
@@ -198,18 +198,18 @@ impl BackgroundData {
                     cur_vram_offset += 1;
                 }
             } else {
-                log_write("Unable to unwrap pixeltiles when creating ANMZ", LogLevel::ERROR);
+                log_write("Unable to unwrap pixeltiles when creating ANMZ", LogLevel::Error);
             }
         }
 
         if ret.scen_segments.len() != test_load_count {
             let mismatch_msg = format!("Mismatch in loaded segments versus load count: {} vs {}",
                 ret.scen_segments.len(),test_load_count);
-            log_write(&mismatch_msg, LogLevel::ERROR);
+            log_write(&mismatch_msg, LogLevel::Error);
             return Err(mismatch_msg);
         }
 
-        log_write(format!("> Created SCEN for background {}",ret.info_ro.which_bg), LogLevel::DEBUG);
+        log_write(format!("> Created SCEN for background {}",ret.info_ro.which_bg), LogLevel::Debug);
 
         Ok(ret)
     }
@@ -297,14 +297,14 @@ impl BackgroundData {
 
     pub fn increase_width(&mut self, new_width: u16) -> Result<u16,()> {
         if new_width % 2 != 0 {
-            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::WARN);
+            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
             return Err(());
         }
-        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::LOG);
+        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width <= old_width {
-            log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::ERROR);
+            log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
             return Err(());
         }
         let how_much_add = new_width - old_width;
@@ -321,14 +321,14 @@ impl BackgroundData {
 
     pub fn decrease_width(&mut self, new_width: u16) -> Result<u16,()> {
         if new_width % 2 != 0 {
-            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::WARN);
+            log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
             return Err(());
         }
-        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::LOG);
+        log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width >= old_width {
-            log_write(format!("Cannot decrease, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::ERROR);
+            log_write(format!("Cannot decrease, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
             return Err(());
         }
         let how_much_remove = old_width - new_width;
@@ -348,7 +348,7 @@ impl BackgroundData {
         let layer_width = info_c.layer_width;
 
         if new_height % 2 != 0 {
-            log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::WARN);
+            log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::Warn);
             return Err(());
         }
         if let Some(mpbz) = self.get_mpbz_mut() {
@@ -368,7 +368,7 @@ impl TopLevelSegment for BackgroundData {
         let mut compiled: Vec<u8> = Vec::new();
         let info_c = self.get_info().expect("There is always INFO");
         for segment in &self.scen_segments {
-            let mut seg_comp = segment.wrap(Some(&info_c));
+            let mut seg_comp = segment.wrap(Some(info_c));
             compiled.append(&mut seg_comp);
         }
 
@@ -378,7 +378,7 @@ impl TopLevelSegment for BackgroundData {
     fn wrap(&self) -> Vec<u8> {
         let uncomped_bytes: Vec<u8> = self.compile();
         // SCEN files are not compressed, though sub-segments are
-        segment_wrap(&uncomped_bytes, "SCEN".to_owned())
+        segment_wrap(uncomped_bytes, "SCEN".to_owned())
     }
 
     fn header(&self) -> String {

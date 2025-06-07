@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::{engine::compression::segment_wrap, utils::{log_write, LogLevel}};
@@ -14,10 +12,10 @@ pub struct ScrollData {
 }
 
 impl ScrollData {
-    pub fn new(rdr: &mut Cursor<&Vec<u8>>) -> Self {
+    pub fn new<T: ReadBytesExt>(rdr: &mut T) -> Self {
         let left_vel = match rdr.read_i32::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Could not read Left Velocity: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Could not read Left Velocity: '{error}'"), LogLevel::Error);
                 return ScrollData::default();
             }
             Ok(v) => v,
@@ -38,7 +36,7 @@ impl ScenSegment for ScrollData {
     }
 
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
-        segment_wrap(&self.compile(info), self.header())
+        segment_wrap(self.compile(info), self.header())
     }
 
     fn header(&self) -> String {

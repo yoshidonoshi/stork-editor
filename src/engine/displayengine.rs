@@ -43,7 +43,7 @@ impl Default for DisplaySettings {
             // Since it's just a copy overlay
             show_breakable_rock: false,
             show_triggers: true,
-            stork_theme: StorkTheme::AUTO,
+            stork_theme: StorkTheme::Auto,
             show_box_for_rendered: true
         }
     }
@@ -55,6 +55,7 @@ impl DisplaySettings {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(PartialEq,Clone,Copy,Debug)]
 pub enum GameVersion {
     /// AYWE
@@ -68,7 +69,7 @@ pub enum GameVersion {
     /// AYWJ
     JAP,
     /// What?
-    UNKNOWN
+    Unknown
 }
 pub fn get_gameversion_prettyname(gv: &GameVersion) -> String {
     match gv {
@@ -79,7 +80,7 @@ pub fn get_gameversion_prettyname(gv: &GameVersion) -> String {
         GameVersion::USA10 => String::from("USA 1.0"),
         GameVersion::USA11 => String::from("USA 1.1 (rev1)"),
         GameVersion::USAXX => String::from("Unknown USA"),
-        GameVersion::UNKNOWN => String::from("Unknown Game Version")
+        GameVersion::Unknown => String::from("Unknown Game Version")
     }
 }
 
@@ -227,7 +228,7 @@ impl Default for DisplayEngine {
             bg_palettes: Default::default(),
             bg_layer_1: Option::None, bg_layer_2: Option::None, bg_layer_3: Option::None,
             loaded_arm9: Option::None,
-            game_version: GameVersion::UNKNOWN,
+            game_version: GameVersion::Unknown,
             tile_cache_bg1: vec![vec![Option::None;1024];16],
             tile_cache_bg2: vec![vec![Option::None;1024];16],
             tile_cache_bg3: vec![vec![Option::None;1024];16],
@@ -267,11 +268,11 @@ impl DisplayEngine {
 
         // Build Stamp //
         let rc_path: PathBuf = PathBuf::from(&extract_dir);
-        let stamp_rc_path = nitrofs_abs(&rc_path, &"stamp.rc".to_owned());
+        let stamp_rc_path = nitrofs_abs(rc_path, "stamp.rc");
         let build_date = match read_to_string(stamp_rc_path) {
             Err(error) => {
                 let rc_err1 = format!("Failed to open stamp.rc: {error}");
-                log_write(rc_err1.clone(), LogLevel::ERROR);
+                log_write(rc_err1.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(rc_err1));
             }
             Ok(d) => d,
@@ -283,7 +284,7 @@ impl DisplayEngine {
         let yaml_content = match read_to_string(header_path) {
             Err(error) => {
                 let yaml_err1 = format!("Failed to open header.yaml: {error}");
-                log_write(yaml_err1.clone(), LogLevel::ERROR);
+                log_write(yaml_err1.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(yaml_err1));
             }
             Ok(s) => s,
@@ -295,18 +296,18 @@ impl DisplayEngine {
                 "AYWE"=> GameVersion::USAXX,
                 "AYWP"=> GameVersion::EURXX,
                 "AYWJ"=> GameVersion::JAP, // Only one Japanese version
-                _=> GameVersion::UNKNOWN
+                _=> GameVersion::Unknown
             };
-            log_write(format!("Found game version header: '{}'",game_code), LogLevel::DEBUG);
+            log_write(format!("Found game version header: '{}'",game_code), LogLevel::Debug);
             de.game_version = game_ver;
         }
         if let Some(maker_code) = yaml["makercode"].as_str() {
             if maker_code == "01" {
-                log_write("Game is unmodified".to_owned(), LogLevel::LOG);
+                log_write("Game is unmodified".to_owned(), LogLevel::Log);
             } else if maker_code == "63" {
-                log_write("Game was edited with Stork".to_owned(), LogLevel::LOG);
+                log_write("Game was edited with Stork".to_owned(), LogLevel::Log);
             } else {
-                log_write(format!("Unusual makercode: '{}'",maker_code), LogLevel::WARN);
+                log_write(format!("Unusual makercode: '{}'",maker_code), LogLevel::Warn);
             }
         }
 
@@ -316,17 +317,17 @@ impl DisplayEngine {
         arm9_path.push("arm9.bin");
         if let None|Some(false) = fs::exists(&arm9_path).ok() {
             let arm9_inval_path = format!("ARM9 Path invalid: '{}'",&arm9_path.display());
-            log_write(arm9_inval_path.clone(), LogLevel::ERROR);
+            log_write(arm9_inval_path.clone(), LogLevel::Error);
             return Err(DisplayEngineError::new(arm9_inval_path));
         }
         let contents = match fs::read(&arm9_path) {
             Ok(bytes) => {
-                log_write(format!("Loaded ARM9 binary from '{}' successfully",&arm9_path.display()), LogLevel::LOG);
+                log_write(format!("Loaded ARM9 binary from '{}' successfully",&arm9_path.display()), LogLevel::Log);
                 bytes
             }
             Err(e) => {
                 let arm9_io_err = format!("ARM9 IO error: {}", e);
-                log_write(arm9_io_err.clone(), LogLevel::ERROR);
+                log_write(arm9_io_err.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(arm9_io_err));
             }
         };
@@ -349,21 +350,21 @@ impl DisplayEngine {
                     _ => GameVersion::EURXX
                 };
             }
-            GameVersion::UNKNOWN => {
+            GameVersion::Unknown => {
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unknown game");
                 let unsupported_msg = "Game Version is unknown, canceling load".to_owned();
-                log_write(unsupported_msg.clone(), LogLevel::ERROR);
+                log_write(unsupported_msg.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(unsupported_msg));
             }
             GameVersion::JAP => {
                 let jpn_msg = "JPN version not yet supported, will break".to_owned();
-                log_write(jpn_msg.clone(), LogLevel::ERROR);
+                log_write(jpn_msg.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(jpn_msg))
             }
             _ => {
                 let bad_logic_gamever = format!("Game version {:?} should not be hit here",gamever);
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unsupported game");
-                log_write(bad_logic_gamever.clone(), LogLevel::ERROR);
+                log_write(bad_logic_gamever.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(bad_logic_gamever));
             }
         }
@@ -376,7 +377,7 @@ impl DisplayEngine {
                 let found_str = utils::read_fixed_string(got_contents, 0xe1e6e, 6);
                 if !found_str.eq("1-1_D3") {
                     let unk_ver1 = "Could not find 1-1_D3 in USA 1.0".to_string();
-                    log_write(unk_ver1.clone(), LogLevel::ERROR);
+                    log_write(unk_ver1.clone(), LogLevel::Error);
                     return Err(DisplayEngineError::new(unk_ver1));
                 }
             },
@@ -384,36 +385,36 @@ impl DisplayEngine {
                 let found_str2 = utils::read_fixed_string(got_contents, 0x0e20ae, 6);
                 if !found_str2.eq("1-1_D3") {
                     let unk_ver2 = "Could not find 1-1_D3 in USA 1.1".to_string();
-                    log_write(unk_ver2.clone(), LogLevel::ERROR);
+                    log_write(unk_ver2.clone(), LogLevel::Error);
                     return Err(DisplayEngineError::new(unk_ver2));
                 }
-                log_write("USA 1.1 is poorly supported, proceed with caution", LogLevel::WARN);
+                log_write("USA 1.1 is poorly supported, proceed with caution", LogLevel::Warn);
             }
             GameVersion::USAXX => {
                 let unk_ver3 = "Unknown USA version".to_string();
-                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                log_write(unk_ver3.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             GameVersion::EURXX => {
                 let unk_ver3 = "Unknown EUR version".to_string();
-                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                log_write(unk_ver3.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             GameVersion::EUR10 => {
                 let unk_ver3 = "EURr0 unsupported".to_string();
-                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                log_write(unk_ver3.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             GameVersion::EUR11 => {
                 let unk_ver3 = "EURr1 unsupported".to_string();
-                log_write(unk_ver3.clone(), LogLevel::ERROR);
+                log_write(unk_ver3.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(unk_ver3));
             }
             _ => {
-                log_write("This should be impossible to hit in version test", LogLevel::FATAL);
+                log_write("This should be impossible to hit in version test", LogLevel::Fatal);
             }
         }
-        log_write(format!("Assuming game version {}",get_gameversion_prettyname(&game_version)), LogLevel::LOG);
+        log_write(format!("Assuming game version {}",get_gameversion_prettyname(&game_version)), LogLevel::Log);
         Ok(de)
     }
 
@@ -424,7 +425,7 @@ impl DisplayEngine {
             GameVersion::USA11 => self.get_level_filename_usa(world_index, level_index,GameVersion::USA11),
             //GameVersion::EUR => self.get_level_filename_eur_11(world_index, level_index),
             _ => {
-                log_write(format!("Attempted to get level filename on unsupported version: '{game_ver:?}'"), LogLevel::FATAL);
+                log_write(format!("Attempted to get level filename on unsupported version: '{game_ver:?}'"), LogLevel::Fatal);
                 unreachable!();
             },
         };
@@ -433,7 +434,7 @@ impl DisplayEngine {
                 s
             }
             Err(e) => {
-                log_write(format!("filename_res failed somehow: {}",e), LogLevel::FATAL);
+                log_write(format!("filename_res failed somehow: {}",e), LogLevel::Fatal);
                 "Error".to_owned()
             }
         }
@@ -443,13 +444,13 @@ impl DisplayEngine {
     fn get_level_filename_usa(&self, world_index: &u32, level_index: &u32, game_version: GameVersion) -> Result<String,String> {
         if world_index + 1 > 5 {
             let world_fail = "World 5 is the highest World";
-            log_write(world_fail, LogLevel::ERROR);
+            log_write(world_fail, LogLevel::Error);
             return Err(world_fail.to_owned());
         }
 
         if level_index + 1 > 10 {
             let level_fail = "There are only 10 levels per World";
-            log_write(level_fail, LogLevel::ERROR);
+            log_write(level_fail, LogLevel::Error);
             return Err(level_fail.to_owned());
         }
 
@@ -457,6 +458,7 @@ impl DisplayEngine {
         // That would mean 1-1 (indexes 0-0) leads to 0-1 not 1-1
         // So the +1 makes it skip that
         let level_id: u32 = world_index * 10 + level_index + 1;
+        #[allow(clippy::manual_range_contains)]
         if level_id < 0x7b || level_id > 0x7e {
             // 02050024 (some function that takes in 0), does not break
         }
@@ -487,7 +489,7 @@ impl DisplayEngine {
             GameVersion::USA10 => 0x000d8f20,
             GameVersion::USA11 => 0x000d9178,
             _ => {
-                log_write(format!("Attempted to use version {} in USA level loader",get_gameversion_prettyname(&game_version)), LogLevel::FATAL);
+                log_write(format!("Attempted to use version {} in USA level loader",get_gameversion_prettyname(&game_version)), LogLevel::Fatal);
                 unreachable!()
             }
         };
@@ -501,7 +503,7 @@ impl DisplayEngine {
                 Some(s) => s,
                 None => {
                     let err_msg = "Failed to get string address in level name retrieval".to_owned();
-                    log_write(err_msg.clone(), LogLevel::ERROR);
+                    log_write(err_msg.clone(), LogLevel::Error);
                     return Err(err_msg)
                 },
             };
@@ -517,6 +519,7 @@ impl DisplayEngine {
     fn get_level_filename_eur_11(&self, world_index: &u32, level_index: &u32) -> Result<String,String> {
         // 1-1 filename location: 0xe21ae
         let level_id: u32 = world_index * 10 + level_index;// + 1 maybe not here?
+        #[allow(clippy::manual_range_contains)]
         if (level_id < 0x7b) || (0x7e < level_id) {
             //func_02017e88(0);
         }
@@ -557,7 +560,7 @@ impl DisplayEngine {
                 Some(s) => s,
                 None => {
                     let err_msg = "Failed to get string address in level name retrieval".to_owned();
-                    log_write(err_msg.clone(), LogLevel::ERROR);
+                    log_write(err_msg.clone(), LogLevel::Error);
                     return Err(err_msg)
                 },
             };
@@ -570,17 +573,17 @@ impl DisplayEngine {
     }
     
     pub fn load_level(&mut self, world_index: u32, level_index: u32, map_index: u32) -> Result<(),String> {
-        log_write(format!("Loading World {} Level {} Map {}",&world_index+1,&level_index+1,&map_index+1), LogLevel::LOG);
+        log_write(format!("Loading World {} Level {} Map {}",&world_index+1,&level_index+1,&map_index+1), LogLevel::Log);
         let map_index_store = self.map_index; // Backup
         self.map_index = Some(map_index as usize);
         let mut initial_level_name = self.get_level_filename(&world_index, &level_index);
         initial_level_name.push_str(".crsb");
-        let crsb_path = nitrofs_abs(&self.export_folder, &initial_level_name);
+        let crsb_path = nitrofs_abs(self.export_folder.to_path_buf(), &initial_level_name);
         let crsb = CourseInfo::new(&crsb_path,&format!("Course {}-{}",world_index+1,level_index+1));
-        log_write(format!("Loaded Course '{}' from '{}'",&crsb.label,&crsb.src_filename), LogLevel::LOG);
+        log_write(format!("Loaded Course '{}' from '{}'",&crsb.label,&crsb.src_filename), LogLevel::Log);
         if (map_index as usize) >= crsb.level_map_data.len() {
             let err_msg = format!("map_index was out of bounds in load_level: '{}' >= '{}'",map_index,crsb.level_map_data.len());
-            log_write(&err_msg, LogLevel::ERROR);
+            log_write(&err_msg, LogLevel::Error);
             // Revert
             self.map_index = map_index_store;
             return Err(err_msg);
@@ -590,12 +593,12 @@ impl DisplayEngine {
         let loaded_course_store = self.loaded_course.clone(); // Backup
         self.loaded_course = crsb;
         map_name.push_str(".mpdz");
-        let map_path = nitrofs_abs(&self.export_folder, &map_name);
-        let loaded_map_res = match MapData::new(&map_path,&self.export_folder) {
+        let map_path = nitrofs_abs(self.export_folder.to_path_buf(), &map_name);
+        let loaded_map_res = match MapData::new(&map_path, &self.export_folder) {
             Ok(x) => x,
             Err(e) => {
                 let err_msg = format!("Failed to load MapData: '{}'",e);
-                log_write(&err_msg, LogLevel::ERROR);
+                log_write(&err_msg, LogLevel::Error);
                 // Revert
                 self.map_index = map_index_store;
                 self.loaded_course = loaded_course_store;
@@ -609,21 +612,21 @@ impl DisplayEngine {
         let seg_count = &self.loaded_map.segments.len();
         let mapped: Vec<String> = self.loaded_map.segments.iter().map(|x| x.header()).collect();
         let mapped: String = mapped.join(", ");
-        log_write(format!("Loaded Map '{}' with {} DataSegments: {}",&self.loaded_map.src_file,seg_count,mapped), LogLevel::LOG);
+        log_write(format!("Loaded Map '{}' with {} DataSegments: {}",&self.loaded_map.src_file,seg_count,mapped), LogLevel::Log);
         
         // Do it manually the first time, don't wait for refresh
         self.update_graphics_from_mapdata();
         Ok(()) // Could something useful be returned?
     }
 
-    pub fn get_render_archive(&mut self, archive_name_local: &String) -> &RenderArchive {
+    pub fn get_render_archive(&mut self, archive_name_local: &str) -> &RenderArchive {
         if self.loaded_archives.contains_key(archive_name_local) {
             let arc_opt = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get");
             arc_opt
         } else {
-            let archive_name_full = nitrofs_abs(&self.export_folder, archive_name_local).display().to_string();
-            let rarc = RenderArchive::new(archive_name_full, &self.export_folder);
-            self.loaded_archives.insert(archive_name_local.clone(), rarc);
+            let archive_name_full = nitrofs_abs(self.export_folder.to_path_buf(), archive_name_local).display().to_string();
+            let rarc = RenderArchive::new(archive_name_full, self.export_folder.to_path_buf());
+            self.loaded_archives.insert(archive_name_local.to_string(), rarc);
             let ret = self.loaded_archives.get(archive_name_local).expect("Error with RenderArchive get post creation");
             ret
         }
@@ -639,17 +642,17 @@ impl DisplayEngine {
             GameVersion::USA10 => 0x0d6f40, // 0x020d6f40
             GameVersion::USA11 => 0x0d7198, // 0x020d7198
             _ => {
-                log_write(format!("Attempting to update graphics with unsupported version '{}'",get_gameversion_prettyname(&gv)), LogLevel::FATAL);
+                log_write(format!("Attempting to update graphics with unsupported version '{}'",get_gameversion_prettyname(&gv)), LogLevel::Fatal);
                 unreachable!()
             }
         }; 
         if let Some(arm9_binary) = &self.loaded_arm9 {
-            let mut cur = Cursor::new(arm9_binary);
+            let mut cur = Cursor::new(arm9_binary.as_slice());
             cur.set_position(unipal_addr);
-            let pal = Palette::from_cur(&mut cur,16);
+            let pal = Palette::from_cursor(&mut cur, 16);
             self.bg_palettes[pal_index] = pal;
         } else {
-            log_write("Could not load ARM9 to get universal palette", LogLevel::ERROR);
+            log_write("Could not load ARM9 to get universal palette", LogLevel::Error);
         }
         pal_index += 1;
 
@@ -665,7 +668,7 @@ impl DisplayEngine {
                             self.bg_palettes[pal_index] = *p;
                         }
                         // else { // For some reason, there's more. But not used?
-                        //     log_write(format!("Palette Overflow, discarding"), LogLevel::WARN);
+                        //     log_write(format!("Palette Overflow, discarding"), LogLevel::Warn);
                         // }
                         pal_index += 1;
                     }
@@ -679,10 +682,10 @@ impl DisplayEngine {
                 } else if which == 3 {
                     self.bg_layer_3 = Some(bg_data.clone());
                 } else {
-                    log_write(format!("Unusual which_bg in update_graphics_from_map: {}",which), LogLevel::ERROR);
+                    log_write(format!("Unusual which_bg in update_graphics_from_map: {}",which), LogLevel::Error);
                 }
             } else {
-                //log_write(format!("Did not get BG from get_background in graphics update"), LogLevel::WARN);
+                //log_write(format!("Did not get BG from get_background in graphics update"), LogLevel::Warn);
             }
         }
         // SETD (Sprites) //
@@ -710,24 +713,15 @@ impl DisplayEngine {
     }
 
     pub fn get_loaded_sprite_by_uuid(&self, uuid: &Uuid) -> Option<&LevelSprite> {
-        for sprite in &self.level_sprites {
-            if sprite.uuid == *uuid {
-                return Some(sprite);
-            }
-        }
-        Option::None
+        self.level_sprites.iter().find(|&sprite| sprite.uuid == *uuid)
     }
 
     pub fn get_selected_exit_mut(&mut self) -> Option<&mut MapExit> {
-        let Some(selected_exit_uuid) = self.course_settings.selected_exit else {
-            return Option::None;
-        };
-        let Some(selected_map_index) = self.course_settings.selected_map else {
-            return Option::None;
-        };
+        let selected_exit_uuid = self.course_settings.selected_exit?;
+        let selected_map_index = self.course_settings.selected_map?;
         if selected_map_index >= self.loaded_course.level_map_data.len() {
             self.course_settings.selected_map = Option::None;
-            log_write("Selected map index out of bounds", LogLevel::WARN);
+            log_write("Selected map index out of bounds", LogLevel::Warn);
         }
         let selected_map = &mut self.loaded_course.level_map_data[selected_map_index];
         let map_exit = selected_map.get_exit(&selected_exit_uuid);

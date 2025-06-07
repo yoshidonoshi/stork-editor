@@ -22,7 +22,7 @@ pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, laye
                     if let ScenSegmentWrapper::INFO(info) = seg {
                         let changed = show_info_segment(ui, info);
                         if changed {
-                            log_write("Changed INFO", LogLevel::DEBUG);
+                            log_write("Changed INFO", LogLevel::Debug);
                             de.unsaved_changes = true;
                             de.graphics_update_needed = true;
                         }
@@ -130,7 +130,7 @@ pub fn show_scen_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine, laye
     if let Some(to_del) = do_del {
         let bg = de.loaded_map.get_background(*layer as u8).expect("BG missing canceled earlier");
         let header = bg.scen_segments[to_del].header();
-        log_write(format!("Deleting segment '{}' at index {}",header,to_del), LogLevel::LOG);
+        log_write(format!("Deleting segment '{}' at index {}",header,to_del), LogLevel::Log);
         bg.scen_segments.remove(to_del);
         de.graphics_update_needed = true;
         de.unsaved_changes = true;
