@@ -22,6 +22,7 @@ pub mod imbz;
 pub mod plan;
 pub mod rast;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone,PartialEq,Debug)]
 pub enum ScenSegmentWrapper {
     INFO(ScenInfoData),

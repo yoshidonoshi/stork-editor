@@ -28,6 +28,7 @@ use super::sprites::{LevelSprite, LevelSpriteSet, SpriteMetadata};
 use super::types::MapTileRecordData;
 use super::{GenericTopLevelSegment, TopLevelSegment};
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone,PartialEq,Debug)]
 pub enum TopLevelSegmentWrapper {
     SETD(LevelSpriteSet),

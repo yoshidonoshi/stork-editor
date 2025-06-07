@@ -55,6 +55,7 @@ impl DisplaySettings {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(PartialEq,Clone,Copy,Debug)]
 pub enum GameVersion {
     /// AYWE

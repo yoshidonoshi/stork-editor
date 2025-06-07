@@ -165,6 +165,7 @@ impl MapTileRecordData {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Clone, Copy, EnumIter)]
 pub enum BgValue {
     BG1,
@@ -172,6 +173,7 @@ pub enum BgValue {
     BG3
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, EnumIter)]
 pub enum CurrentLayer {
     BG1 = 1,

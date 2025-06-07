@@ -8,6 +8,7 @@ use crate::{data::{path::PathPoint, types::{MapTileRecordData, Palette}}, engine
 
 pub mod profile;
 
+#[allow(clippy::upper_case_acronyms)] // TODO: make these CamelCase maybe?
 #[derive(PartialEq)]
 pub enum LogLevel {
     DEBUG,
