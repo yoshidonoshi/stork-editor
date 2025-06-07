@@ -29,11 +29,11 @@ impl fmt::Display for BackgroundData {
     }
 }
 impl BackgroundData {
-    pub fn new(vec: &Vec<u8>, project_directory: &PathBuf) -> Result<BackgroundData,String> {
+    pub fn new(vec: &[u8], project_directory: &PathBuf) -> Result<BackgroundData,String> {
         // Since the issue is commonly tied to a specific background, this should stick out
         log_write("> Creating SCEN...", LogLevel::DEBUG);
         let mut ret: BackgroundData = BackgroundData::default();
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(vec);
+        let mut rdr = Cursor::new(vec);
         let file_end_pos: u64 = vec.len().try_into().unwrap();
         let mut test_load_count: usize = 0;
         while rdr.position() < file_end_pos {
@@ -82,7 +82,7 @@ impl BackgroundData {
                         let count_16: u32 = seg_internal_length / (16*2);
                         let mut index: u32 = 0;
                         while index < count_16 {
-                            let pal = Palette::from_cur(&mut rdr,16);
+                            let pal = Palette::from_cursor(&mut rdr,16);
                             pal_vec.push(pal);
                             index += 1;
                         }
@@ -93,7 +93,7 @@ impl BackgroundData {
                         // But the garbage data will never be read anyway so...
                         // Future issue may be if this is the last segment with nothing after it
                         let start_pos = rdr.position();
-                        pal_vec.push(Palette::from_cur(&mut rdr, 256));
+                        pal_vec.push(Palette::from_cursor(&mut rdr, 256));
                         rdr.set_position(start_pos + seg_internal_length as u64);
                     }
                     let pltb = PltbData::from_pal_vec(pal_vec);
@@ -113,7 +113,7 @@ impl BackgroundData {
                 "IMGB" => {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
-                    let imgb_data = ImgbData::new(&buffer);
+                    let imgb_data = ImgbData::new(buffer.clone());
                     ret.scen_segments.push(ScenSegmentWrapper::IMGB(imgb_data));
                     // Update preview
                     if ret.pixel_tiles_preview.is_some() {
@@ -139,7 +139,7 @@ impl BackgroundData {
                     let _read_res = rdr.read_exact(&mut buffer);
                     let anmz_decomped = lamezip77_lz10_decomp(&buffer);
                     // The real one to use for previews
-                    let anmz_data = match AnmzDataSegment::from_decomp(&anmz_decomped) {
+                    let anmz_data = match AnmzDataSegment::from_decomp(anmz_decomped) {
                         Some(a) => a,
                         None => {
                             log_write("Error reading ANMZ data", LogLevel::ERROR);
@@ -156,13 +156,13 @@ impl BackgroundData {
                 "PLAN" => {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
-                    let plan = AnimatedPaletteData::new(&buffer);
+                    let plan = AnimatedPaletteData::new(buffer);
                     ret.scen_segments.push(ScenSegmentWrapper::PLAN(plan));
                 }
                 "RAST" => {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
-                    let rast = RastData::new(&buffer);
+                    let rast = RastData::new(buffer);
                     ret.scen_segments.push(ScenSegmentWrapper::RAST(rast));
                 }
                 _ => {
@@ -378,7 +378,7 @@ impl TopLevelSegment for BackgroundData {
     fn wrap(&self) -> Vec<u8> {
         let uncomped_bytes: Vec<u8> = self.compile();
         // SCEN files are not compressed, though sub-segments are
-        segment_wrap(&uncomped_bytes, "SCEN".to_owned())
+        segment_wrap(uncomped_bytes, "SCEN".to_owned())
     }
 
     fn header(&self) -> String {

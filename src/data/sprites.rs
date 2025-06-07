@@ -36,7 +36,7 @@ impl fmt::Display for LevelSprite {
     }
 }
 impl LevelSprite {
-    pub fn from_cursor(rdr: &mut Cursor<&Vec<u8>>) -> Self {
+    pub fn from_cursor<T: ReadBytesExt>(rdr: &mut T)  -> Self {
         let mut spr = LevelSprite::default();
         spr.object_id = rdr.read_u16::<LittleEndian>().unwrap();
         spr.settings_length = rdr.read_u16::<LittleEndian>().unwrap();
@@ -80,8 +80,8 @@ pub struct LevelSpriteSet {
     pub sprites: Vec<LevelSprite>
 }
 impl LevelSpriteSet {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
+    pub fn new(byte_data: &[u8]) -> Self {
+        let mut rdr = Cursor::new(byte_data);
         let seg_end: usize = byte_data.len();
         let mut seg: LevelSpriteSet = LevelSpriteSet::default();
         // If all goes well, the terminating position should be equal to the length
@@ -133,7 +133,7 @@ impl TopLevelSegment for LevelSpriteSet {
     
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
-        segment_wrap(&comp_bytes, "SETD".to_owned())
+        segment_wrap(comp_bytes, "SETD".to_owned())
     }
 
     fn header(&self) -> String {

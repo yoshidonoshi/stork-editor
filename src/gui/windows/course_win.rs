@@ -373,7 +373,7 @@ fn show_exit_type(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
         });
 }
 
-fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
+fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &[CourseMapInfo]) {
     let Some(course) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
         log_write("Somehow, course was none", LogLevel::ERROR);
         return;
@@ -401,7 +401,7 @@ fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &V
     }
 }
 
-fn show_exit_target_entrance(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
+fn show_exit_target_entrance(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &[CourseMapInfo]) {
     let Some(course) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
         log_write("Somehow, course was none", LogLevel::ERROR);
         return;

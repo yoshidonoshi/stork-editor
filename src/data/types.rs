@@ -69,15 +69,15 @@ impl Palette {
             _pal_len: pal_len
         }
     }
-    pub fn from_cur(cur: &mut Cursor<&Vec<u8>>, pal_len: usize) -> Self {
+    pub fn from_cursor(rdr: &mut Cursor<&[u8]>, pal_len: usize) -> Self {
         let mut cols: [PalColor; 256] = [PalColor::default(); 256];
         let mut i: usize = 0;
         while i < pal_len {
-            let short: u16 = cur.read_u16::<LittleEndian>().unwrap();
+            let short: u16 = rdr.read_u16::<LittleEndian>().unwrap();
             let color = utils::color_from_u16(&short);
             cols[i].color = color;
             cols[i]._short = short;
-            cols[i]._addr = cur.position() as u32;
+            cols[i]._addr = rdr.position() as u32;
             i += 1;
         }
         Self {

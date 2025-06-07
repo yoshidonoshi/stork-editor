@@ -25,7 +25,7 @@ impl fmt::Display for DataSegment {
     }
 }
 impl DataSegment {
-    pub fn _new_from_bytes(input: &Vec<u8>) -> Self {
+    pub fn _new_from_bytes(input: &[u8]) -> Self {
         let mut rdr = Cursor::new(input);
         let header = rdr.read_u32::<LittleEndian>().unwrap();
         let size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;
@@ -43,13 +43,13 @@ impl DataSegment {
         }
     }
     #[allow(dead_code)]
-    pub fn new(input: &Vec<u8>, header: String) -> Self {
+    pub fn new(input: Vec<u8>, header: String) -> Self {
         if header.len() != 4 {
             log_write(format!("Bad header string length: '{}'",header.len()), LogLevel::ERROR);
         }
         Self {
             header: string_to_header(header),
-            internal_data: input.clone()
+            internal_data: input,
         }
     }
 }

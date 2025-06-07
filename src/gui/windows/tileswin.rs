@@ -11,7 +11,7 @@ const TILE_RECT: Vec2 = Vec2::new(TILE_WIDTH, TILE_HEIGHT);
 const TILES_ARRAY_WIDTH: usize = 0x10;
 const TOP_MARGIN: f32 = 1.0;
 
-pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &Vec<TextureHandle>) {
+pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &[TextureHandle]) {
     puffin::profile_function!();
     let painter: &egui::Painter = ui.painter();
     let top_left: Pos2 = ui.min_rect().min + Vec2::new(0.0, TOP_MARGIN);

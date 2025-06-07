@@ -210,7 +210,7 @@ pub fn load_stored_brushes() {
 
 const SAVED_BRUSHES_FILE: &str = "saved_brushes.json";
 
-pub fn save_brushes_to_file(brushes: &Vec<Brush>) {
+pub fn save_brushes_to_file(brushes: &[Brush]) {
     log_write("Saving loaded Brushes to JSON...", LogLevel::LOG);
     let saved_brushes = json!({
         "brushes": brushes,

@@ -143,7 +143,7 @@ impl CourseInfo {
         self.update_exit_indexes();
         let uncomped_bytes: Vec<u8> = self.compile();
         // SCEN files are not compressed, though sub-segments are
-        segment_wrap(&uncomped_bytes, "CRSB".to_owned())
+        segment_wrap(uncomped_bytes, "CRSB".to_owned())
     }
 
     /// Update UUID lists from indexes
@@ -348,7 +348,7 @@ impl CourseMapInfo {
     fn wrap(&self) -> Vec<u8> {
         let uncomped_bytes: Vec<u8> = self.compile();
         // SCEN files are not compressed, though sub-segments are
-        segment_wrap(&uncomped_bytes, "CSCN".to_owned())
+        segment_wrap(uncomped_bytes, "CSCN".to_owned())
     }
     pub fn get_entrance_index(&self, entrance_uuid: &Uuid) -> Option<u8> {
         let mut index: u8 = 0;

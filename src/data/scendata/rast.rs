@@ -7,10 +7,10 @@ pub struct RastData {
     pub _raw: Vec<u8>
 }
 impl RastData {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
+    pub fn new(byte_data: Vec<u8>) -> Self {
         log_write("RAST is unhandled, storing raw data to enable safe saving", LogLevel::WARN);
         Self {
-            _raw: byte_data.clone()
+            _raw: byte_data,
         }
     }
 }
@@ -22,7 +22,7 @@ impl ScenSegment for RastData {
 
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile(info);
-        segment_wrap(&comp_bytes, self.header())
+        segment_wrap(comp_bytes, self.header())
     }
 
     fn header(&self) -> String {

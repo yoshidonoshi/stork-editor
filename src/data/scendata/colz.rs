@@ -19,7 +19,7 @@ pub struct CollisionData {
 }
 
 impl CollisionData {
-    pub fn new(compressed_buffer: &Vec<u8>) -> Self {
+    pub fn new(compressed_buffer: &[u8]) -> Self {
         let decomp: Vec<u8> = lamezip77_lz10_decomp(compressed_buffer);
         Self {
             col_tiles: decomp
@@ -83,7 +83,7 @@ impl ScenSegment for CollisionData {
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let compiled = self.compile(info);
         let compressed = lamezip77_lz10_recomp(&compiled);
-        segment_wrap(&compressed, self.header())
+        segment_wrap(compressed, self.header())
     }
 
     fn header(&self) -> String {

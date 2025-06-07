@@ -13,9 +13,9 @@ pub struct PathDatabase {
     pub lines: Vec<PathLine>
 }
 impl PathDatabase {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
+    pub fn new(byte_data: &[u8]) -> Self {
         let mut ret: PathDatabase = PathDatabase::default();
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
+        let mut rdr = Cursor::new(byte_data);
         let path_count = match rdr.read_u32::<LittleEndian>() {
             Err(error) => {
                 log_write(format!("Failed to get path_count from PathDatabase: '{error}'"), LogLevel::ERROR);
@@ -94,7 +94,7 @@ impl TopLevelSegment for PathDatabase {
 
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
-        segment_wrap(&comp_bytes, "PATH".to_owned())
+        segment_wrap(comp_bytes, "PATH".to_owned())
     }
 
     fn header(&self) -> String {

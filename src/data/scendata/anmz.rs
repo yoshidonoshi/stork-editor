@@ -32,12 +32,12 @@ impl Default for AnmzDataSegment {
 }
 
 impl AnmzDataSegment {
-    pub fn from_decomp(an_decomp: &Vec<u8>) -> Option<AnmzDataSegment> {
+    pub fn from_decomp(an_decomp: Vec<u8>) -> Option<AnmzDataSegment> {
         let decomp_len: usize = an_decomp.len();
         //println!("Creating ANMZ from decomp with size of 0x'{:X}' bytes",decomp_len);
         let mut anmz = AnmzDataSegment::default();
-        anmz._raw_decomp = an_decomp.clone();
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(an_decomp);
+        anmz._raw_decomp = an_decomp;
+        let mut rdr = Cursor::new(&anmz._raw_decomp);
         anmz.frame_count = utils::read_u8(&mut rdr)?;
         anmz.unk1 = utils::read_u8(&mut rdr)?;
         anmz.unk2 = utils::read_u16(&mut rdr)?;
@@ -71,7 +71,7 @@ impl ScenSegment for AnmzDataSegment {
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let compiled = self.compile(info);
         let compressed = lamezip77_lz10_recomp(&compiled);
-        segment_wrap(&compressed, self.header())
+        segment_wrap(compressed, self.header())
     }
 
     fn header(&self) -> String {

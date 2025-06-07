@@ -110,7 +110,7 @@ impl BgSelectData {
         Some(Pos2::new(x as f32, y as f32))
     }
 
-    pub fn to_clipboard_tiles(&mut self, map_width: u16, map_tiles: &Vec<MapTileRecordData>) -> Vec<BgClipboardSelectedTile> {
+    pub fn to_clipboard_tiles(&mut self, map_width: u16, map_tiles: &[MapTileRecordData]) -> Vec<BgClipboardSelectedTile> {
         let mut ret: Vec<BgClipboardSelectedTile> = Vec::new();
         if self.selected_map_indexes.is_empty() {
             log_write("Attempted to convert to clipboard tiles while empty", LogLevel::WARN);

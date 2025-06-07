@@ -45,7 +45,7 @@ impl Default for ScenInfoData {
     }
 }
 impl ScenInfoData {
-    pub fn new(rdr: &mut Cursor<&Vec<u8>>, internal_length: u32) -> Option<ScenInfoData> {
+    pub fn new(rdr: &mut Cursor<&[u8]>, internal_length: u32) -> Option<ScenInfoData> {
         // 24, 32, 36 are the only three sizes found with pytools
         if internal_length != 0x18 && internal_length != 0x20 && internal_length != 0x24 {
             log_write(format!("Unusual INFO size: 0x{:X}",internal_length), LogLevel::WARN);
@@ -153,7 +153,7 @@ impl ScenSegment for ScenInfoData {
 
     fn wrap(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         let comped = self.compile(Option::None);
-        segment_wrap(&comped, self.header())
+        segment_wrap(comped, self.header())
     }
 
     fn header(&self) -> String {

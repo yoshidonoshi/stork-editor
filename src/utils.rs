@@ -48,7 +48,7 @@ pub fn log_write(msg: impl Into<String>, level: LogLevel) {
 }
 
 #[allow(dead_code)] // May not be used in final
-pub fn print_vector_u8(byte_vector: &Vec<u8>) {
+pub fn print_vector_u8(byte_vector: &[u8]) {
     let vec_length: usize = byte_vector.len();
     if vec_length == 0 {
         log_write("print_vector_u8: vector is empty", LogLevel::LOG);
@@ -70,7 +70,7 @@ pub fn print_vector_u8(byte_vector: &Vec<u8>) {
     }
 }
 
-pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16, v: GameVersion) -> PathAngle {
+pub fn get_sin_cos_table_value(arm9: &[u8], value: u16, v: GameVersion) -> PathAngle {
     let table_addr: u32 = match v {
         // To find: look up 00 00 00 10 06 00 00 10 0d 00 00 10...
         GameVersion::USA10 => 0x0d1878, // 020d1878
@@ -80,7 +80,7 @@ pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16, v: GameVersion) -> Pa
             unreachable!()
         }
     };
-    let mut rdr: Cursor<&Vec<u8>> = Cursor::new(arm9);
+    let mut rdr = Cursor::new(arm9);
     // Value 1
     let pos1 = table_addr + ((value as u32 >> 4) * 2 + 1) * 2;
     rdr.set_position(pos1 as u64);
@@ -93,7 +93,7 @@ pub fn get_sin_cos_table_value(arm9: &Vec<u8>, value: u16, v: GameVersion) -> Pa
 }
 
 #[allow(dead_code)] // May not be used in final
-pub fn compare_vector_u8s(byte_vector_1: &Vec<u8>, byte_vector_2: &Vec<u8>) {
+pub fn compare_vector_u8s(byte_vector_1: &[u8], byte_vector_2: &[u8]) {
     if byte_vector_1.len() != byte_vector_2.len() {
         log_write(format!("Vector lengths differ: 0x{:X} vs 0x{:X}",byte_vector_1.len(),byte_vector_2.len()),LogLevel::ERROR);
         return;
@@ -125,7 +125,7 @@ pub fn header_to_string(header: &u32) -> String {
     str
 }
 
-pub fn settings_to_string(settings: &Vec<u8>) -> String {
+pub fn settings_to_string(settings: &[u8]) -> String {
     settings.iter().map(|f| {
         format!("{:02X} ",f)
     }).collect::<String>().trim().to_string()
@@ -226,7 +226,7 @@ pub fn color_from_u16(val: &u16) -> Color32 {
     Color32::from_rgb(red as u8, green as u8, blue as u8)
 }
 
-pub fn read_c_string(rdr: &mut Cursor<&Vec<u8>>) -> String {
+pub fn read_c_string<T: ReadBytesExt>(rdr: &mut T) -> String {
     // Read the map file name
     let mut string_buffer: Vec<u8> = Vec::new();
     while let Ok(charbyte) = rdr.read_u8() {
@@ -244,19 +244,19 @@ pub fn read_c_string(rdr: &mut Cursor<&Vec<u8>>) -> String {
     }
 }
 
-pub fn read_address(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
+pub fn read_address<T: ReadBytesExt>(rdr: &mut T)  -> Option<u32> {
     let mut address: u32 = read_u32(rdr)?;
     address -= 0x2000000;
     Some(address)
 }
 
-pub fn read_fixed_string(vec_data: &Vec<u8>, position: u64, length: u32) -> String {
-    let mut rdr: Cursor<&Vec<u8>> = Cursor::new(vec_data);
+pub fn read_fixed_string(vec_data: &[u8], position: u64, length: u32) -> String {
+    let mut rdr = Cursor::new(vec_data);
     rdr.set_position(position);
     read_fixed_string_cursor(&mut rdr, length)
 }
 
-pub fn read_fixed_string_cursor(rdr: &mut Cursor<&Vec<u8>>, length: u32) -> String {
+pub fn read_fixed_string_cursor(rdr: &mut Cursor<&[u8]>, length: u32) -> String {
     let mut string_buffer: Vec<u8> = Vec::new();
     let mut i: u32 = 0;
     while i < length {
@@ -278,7 +278,7 @@ pub fn read_fixed_string_cursor(rdr: &mut Cursor<&Vec<u8>>, length: u32) -> Stri
     }
 }
 
-pub fn color_image_from_pal(pal: &Palette, pal_indexes: &Vec<u8>) -> ColorImage {
+pub fn color_image_from_pal(pal: &Palette, pal_indexes: &[u8]) -> ColorImage {
     let mut ret: Vec<egui::Color32> = Vec::new();
     if pal_indexes.len() != 64 {
         log_write(format!("Instead of 64 values when generating color image, got {}, placing red error tile",pal_indexes.len()), LogLevel::ERROR);
@@ -315,7 +315,7 @@ pub fn generate_bg_tile_cache(ctx: &egui::Context, color_images: Vec<ColorImage>
     ret
 }
 
-pub fn pixel_byte_array_to_nibbles(byte_array: &Vec<u8>) -> Vec<u8> {
+pub fn pixel_byte_array_to_nibbles(byte_array: &[u8]) -> Vec<u8> {
     if byte_array.len() != 0x20 {
         log_write(format!("byte_array in pixel_byte_array_to_nibbles was not 32, was instead {}",byte_array.len()), LogLevel::ERROR);
     }
@@ -343,7 +343,7 @@ pub fn print_cursor(rdr: &mut Cursor<&Vec<u8>>, length: usize) {
 }
 
 #[allow(dead_code)] // May not be used in final
-pub fn write_vec_test_file(byte_vector: &Vec<u8>,filename: String) {
+pub fn write_vec_test_file(byte_vector: &[u8],filename: String) {
     if write(&filename, byte_vector).is_err() {
         log_write(format!("Failed to write vec test file '{}'",&filename), LogLevel::ERROR);
     }
@@ -447,7 +447,7 @@ pub fn get_uvs_from_tile(tile: &MapTileRecordData) -> Rect {
     uvs
 }
 
-pub fn get_pixel_bytes_16(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
+pub fn get_pixel_bytes_16(pixel_tiles: &[u8], tile_id: &u16) -> Vec<u8> {
     let array_start: usize = *tile_id as usize * 32;
     let array_end: usize = array_start + 32;
     if array_end > pixel_tiles.len() {
@@ -458,7 +458,7 @@ pub fn get_pixel_bytes_16(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
     pixel_tiles[array_start..array_end].to_vec()
 }
 
-pub fn get_pixel_bytes_256(pixel_tiles: &Vec<u8>, tile_id: &u16) -> Vec<u8> {
+pub fn get_pixel_bytes_256(pixel_tiles: &[u8], tile_id: &u16) -> Vec<u8> {
     let array_start: usize = *tile_id as usize * 64;
     let array_end: usize = array_start + 64;
     if array_end > pixel_tiles.len() {
@@ -497,7 +497,7 @@ pub fn distance(p1: Pos2, p2: Pos2) -> f32 {
     (p2.x - p1.x).hypot(p2.y - p1.y)
 }
 
-pub fn read_u8(rdr: &mut Cursor<&Vec<u8>>) -> Option<u8> {
+pub fn read_u8<T: ReadBytesExt>(rdr: &mut T) -> Option<u8> {
     match rdr.read_u8() {
         Ok(i) => Some(i),
         Err(e) => {
@@ -507,7 +507,7 @@ pub fn read_u8(rdr: &mut Cursor<&Vec<u8>>) -> Option<u8> {
     }
 }
 
-pub fn read_u16(rdr: &mut Cursor<&Vec<u8>>) -> Option<u16> {
+pub fn read_u16<T: ReadBytesExt>(rdr: &mut T) -> Option<u16> {
     match rdr.read_u16::<LittleEndian>() {
         Ok(i) => Some(i),
         Err(e) => {
@@ -517,7 +517,7 @@ pub fn read_u16(rdr: &mut Cursor<&Vec<u8>>) -> Option<u16> {
     }
 }
 
-pub fn read_i16(rdr: &mut Cursor<&Vec<u8>>) -> Option<i16> {
+pub fn read_i16<T: ReadBytesExt>(rdr: &mut T) -> Option<i16> {
     match rdr.read_i16::<LittleEndian>() {
         Ok(i) => Some(i),
         Err(e) => {
@@ -527,7 +527,7 @@ pub fn read_i16(rdr: &mut Cursor<&Vec<u8>>) -> Option<i16> {
     }
 }
 
-pub fn read_u32(rdr: &mut Cursor<&Vec<u8>>) -> Option<u32> {
+pub fn read_u32<T: ReadBytesExt>(rdr: &mut T) -> Option<u32> {
     match rdr.read_u32::<LittleEndian>() {
         Ok(i) => Some(i),
         Err(e) => {

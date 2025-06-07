@@ -17,7 +17,7 @@ pub struct SoftRockBackdrop {
 }
 
 impl SoftRockBackdrop {
-    pub fn new(byte_data: &Vec<u8>) -> Option<Self> {
+    pub fn new(byte_data: &[u8]) -> Option<Self> {
         let mut ret = SoftRockBackdrop::default();
         let byte_data = &lamezip77_lz10_decomp(byte_data);
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
@@ -64,7 +64,7 @@ impl TopLevelSegment for SoftRockBackdrop {
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
         let comp_bytes = lamezip77_lz10_recomp(&comp_bytes);
-        segment_wrap(&comp_bytes, self.header())
+        segment_wrap(comp_bytes, self.header())
     }
 
     fn header(&self) -> String {

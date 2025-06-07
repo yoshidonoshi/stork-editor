@@ -8,7 +8,7 @@ pub struct ImbzData {
 }
 
 impl ImbzData {
-    pub fn new(byte_data_compressed: &Vec<u8>) -> Self {
+    pub fn new(byte_data_compressed: &[u8]) -> Self {
         let byte_data = lamezip77_lz10_decomp(byte_data_compressed);
         Self {
             pixel_tiles: byte_data
@@ -23,7 +23,7 @@ impl ScenSegment for ImbzData {
 
     fn wrap(&self, info: Option<&super::info::ScenInfoData>) -> Vec<u8> {
         let compressed = self.compile(info);
-        segment_wrap(&compressed, self.header())
+        segment_wrap(compressed, self.header())
     }
 
     fn header(&self) -> String {

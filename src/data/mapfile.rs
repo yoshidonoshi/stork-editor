@@ -204,12 +204,12 @@ impl MapData {
                     ret.segments.push(TopLevelSegmentWrapper::BLKZ(blkz));
                 }
                 "BRAK" => {
-                    let brak = BrakData::new(&segment.internal_data);
+                    let brak = BrakData::new(segment.internal_data.clone());
                     ret.segments.push(TopLevelSegmentWrapper::BRAK(brak));
                 }
                 _ => {
                     log_write(format!("Level DataSegment header '{}' unhandled",&seg_header), LogLevel::WARN);
-                    let unkn = GenericTopLevelSegment::new(&segment.internal_data, &seg_header);
+                    let unkn = GenericTopLevelSegment::new(segment.internal_data.clone(), &seg_header);
                     ret.unhandled_headers.push(seg_header);
                     ret.segments.push(TopLevelSegmentWrapper::Unknown(unkn));
                 }
@@ -317,7 +317,7 @@ impl MapData {
     /// be written to an MPDZ file
     pub fn package(&self) -> Vec<u8> {
         let interior = self.compile();
-        let wrapped = segment_wrap_u32(&interior, 0x00544553);
+        let wrapped = segment_wrap_u32(interior, 0x00544553);
         lamezip77_lz10_recomp(&wrapped)
     }
 

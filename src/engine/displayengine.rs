@@ -644,9 +644,9 @@ impl DisplayEngine {
             }
         }; 
         if let Some(arm9_binary) = &self.loaded_arm9 {
-            let mut cur = Cursor::new(arm9_binary);
+            let mut cur = Cursor::new(arm9_binary.as_slice());
             cur.set_position(unipal_addr);
-            let pal = Palette::from_cur(&mut cur,16);
+            let pal = Palette::from_cursor(&mut cur, 16);
             self.bg_palettes[pal_index] = pal;
         } else {
             log_write("Could not load ARM9 to get universal palette", LogLevel::ERROR);

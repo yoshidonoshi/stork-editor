@@ -34,7 +34,7 @@ impl TopLevelSegment for TriggerData {
     // No compression
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
-        segment_wrap(&comp_bytes, "AREA".to_owned())
+        segment_wrap(comp_bytes, "AREA".to_owned())
     }
 
     fn header(&self) -> String {
@@ -42,8 +42,8 @@ impl TopLevelSegment for TriggerData {
     }
 }
 impl TriggerData {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
+    pub fn new(byte_data: &[u8]) -> Self {
+        let mut rdr = Cursor::new(byte_data);
         let seg_end: usize = byte_data.len();
         let mut ret: TriggerData = TriggerData::default(); // Empty
         while rdr.position() < seg_end as u64 {

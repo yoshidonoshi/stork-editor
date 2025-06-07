@@ -286,7 +286,7 @@ fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_blkz_tile(
     tile: &MapTileRecordData, palette: &Palette,
-    pixel_tiles: &Vec<u8>, true_rect: &Rect,
+    pixel_tiles: &[u8], true_rect: &Rect,
     ctx: &Context, painter: &Painter
 ) {
     let byte_array = &utils::get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
@@ -1001,11 +1001,11 @@ fn local_pos_to_col_index(local_pos: &Vec2, std_grid_width: u32) -> u32 {
 
 fn draw_tile(
     tile: &MapTileRecordData,
-    ctx: &Context, pixel_tiles: &Vec<u8>,
+    ctx: &Context, pixel_tiles: &[u8],
     painter: &Painter, tc: &mut TileCache,
     true_rect: &Rect, selected: bool,
     dim: bool,
-    create_texture_image: impl Fn(&MapTileRecordData, &Vec<u8>) -> ColorImage, texture_name: &str
+    create_texture_image: impl Fn(&MapTileRecordData, &[u8]) -> ColorImage, texture_name: &str
 ) {
     puffin::profile_function!();
     if let Some(t) = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize) {
@@ -1027,7 +1027,7 @@ fn draw_tile(
 
 pub fn draw_tile_16(
     tile: &MapTileRecordData, palette: &Palette,
-    ctx: &Context, pixel_tiles: &Vec<u8>,
+    ctx: &Context, pixel_tiles: &[u8],
     painter: &Painter, tc: &mut TileCache,
     true_rect: &Rect, selected: bool,
     dim: bool
@@ -1044,7 +1044,7 @@ pub fn draw_tile_16(
 
 pub fn draw_tile_256(
     tile: &MapTileRecordData, palette256: &Palette,
-    ctx: &Context, pixel_tiles: &Vec<u8>,
+    ctx: &Context, pixel_tiles: &[u8],
     painter: &Painter, tc: &mut TileCache,
     true_rect: &Rect, selected: bool,
     dim: bool

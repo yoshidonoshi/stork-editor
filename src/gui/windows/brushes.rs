@@ -236,7 +236,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     }
 }
 
-fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], tiles: &Vec<u8>, col_mode: &u32, pal_offset: &u8) {
+fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], tiles: &[u8], col_mode: &u32, pal_offset: &u8) {
     let top_left: Pos2 = ui.min_rect().min;
     // First, draw the entire thing
     for y in 0..BRUSH_TILES_WIDE {
