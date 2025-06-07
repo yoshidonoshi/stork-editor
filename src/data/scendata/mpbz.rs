@@ -16,12 +16,12 @@ pub struct MapTileDataSegment {
 }
 
 impl MapTileDataSegment {
-    pub fn from_decomped_vec(mp_decomp: &Vec<u8>, layer_width: u16) -> Self {
+    pub fn from_decomped_vec(mp_decomp: &[u8], layer_width: u16) -> Self {
         let mut mpbz_vec: Vec<MapTileRecordData> = Vec::new();
         let mut count_tiles: u32 = mp_decomp.len() as u32 / 2;
         let tile_offset: u16;
         let bottom_trim: u16;
-        let mut rdr2: Cursor<&Vec<u8>> = Cursor::new(mp_decomp);
+        let mut rdr2 = Cursor::new(mp_decomp);
         // Check for offsets
         let first = rdr2.read_u16::<LittleEndian>().unwrap();
         if first == 0xffff {
@@ -62,8 +62,8 @@ impl MapTileDataSegment {
     }
 
     #[allow(dead_code)]
-    pub fn test_against_raw_decomp(&self, info: Option<&ScenInfoData>, raw_decomp: &Vec<u8>) {
-        log_write("Doing MPBZ recompilation test",LogLevel::DEBUG);
+    pub fn test_against_raw_decomp(&self, info: Option<&ScenInfoData>, raw_decomp: &[u8]) {
+        log_write("Doing MPBZ recompilation test",LogLevel::Debug);
         let comp = self.compile(info);
         compare_vector_u8s(&comp, raw_decomp);
     }
@@ -101,7 +101,7 @@ impl ScenSegment for MapTileDataSegment {
     fn compile(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let Some(info) = info else {
             // Probably do Err for this in the future, but this is basically fatal
-            log_write("Missing info parameter in MapTileDataSegment compiler", LogLevel::FATAL);
+            log_write("Missing info parameter in MapTileDataSegment compiler", LogLevel::Fatal);
             return Vec::new();
         };
         let mut comp: Vec<u8> = vec![];
@@ -126,12 +126,12 @@ impl ScenSegment for MapTileDataSegment {
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         if info.is_none() {
             // Again, maybe change all these to Err, but this is catastrophic
-            log_write("Missing info parameter in MapTileDataSegment wrapper", LogLevel::FATAL);
+            log_write("Missing info parameter in MapTileDataSegment wrapper", LogLevel::Fatal);
             return Vec::new();
         }
         let comped = self.compile(info);
         let mpbz_compressed = lamezip77_lz10_recomp(&comped);
-        segment_wrap(&mpbz_compressed, self.header())
+        segment_wrap(mpbz_compressed, self.header())
     }
 
     fn header(&self) -> String {

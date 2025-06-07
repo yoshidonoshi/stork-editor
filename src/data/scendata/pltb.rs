@@ -30,7 +30,7 @@ impl ScenSegment for PltbData {
     }
 
     fn wrap(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
-        segment_wrap(&self.compile(Option::None), self.header())
+        segment_wrap(self.compile(Option::None), self.header())
     }
 
     fn header(&self) -> String {

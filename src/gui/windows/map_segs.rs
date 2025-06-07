@@ -79,15 +79,15 @@ pub fn show_map_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         });
     if let Some(to_del) = do_del {
         let header = &de.loaded_map.segments[to_del].header();
-        log_write(format!("Deleting segment '{}' at index {}",header,to_del), LogLevel::LOG);
+        log_write(format!("Deleting segment '{}' at index {}",header,to_del), LogLevel::Log);
         // These are way too important, and can just be emptied instead of outright deleted
         match header.as_str() {
             "SETD" => {
-                log_write("Cannot delete Sprite database", LogLevel::WARN);
+                log_write("Cannot delete Sprite database", LogLevel::Warn);
                 return;
             }
             "SCEN" => {
-                log_write("Cannot delete Background", LogLevel::WARN);
+                log_write("Cannot delete Background", LogLevel::Warn);
                 return;
             }
             _ => { /* Do nothing */ }
@@ -101,7 +101,7 @@ pub fn show_map_segments_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 fn show_scen_data(ui: &mut egui::Ui, scen: &mut BackgroundData) {
     let info = scen.get_info().expect("INFO is guaranteed");
     ui.label(format!("BG Index: {}",info.which_bg));
-    let charset = info.imbz_filename_noext.as_ref().map(|v| v.as_str()).unwrap_or("N/A");
+    let charset = info.imbz_filename_noext.as_deref().unwrap_or("N/A");
     ui.label(format!("Charset: {charset}"));
     ui.label(format!("X Scroll Speed: 0x{:X}",info.x_scroll));
     ui.label(format!("Y Scroll Speed: 0x{:X}",info.y_scroll));

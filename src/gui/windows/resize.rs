@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use egui::Color32;
 
 use crate::{engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}, NON_MAIN_FOCUSED};
@@ -13,18 +15,18 @@ pub struct ResizeSettings {
 pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &mut ResizeSettings) {
     puffin::profile_function!();
     if !de.display_settings.is_cur_layer_bg() {
-        log_write("Cannot resize, not on BG layer", LogLevel::WARN);
+        log_write("Cannot resize, not on BG layer", LogLevel::Warn);
         settings.window_open = false;
         return;
     }
     // Get BG and INFO read-only
     let Some(bg) = de.loaded_map.get_background(de.display_settings.current_layer as u8) else {
-        log_write("Failed to get BG in resize modal", LogLevel::ERROR);
+        log_write("Failed to get BG in resize modal", LogLevel::Error);
         settings.window_open = false;
         return;
     };
     let Some(info) = bg.get_info() else {
-        log_write("Failed to get INFO in resize modal", LogLevel::ERROR);
+        log_write("Failed to get INFO in resize modal", LogLevel::Error);
         settings.window_open = false;
         return;
     };
@@ -82,62 +84,64 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         if button_ok.clicked() {
             // Do update with mutable versions
             let Some(bg) = de.loaded_map.get_background(de.display_settings.current_layer as u8) else {
-                log_write("Failed to get BG in resize modal resizing", LogLevel::ERROR);
+                log_write("Failed to get BG in resize modal resizing", LogLevel::Error);
                 settings.window_open = false;
                 return;
             };
             let Some(info) = bg.get_info_mut() else {
-                log_write("Failed to get INFO in resize modal resizing", LogLevel::ERROR);
+                log_write("Failed to get INFO in resize modal resizing", LogLevel::Error);
                 settings.window_open = false;
                 return;
             };
             log_write(format!("Changing size of layer from 0x{:X}/0x{:X} to 0x{:X}/0x{:X}",
                 info.layer_width,info.layer_height,
-                settings.new_width,settings.new_height), LogLevel::LOG);
+                settings.new_width,settings.new_height), LogLevel::Log);
             // Actual resizing calls
-            if settings.new_width > info.layer_width {
-                // Width is greater, increase width //
-                let Ok(increase_result) = bg.increase_width(settings.new_width) else {
-                    log_write("Error increasing size of layer", LogLevel::ERROR);
-                    settings.reset_needed = true;
-                    settings.window_open = false;
-                    return;
-                };
-                if increase_result != settings.new_width {
-                    log_write("Mismatch in result width", LogLevel::ERROR);
-                } else {
-                    log_write("Resize successful, updating", LogLevel::LOG);
+            match settings.new_width.cmp(&info.layer_width) {
+                Ordering::Greater => {
+                    // Width is greater, increase width //
+                    let Ok(increase_result) = bg.increase_width(settings.new_width) else {
+                        log_write("Error increasing size of layer", LogLevel::Error);
+                        settings.reset_needed = true;
+                        settings.window_open = false;
+                        return;
+                    };
+                    if increase_result != settings.new_width {
+                        log_write("Mismatch in result width", LogLevel::Error);
+                    } else {
+                        log_write("Resize successful, updating", LogLevel::Log);
+                    }
                 }
-            } else if settings.new_width < info.layer_width {
-                let Ok(decrease_result) = bg.decrease_width(settings.new_width) else {
-                    log_write("Error decreasing size of layer", LogLevel::ERROR);
-                    settings.reset_needed = true;
-                    settings.window_open = false;
-                    return;
-                };
-                if decrease_result != settings.new_width {
-                    log_write("Mismatch in result width", LogLevel::ERROR);
-                } else {
-                    log_write("Resize successful, updating", LogLevel::LOG);
+                Ordering::Less => {
+                    let Ok(decrease_result) = bg.decrease_width(settings.new_width) else {
+                        log_write("Error decreasing size of layer", LogLevel::Error);
+                        settings.reset_needed = true;
+                        settings.window_open = false;
+                        return;
+                    };
+                    if decrease_result != settings.new_width {
+                        log_write("Mismatch in result width", LogLevel::Error);
+                    } else {
+                        log_write("Resize successful, updating", LogLevel::Log);
+                    }
                 }
-            } else {
-                log_write("No change in layer width", LogLevel::DEBUG);
+                Ordering::Equal => log_write("No change in layer width", LogLevel::Debug),
             }
             if bg.change_height(settings.new_height).is_err() {
-                log_write("Error changing height of layer", LogLevel::ERROR);
+                log_write("Error changing height of layer", LogLevel::Error);
                 settings.reset_needed = true;
                 settings.window_open = false;
                 return;
             }
             // Trim sprites
             let Some(spr) = de.loaded_map.get_setd() else {
-                log_write("Failed to get SETD when resizing", LogLevel::FATAL);
+                log_write("Failed to get SETD when resizing", LogLevel::Fatal);
                 unreachable!()
             };
             let trimmed = spr.trim(settings.new_width, settings.new_height);
-            log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::DEBUG);
+            log_write(format!("Trimmed {} Sprites on resize",trimmed), LogLevel::Debug);
             // Do things to trigger updates
-            log_write("graphics updated", LogLevel::DEBUG);
+            log_write("graphics updated", LogLevel::Debug);
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
             settings.reset_needed = true;

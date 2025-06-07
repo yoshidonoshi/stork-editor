@@ -19,7 +19,7 @@ pub struct CollisionData {
 }
 
 impl CollisionData {
-    pub fn new(compressed_buffer: &Vec<u8>) -> Self {
+    pub fn new(compressed_buffer: &[u8]) -> Self {
         let decomp: Vec<u8> = lamezip77_lz10_decomp(compressed_buffer);
         Self {
             col_tiles: decomp
@@ -28,11 +28,11 @@ impl CollisionData {
     pub fn increase_width(&mut self, old_width: u16, increase_by: usize) {
         // Tiles are 2x2
         if increase_by % 2 != 0 {
-            log_write(format!("increase_by was not even: 0x{:X}",increase_by), LogLevel::ERROR);
+            log_write(format!("increase_by was not even: 0x{:X}",increase_by), LogLevel::Error);
             return;
         }
         if old_width % 2 != 0 {
-            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::ERROR);
+            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::Error);
             return;
         }
         let increase_by = increase_by / 2;
@@ -50,11 +50,11 @@ impl CollisionData {
     pub fn decrease_width(&mut self, old_width: i32, decrease_by: i32) {
         // Tiles are 2x2
         if decrease_by % 2 != 0 {
-            log_write(format!("decrease_by was not even: 0x{:X}",decrease_by), LogLevel::ERROR);
+            log_write(format!("decrease_by was not even: 0x{:X}",decrease_by), LogLevel::Error);
             return;
         }
         if old_width % 2 != 0 {
-            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::ERROR);
+            log_write(format!("old_width was not even: 0x{:X}",old_width), LogLevel::Error);
             return;
         }
         let decrease_by = decrease_by / 2;
@@ -69,7 +69,7 @@ impl CollisionData {
         }
     }
     pub fn change_height(&mut self, new_height: u16, current_width: u16) {
-        log_write(format!("Changing COLZ height to {:X}",new_height), LogLevel::DEBUG);
+        log_write(format!("Changing COLZ height to {:X}",new_height), LogLevel::Debug);
         let new_len = (new_height as u32 / 2) * (current_width as u32 / 2);
         self.col_tiles.resize(new_len as usize, 0x00);
     }
@@ -83,7 +83,7 @@ impl ScenSegment for CollisionData {
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let compiled = self.compile(info);
         let compressed = lamezip77_lz10_recomp(&compiled);
-        segment_wrap(&compressed, self.header())
+        segment_wrap(compressed, self.header())
     }
 
     fn header(&self) -> String {

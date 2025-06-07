@@ -8,9 +8,9 @@ pub struct AnimatedPaletteData {
 }
 
 impl AnimatedPaletteData {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
+    pub fn new(byte_data: Vec<u8>) -> Self {
         Self {
-            _raw: byte_data.clone()
+            _raw: byte_data,
         }
     }
 }
@@ -22,7 +22,7 @@ impl ScenSegment for AnimatedPaletteData {
 
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let compiled = self.compile(info);
-        segment_wrap(&compiled, self.header())
+        segment_wrap(compiled, self.header())
     }
 
     fn header(&self) -> String {

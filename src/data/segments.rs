@@ -25,31 +25,31 @@ impl fmt::Display for DataSegment {
     }
 }
 impl DataSegment {
-    pub fn _new_from_bytes(input: &Vec<u8>) -> Self {
+    pub fn _new_from_bytes(input: &[u8]) -> Self {
         let mut rdr = Cursor::new(input);
         let header = rdr.read_u32::<LittleEndian>().unwrap();
         let size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;
         let mut inner_data: Vec<u8> = Vec::new();
-        if let Err(_) = rdr.read_to_end(&mut inner_data) {
-            utils::log_write(String::from("Could not read to end of data"), utils::LogLevel::ERROR);
+        if rdr.read_to_end(&mut inner_data).is_err() {
+            utils::log_write(String::from("Could not read to end of data"), utils::LogLevel::Error);
         }
         let inside_len = inner_data.len();
         if inside_len != size {
             println!("Mismatch in file specified internal size vs actual: 0x{:05X} vs 0x{:05X}", size, inside_len);
         }
         Self {
-            header: header,
+            header,
             internal_data: inner_data
         }
     }
     #[allow(dead_code)]
-    pub fn new(input: &Vec<u8>, header: String) -> Self {
+    pub fn new(input: Vec<u8>, header: String) -> Self {
         if header.len() != 4 {
-            log_write(format!("Bad header string length: '{}'",header.len()), LogLevel::ERROR);
+            log_write(format!("Bad header string length: '{}'",header.len()), LogLevel::Error);
         }
         Self {
             header: string_to_header(header),
-            internal_data: input.clone()
+            internal_data: input,
         }
     }
 }
