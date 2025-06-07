@@ -25,17 +25,17 @@ impl fmt::Display for RenderArchive {
 }
 impl RenderArchive {
     pub fn new(filename_local: String, project_directory: &PathBuf) -> Self {
-        log_write(format!("Loading new RenderArchive '{}'",&filename_local), LogLevel::DEBUG);
+        log_write(format!("Loading new RenderArchive '{}'",&filename_local), LogLevel::Debug);
         let true_path: PathBuf = nitrofs_abs(project_directory,&filename_local);
         let file_bytes: Vec<u8> = compression::decompress_file(&true_path);
         let mut rdr = Cursor::new(&file_bytes);
         let Ok(file_header) = rdr.read_u32::<LittleEndian>() else {
-            utils::log_write("Error getting master header from RenderArchive".to_owned(), LogLevel::ERROR);
+            utils::log_write("Error getting master header from RenderArchive".to_owned(), LogLevel::Error);
             return Self::default();
         };
         let header_string = utils::header_to_string(&file_header);
         if header_string != "OBAR" {
-            utils::log_write(format!("RenderArchive master header was not OBAR, was instead '{}'",header_string), LogLevel::ERROR);
+            utils::log_write(format!("RenderArchive master header was not OBAR, was instead '{}'",header_string), LogLevel::Error);
             return Self::default();
         }
         let _ = rdr.read_u32::<LittleEndian>().unwrap();

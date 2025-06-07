@@ -18,7 +18,7 @@ impl PathDatabase {
         let mut rdr = Cursor::new(byte_data);
         let path_count = match rdr.read_u32::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Failed to get path_count from PathDatabase: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Failed to get path_count from PathDatabase: '{error}'"), LogLevel::Error);
                 return ret;
             }
             Ok(c) => c,
@@ -31,7 +31,7 @@ impl PathDatabase {
             loop { // Build the points
                 let angle = match rdr.read_i16::<LittleEndian>() {
                     Err(error) => {
-                        log_write(format!("Failed to read Path angle: '{error}'"), LogLevel::ERROR);
+                        log_write(format!("Failed to read Path angle: '{error}'"), LogLevel::Error);
                         return ret;
                     },
                     Ok(a) => a,
@@ -52,12 +52,12 @@ impl PathDatabase {
     }
 
     pub fn delete_line(&mut self, line_uuid: Uuid) -> Result<(),()> {
-        log_write("Deleting Line", LogLevel::DEBUG);
+        log_write("Deleting Line", LogLevel::Debug);
         let Some(line_pos) = self.lines.iter().position(|x| x.uuid == line_uuid) else {
             return Err(());
         };
         self.lines.remove(line_pos);
-        log_write("Line data deleted", LogLevel::DEBUG);
+        log_write("Line data deleted", LogLevel::Debug);
         Ok(())
     }
     pub fn fix_term(&mut self) {

@@ -48,7 +48,7 @@ impl ScenInfoData {
     pub fn new(rdr: &mut Cursor<&[u8]>, internal_length: u32) -> Option<ScenInfoData> {
         // 24, 32, 36 are the only three sizes found with pytools
         if internal_length != 0x18 && internal_length != 0x20 && internal_length != 0x24 {
-            log_write(format!("Unusual INFO size: 0x{:X}",internal_length), LogLevel::WARN);
+            log_write(format!("Unusual INFO size: 0x{:X}",internal_length), LogLevel::Warn);
         }
         let initial_position: u64 = rdr.position();
         let layer_width: u16 = utils::read_u16(rdr)?;
@@ -68,7 +68,7 @@ impl ScenInfoData {
         let after_position: u64 = rdr.position();
         let mut read_length = after_position - initial_position;
         if read_length % 4 != 0 {
-            log_write(format!("INFO read size not 4 byte aligned; size was 0x{:X}, padding",read_length), LogLevel::DEBUG);
+            log_write(format!("INFO read size not 4 byte aligned; size was 0x{:X}, padding",read_length), LogLevel::Debug);
             while read_length % 4 != 0 {
                 let _ = rdr.read_u8();
                 read_length = rdr.position() - initial_position;
@@ -95,7 +95,7 @@ impl ScenInfoData {
         let p: PathBuf = nitrofs_abs(proj_dir, &imbz_withext);
         let file_bytes = match fs::read(&p) {
             Err(error) => {
-                log_write(format!("Failed to read IMBZ '{}' from INFO: '{error}'", p.display()), LogLevel::ERROR);
+                log_write(format!("Failed to read IMBZ '{}' from INFO: '{error}'", p.display()), LogLevel::Error);
                 return Option::None;
             }
             Ok(b) => b,
@@ -145,7 +145,7 @@ impl ScenSegment for ScenInfoData {
         let final_comp_len = comp.len();
         // 24, 32, 36 are the only ones found in the base game
         if final_comp_len != 0x18 && final_comp_len != 0x20 && final_comp_len != 0x24 {
-            log_write(format!("Unusual INFO compiled size: 0x{:X}",final_comp_len), LogLevel::ERROR);
+            log_write(format!("Unusual INFO compiled size: 0x{:X}",final_comp_len), LogLevel::Error);
         }
 
         comp

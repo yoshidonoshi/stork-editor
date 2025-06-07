@@ -20,7 +20,7 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                         .get_sprite_by_uuid(gui_state.display_engine.selected_sprite_uuids[0])
                         .expect("Selected sprite UUID should exist on panel");
                     let Some(sprite_meta) = gui_state.sprite_metadata.get(&sprite.object_id) else {
-                        log_write(format!("Failed to get sprite_meta for ID 0x{:X} on panel",&sprite.object_id), LogLevel::ERROR);
+                        log_write(format!("Failed to get sprite_meta for ID 0x{:X} on panel",&sprite.object_id), LogLevel::Error);
                         return;
                     };
                     ui.label(format!("[0x{:03X}]: {}",&sprite.object_id,&sprite_meta.name));
@@ -65,9 +65,9 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                                     egui::Button::new("Update Settings")
                                 );
                                 if res.clicked() {
-                                    log_write("Updating selected Sprite settings".to_owned(), LogLevel::LOG);
+                                    log_write("Updating selected Sprite settings".to_owned(), LogLevel::Log);
                                     match string_to_settings(&gui_state.display_engine.latest_sprite_settings) {
-                                        Err(error) => log_write(format!("Still had bad settings somehow: '{error}'"), LogLevel::ERROR),
+                                        Err(error) => log_write(format!("Still had bad settings somehow: '{error}'"), LogLevel::Error),
                                         Ok(new_settings) => {
                                             gui_state.display_engine.loaded_map.update_sprite_settings(sprite.uuid, new_settings);
                                             gui_state.display_engine.unsaved_changes = true;
@@ -125,8 +125,8 @@ fn render_table(ui: &mut egui::Ui, gui_state: &mut Gui) {
                             let missing_sprite = ui.label(format!("Missing metadata (0x{:X}, len {:X})",
                                 &cur_sprite.object_id,&cur_sprite.settings_length));
                             if missing_sprite.clicked() {
-                                log_write(format!("Could not get sprite metadata for object ID '0x{:X}'",&cur_sprite.object_id), LogLevel::ERROR);
-                                log_write(format!("Settings length: 0x{:X}; data: {:?}",&cur_sprite.settings_length,&cur_sprite.settings), LogLevel::LOG);
+                                log_write(format!("Could not get sprite metadata for object ID '0x{:X}'",&cur_sprite.object_id), LogLevel::Error);
+                                log_write(format!("Settings length: 0x{:X}; data: {:?}",&cur_sprite.settings_length,&cur_sprite.settings), LogLevel::Log);
                             }
                         });
                         return;
@@ -167,7 +167,7 @@ fn render_table(ui: &mut egui::Ui, gui_state: &mut Gui) {
 fn settings_save_check(gui_state: &mut Gui, comp: Vec<u8>, sprite: &LevelSprite) {
     if *comp != sprite.settings {
         if is_debug() {
-            log_write("Settings before and after:", LogLevel::DEBUG);
+            log_write("Settings before and after:", LogLevel::Debug);
             utils::print_vector_u8(&sprite.settings);
             utils::print_vector_u8(&comp);
         }

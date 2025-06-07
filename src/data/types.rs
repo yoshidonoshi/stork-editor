@@ -50,7 +50,7 @@ impl Palette {
     pub fn from_segment_index(source: &DataSegment, index: u32, pal_len: usize) -> Self {
         let data_header_str: String = utils::header_to_string(&source.header);
         if data_header_str != "PLTB" {
-            log_write(format!("DataSegment was {} not PLTB, proceed with caution",&data_header_str), LogLevel::ERROR);
+            log_write(format!("DataSegment was {} not PLTB, proceed with caution",&data_header_str), LogLevel::Error);
         }
         let mut cols: [PalColor; 256] = [PalColor::default(); 256];
         let internal_position = index * 16;
@@ -157,7 +157,7 @@ impl MapTileRecordData {
         } else if color_mode == 0x1 {
             // Do nothing
         } else {
-            log_write(format!("Unusual color mode in get_render_pal_id: {}",color_mode), LogLevel::WARN);
+            log_write(format!("Unusual color mode in get_render_pal_id: {}",color_mode), LogLevel::Warn);
             // I think its color16
             pal_index += 1;
         }
@@ -199,11 +199,11 @@ pub fn wipe_tile_cache(tc: &mut TileCache) {
 
 pub fn get_cached_texture(tc: &TileCache, global_palette_index: usize, tile_index: usize) -> Option<&TextureHandle> {
     if global_palette_index >= 16 {
-        log_write(format!("texture cache: global_palette_index out of bounds: {}",global_palette_index), utils::LogLevel::ERROR);
+        log_write(format!("texture cache: global_palette_index out of bounds: {}",global_palette_index), utils::LogLevel::Error);
         return Option::None;
     }
     if tile_index >= 1024 {
-        log_write(format!("texture cache: tile_index out of bounds: {}",tile_index), utils::LogLevel::ERROR);
+        log_write(format!("texture cache: tile_index out of bounds: {}",tile_index), utils::LogLevel::Error);
         return Option::None;
     }
     tc[global_palette_index][tile_index].as_ref()

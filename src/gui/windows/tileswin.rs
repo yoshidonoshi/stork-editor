@@ -35,7 +35,7 @@ pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &[TextureHandle]
             // Do something more with this eventually
             println!("pos: {}/{}: 0x{:X}",base_tile_x,base_tile_y,tile_index);
         } else {
-            log_write("Unable to get pointer_pos in tileswin", LogLevel::ERROR);
+            log_write("Unable to get pointer_pos in tileswin", LogLevel::Error);
         }
     }
 }

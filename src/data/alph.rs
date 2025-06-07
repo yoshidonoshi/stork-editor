@@ -25,7 +25,7 @@ impl AlphaData {
         let mut rdr = Cursor::new(byte_data);
         let cnt_res = match rdr.read_u16::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Failed to get BLDCNT: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Failed to get BLDCNT: '{error}'"), LogLevel::Error);
                 return None;
             }
             Ok(cnt_res) => cnt_res,

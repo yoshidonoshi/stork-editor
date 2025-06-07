@@ -23,7 +23,7 @@ impl SoftRockBackdrop {
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
         let first_res = match rdr.read_u16::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Failed to get first result in SoftRockBackdrop: '{}'", error), LogLevel::ERROR);
+                log_write(format!("Failed to get first result in SoftRockBackdrop: '{}'", error), LogLevel::Error);
                 return None;
             }
             Ok(fr) => fr,
@@ -40,7 +40,7 @@ impl SoftRockBackdrop {
         }
         let calced_len = (ret.width as usize) * (ret.height as usize);
         if calced_len != ret.tiles.len() {
-            log_write(format!("Mismatch in height*width to tile len: {} vs {}",calced_len,ret.tiles.len()), LogLevel::ERROR);
+            log_write(format!("Mismatch in height*width to tile len: {} vs {}",calced_len,ret.tiles.len()), LogLevel::Error);
         }
 
         Some(ret)

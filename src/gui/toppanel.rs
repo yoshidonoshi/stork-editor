@@ -124,7 +124,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                     if let Some(colz_layer) = gui_state.display_engine.loaded_map.get_bg_with_colz() {
                         gui_state.do_alert(&format!("Cannot resize collision, as it is attached to the layer '{colz_layer}'"));
                     } else {
-                        log_write("Could not get COLZ layer when attempting to open resize modal", LogLevel::DEBUG);
+                        log_write("Could not get COLZ layer when attempting to open resize modal", LogLevel::Debug);
                     }
                     ui.close_menu();
                 } else {
@@ -181,7 +181,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                 }
             });
         if *selected_bg != old_selected_bg {
-            log_write("Cleaning up due to layer change", LogLevel::DEBUG);
+            log_write("Cleaning up due to layer change", LogLevel::Debug);
             gui_state.display_engine.brush_settings.cur_selected_brush = Option::None;
             gui_state.display_engine.current_brush.clear();
             gui_state.display_engine.clipboard.bg_clip.clear();

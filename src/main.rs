@@ -31,7 +31,7 @@ fn main() -> eframe::Result {
     let _ = simple_logging::log_to_file("stork.log", LevelFilter::Info);
     log_panics::init(); // We want it to go in stork.log
 
-    log_write(format!("== Starting Stork Editor {} ==", VERSION), LogLevel::LOG);
+    log_write(format!("== Starting Stork Editor {} ==", VERSION), LogLevel::Log);
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -50,7 +50,7 @@ fn main() -> eframe::Result {
             // Pre-ROM-load setup
             let mut gui = Box::<Gui>::default();
             if cc.egui_ctx.system_theme().is_none() {
-                log_write("No default system theme found, defaulting to Dark", LogLevel::WARN);
+                log_write("No default system theme found, defaulting to Dark", LogLevel::Warn);
                 cc.egui_ctx.set_theme(egui::Theme::Dark);
             }
             initial_load(&mut gui);
@@ -63,9 +63,9 @@ fn main() -> eframe::Result {
 fn initial_load(gui: &mut Gui) {
     if let Err(error) = gui.load_sprite_csv() {
         // The software simply won't work without this. It shouldn't be possible
-        log_write(format!("Sprite database load error: '{error}'"), LogLevel::FATAL);
+        log_write(format!("Sprite database load error: '{error}'"), LogLevel::Fatal);
     } else {
-        log_write("Sprite database loaded successfully", LogLevel::LOG);
+        log_write("Sprite database loaded successfully", LogLevel::Log);
     }
     load_stored_brushes();
     gui.display_engine.load_saved_brushes();

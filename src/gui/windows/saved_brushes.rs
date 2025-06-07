@@ -167,7 +167,7 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if button_store.clicked() {
             let entered_brush_name = de.brush_settings.pos_brush_name.clone();
             if entered_brush_name.trim().is_empty() {
-                log_write("Cannot save Brush with no name", LogLevel::WARN);
+                log_write("Cannot save Brush with no name", LogLevel::Warn);
                 return;
             }
             de.current_brush.name = entered_brush_name;
@@ -203,29 +203,29 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 }
 
 pub fn load_stored_brushes() {
-    log_write("Loading Stored brushes...", LogLevel::DEBUG);
+    log_write("Loading Stored brushes...", LogLevel::Debug);
     LazyLock::force(&STORED_BRUSHES);
-    log_write("Loaded stored brushes successfully", LogLevel::LOG);
+    log_write("Loaded stored brushes successfully", LogLevel::Log);
 }
 
 const SAVED_BRUSHES_FILE: &str = "saved_brushes.json";
 
 pub fn save_brushes_to_file(brushes: &[Brush]) {
-    log_write("Saving loaded Brushes to JSON...", LogLevel::LOG);
+    log_write("Saving loaded Brushes to JSON...", LogLevel::Log);
     let saved_brushes = json!({
         "brushes": brushes,
     });
     let pretty_string = serde_json::to_string_pretty(&saved_brushes).expect("Brushes should Stringify correctly");
     let mut output = File::create(SAVED_BRUSHES_FILE).expect("Can init the Brushes JSON file");
     if let Err(error) = write!(output,"{pretty_string}") {
-        log_write(format!("Failed to write Brushes JSON: '{error}'"), LogLevel::ERROR);
+        log_write(format!("Failed to write Brushes JSON: '{error}'"), LogLevel::Error);
     }
 }
 
 fn load_saved_brushes() -> Result<Vec<Brush>,Box<dyn Error>> {
     let file = match File::open(SAVED_BRUSHES_FILE) {
         Err(error) => {
-            log_write(format!("Could not open {SAVED_BRUSHES_FILE}: '{error}'"), LogLevel::WARN);
+            log_write(format!("Could not open {SAVED_BRUSHES_FILE}: '{error}'"), LogLevel::Warn);
             return Ok(Vec::new());
         }
         Ok(f) => f,
@@ -237,14 +237,14 @@ fn load_saved_brushes() -> Result<Vec<Brush>,Box<dyn Error>> {
 
 impl DisplayEngine {
     pub fn load_saved_brushes(&mut self) {
-        log_write("Loading Saved brushes...", LogLevel::DEBUG);
+        log_write("Loading Saved brushes...", LogLevel::Debug);
         match load_saved_brushes() {
             Err(error) => {
-                log_write(format!("Failed to load brushes from JSON: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Failed to load brushes from JSON: '{error}'"), LogLevel::Error);
             }
             Ok(brushes_load_attempt) => {
                 self.saved_brushes = brushes_load_attempt;
-                log_write("Loaded saved brushes successfully", LogLevel::LOG);
+                log_write("Loaded saved brushes successfully", LogLevel::Log);
             }
         }
     }

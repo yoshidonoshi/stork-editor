@@ -15,7 +15,7 @@ pub fn show_triggers_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if create.clicked() {
             let t = TriggerData::default();
             de.loaded_map.segments.push(TopLevelSegmentWrapper::AREA(t));
-            log_write("Created new AREA database", LogLevel::LOG);
+            log_write("Created new AREA database", LogLevel::Log);
             return;
         }
         ui.disable();
@@ -39,7 +39,7 @@ fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
         let add_button = ui.add(egui::Button::new("New"));
         if add_button.clicked() {
-            log_write("Adding new Trigger", LogLevel::LOG);
+            log_write("Adding new Trigger", LogLevel::Log);
             let Some(area) = de.loaded_map.get_area_mut() else { return };
             let new_trigger = Trigger { left_x: 2, top_y: 2, right_x: 12, bottom_y: 12, uuid: Uuid::new_v4() };
             de.trigger_settings.selected_uuid = new_trigger.uuid;
@@ -51,7 +51,7 @@ fn draw_trigger_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let del = ui.add_enabled(de.trigger_settings.selected_uuid != Uuid::nil(),
             egui::Button::new("Delete"));
         if del.clicked() {
-            log_write(format!("Attempting to delete Trigger {}",de.trigger_settings.selected_uuid), LogLevel::DEBUG);
+            log_write(format!("Attempting to delete Trigger {}",de.trigger_settings.selected_uuid), LogLevel::Debug);
             let Some(area) = de.loaded_map.get_area_mut() else { return };
             let _did_delete = area.delete(de.trigger_settings.selected_uuid);
             de.trigger_settings.selected_uuid = Uuid::nil();
@@ -94,7 +94,7 @@ fn draw_trigger_settings(ui: &mut egui::Ui, de: &mut DisplayEngine, trigger_uuid
     }
     let triggers = &mut trigger_data.triggers;
     let Some(t) = triggers.iter_mut().find(|x| x.uuid == trigger_uuid) else {
-        log_write(format!("Could not find Trigger with UUID '{}'",trigger_uuid), LogLevel::WARN);
+        log_write(format!("Could not find Trigger with UUID '{}'",trigger_uuid), LogLevel::Warn);
         de.trigger_settings.selected_uuid = Uuid::nil();
         return;
     };

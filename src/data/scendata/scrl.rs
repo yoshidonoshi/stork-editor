@@ -15,7 +15,7 @@ impl ScrollData {
     pub fn new<T: ReadBytesExt>(rdr: &mut T) -> Self {
         let left_vel = match rdr.read_i32::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Could not read Left Velocity: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Could not read Left Velocity: '{error}'"), LogLevel::Error);
                 return ScrollData::default();
             }
             Ok(v) => v,

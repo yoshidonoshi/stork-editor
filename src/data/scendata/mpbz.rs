@@ -63,7 +63,7 @@ impl MapTileDataSegment {
 
     #[allow(dead_code)]
     pub fn test_against_raw_decomp(&self, info: Option<&ScenInfoData>, raw_decomp: &[u8]) {
-        log_write("Doing MPBZ recompilation test",LogLevel::DEBUG);
+        log_write("Doing MPBZ recompilation test",LogLevel::Debug);
         let comp = self.compile(info);
         compare_vector_u8s(&comp, raw_decomp);
     }
@@ -101,7 +101,7 @@ impl ScenSegment for MapTileDataSegment {
     fn compile(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         let Some(info) = info else {
             // Probably do Err for this in the future, but this is basically fatal
-            log_write("Missing info parameter in MapTileDataSegment compiler", LogLevel::FATAL);
+            log_write("Missing info parameter in MapTileDataSegment compiler", LogLevel::Fatal);
             return Vec::new();
         };
         let mut comp: Vec<u8> = vec![];
@@ -126,7 +126,7 @@ impl ScenSegment for MapTileDataSegment {
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
         if info.is_none() {
             // Again, maybe change all these to Err, but this is catastrophic
-            log_write("Missing info parameter in MapTileDataSegment wrapper", LogLevel::FATAL);
+            log_write("Missing info parameter in MapTileDataSegment wrapper", LogLevel::Fatal);
             return Vec::new();
         }
         let comped = self.compile(info);

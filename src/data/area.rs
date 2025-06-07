@@ -49,7 +49,7 @@ impl TriggerData {
         while rdr.position() < seg_end as u64 {
             let left_x = match rdr.read_u16::<LittleEndian>() {
                 Err(error) => {
-                    log_write(format!("Error reading LeftX for TriggerData: '{}'", error), LogLevel::ERROR);
+                    log_write(format!("Error reading LeftX for TriggerData: '{}'", error), LogLevel::Error);
                     break;
                 }
                 Ok(left_x) => left_x,
@@ -66,7 +66,7 @@ impl TriggerData {
     pub fn delete(&mut self, uuid: Uuid) -> bool {
         if let Some(pos) = self.triggers.iter().position(|x| x.uuid == uuid) {
             self.triggers.remove(pos);
-            log_write("Trigger data deleted", LogLevel::DEBUG);
+            log_write("Trigger data deleted", LogLevel::Debug);
             true
         } else {
             false

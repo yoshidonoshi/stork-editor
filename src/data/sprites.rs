@@ -87,7 +87,7 @@ impl LevelSpriteSet {
         // If all goes well, the terminating position should be equal to the length
         while (rdr.position() as usize) != seg_end {
             if (rdr.position() as usize) > seg_end {
-                log_write("Overflow when reading SETD", LogLevel::ERROR);
+                log_write("Overflow when reading SETD", LogLevel::Error);
                 break;
             }
             let sprite: LevelSprite = LevelSprite::from_cursor(&mut rdr);
@@ -311,7 +311,7 @@ impl SpriteGraphicsSegment {
             }
             ret.sprite_frames.push(spr_frame); // Move it on in
         }
-        //log_write(format!("Loaded 0x{:X}/{} SpriteFrames",&ret.sprite_frames.len(),&ret.sprite_frames.len()), LogLevel::LOG);
+        //log_write(format!("Loaded 0x{:X}/{} SpriteFrames",&ret.sprite_frames.len(),&ret.sprite_frames.len()), LogLevel::Log);
         // RDR is now at the start of BuildFrames! //
         ret
     }
@@ -327,7 +327,7 @@ impl SpriteGraphicsSegment {
         rdr.set_position(sprite_frame.build_offset as u64 + sprite_frame._pos);
         let tile_offset = match rdr.read_u16::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Failed to read tile_offset in render_sprite_frame: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Failed to read tile_offset in render_sprite_frame: '{error}'"), LogLevel::Error);
                 return Vec::new();
             }
             Ok(o) => o,
@@ -422,7 +422,7 @@ fn get_sprite_dims_from_flag_value(val: u16) -> Pos2 {
         0x13 => Pos2::new(4.0,8.0),
         0x14 => Pos2::new(1.0,2.0),
         _ => {
-            log_write(format!("Unknown Sprite Dim value: '{}'",val), LogLevel::WARN);
+            log_write(format!("Unknown Sprite Dim value: '{}'",val), LogLevel::Warn);
             Pos2::new(2.0, 2.0)
         }
     }

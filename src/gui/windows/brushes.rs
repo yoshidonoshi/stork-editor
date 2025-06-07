@@ -12,7 +12,7 @@ pub struct StoredBrushes {
 
 pub static STORED_BRUSHES: LazyLock<StoredBrushes> = LazyLock::new(|| {
     let value = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/stored_brushes.json"));
-    // log_write("Loaded stored brushes JSON, not parsed yet", LogLevel::DEBUG);
+    // log_write("Loaded stored brushes JSON, not parsed yet", LogLevel::Debug);
     serde_json::from_str(value).expect("Valid stored_brushes.json file")
 });
 
@@ -118,24 +118,24 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let tile_x: u32 = (local_pos.x/BRUSH_TILE_DIM) as u32;
                 let mut should_delete: bool = true;
                 if tile_x >= de.current_brush.width as u32 {
-                    log_write("tile_x out of bounds for Brush", LogLevel::WARN);
+                    log_write("tile_x out of bounds for Brush", LogLevel::Warn);
                     should_delete = false;
                 }
                 let tile_y: u32 = (local_pos.y/BRUSH_TILE_DIM) as u32;
                 if tile_y >= de.current_brush.height as u32 {
-                    log_write("tile_y out of bounds for Brush", LogLevel::WARN);
+                    log_write("tile_y out of bounds for Brush", LogLevel::Warn);
                     should_delete = false;
                 }
                 let tile_index: u32 = tile_y * (de.current_brush.width as u32) + tile_x;
                 if tile_index as usize >= de.current_brush.tiles.len() {
-                    log_write(format!("Tile index too high for Brush: 0x{:X}",tile_index), LogLevel::WARN);
+                    log_write(format!("Tile index too high for Brush: 0x{:X}",tile_index), LogLevel::Warn);
                     should_delete = false;
                 }
                 if should_delete {
                     de.current_brush.tiles[tile_index as usize] = 0x0000;
                 }
             } else {
-                log_write("Failed to get pointer input when clicking Saved Brushes grid", LogLevel::ERROR);
+                log_write("Failed to get pointer input when clicking Saved Brushes grid", LogLevel::Error);
             }
         } // End interactivity
         // Helper for selection
@@ -145,7 +145,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             let odd_size = sel_width % 2 != 0 || sel_height % 2 != 0;
             let raw_text = format!("Selection width/height: {}/{}",sel_width,sel_height);
             let Some(top_left) = de.bg_sel_data.get_top_left(layer.get_info().expect("Layer has INFO").layer_width) else {
-                log_write("Unable to get top left from bg selection in brushes", LogLevel::ERROR);
+                log_write("Unable to get top left from bg selection in brushes", LogLevel::Error);
                 return;
             };
             let odd_pos = (top_left.x as u32) % 2 != 0 || (top_left.y as u32) % 2 != 0;
@@ -203,17 +203,17 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             ui.label(label_str);
             if load_tiles.clicked() {
                 if de.bg_sel_data.selection_width == 0 {
-                    log_write("Cannot load selected tiles, selection width is 0", LogLevel::WARN);
+                    log_write("Cannot load selected tiles, selection width is 0", LogLevel::Warn);
                     return;
                 }
                 if de.bg_sel_data.selected_map_indexes.is_empty() {
-                    log_write("Cannot load selected tiles, nothing selected", LogLevel::WARN);
+                    log_write("Cannot load selected tiles, nothing selected", LogLevel::Warn);
                     return;
                 }
                 let maptiles = layer.get_mpbz().expect("maptiles should be Some'd on a layer");
                 de.current_brush.tiles.clear();
                 if de.bg_sel_data.selection_width >= u8::MAX as u16 {
-                    log_write("Selection width higher than u8 able", LogLevel::ERROR);
+                    log_write("Selection width higher than u8 able", LogLevel::Error);
                     return;
                 }
                 de.current_brush.width = de.bg_sel_data.selection_width as u8;
@@ -229,7 +229,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.horizontal(|ui| {
             // Clear button
             if ui.button("Clear Brush").clicked() {
-                log_write("Clearing current Brush", LogLevel::LOG);
+                log_write("Clearing current Brush", LogLevel::Log);
                 de.current_brush.clear();
             }
         });
@@ -269,7 +269,7 @@ fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], ti
 
             if index >= brush.tiles.len() {
                 log_write(format!("Brush index is out of bounds, was {} but len is {}; calc'ed with x/y/brsw: {}/{}/{}",
-                index,brush.tiles.len(),&x,&y,brush.width), LogLevel::ERROR);
+                index,brush.tiles.len(),&x,&y,brush.width), LogLevel::Error);
             } else {
                 // Do the actual tile draw
                 if *col_mode == 0x0 {
@@ -277,11 +277,11 @@ fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], ti
                     // Check if out of bounds (subtract palette offset, +1 for universal palette)
                     let pal_id_signed = tile.palette_id as i32 + *pal_offset as i32 + 1;
                     if pal_id_signed < 0 || pal_id_signed >= 16 {
-                        log_write(format!("Palette ID out of range: {}",pal_id_signed), LogLevel::ERROR);
+                        log_write(format!("Palette ID out of range: {}",pal_id_signed), LogLevel::Error);
                         continue;
                     }
                     if pal_id_signed as usize >= palette.len() {
-                        log_write(format!("pal ID overflow in brush tile drawing: 0x{:X} >= 0x{:X}",pal_id_signed,palette.len()), LogLevel::ERROR);
+                        log_write(format!("pal ID overflow in brush tile drawing: 0x{:X} >= 0x{:X}",pal_id_signed,palette.len()), LogLevel::Error);
                         return;
                     }
                     let cur_pal = &palette[pal_id_signed as usize];
