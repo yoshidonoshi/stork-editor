@@ -1406,6 +1406,7 @@ impl eframe::App for Gui {
                     });
                 });
         }
+        self.show_modals(ctx);
         if let Some(exporting_progress) = self.exporting_progress {
             egui::Modal::new(Id::new("exporting_modal")).show(ctx, |ui| {
                 ui.set_width(200.0);
