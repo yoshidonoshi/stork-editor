@@ -569,6 +569,8 @@ mod tests_utils {
         let obar_num = 0x5241424f;
         let header_test_1 = header_to_string(&obar_num);
         assert_eq!(header_test_1,"OBAR");
+        let header_test_num = string_to_header("OBAR".to_string());
+        assert_eq!(header_test_num,obar_num);
     }
 
     #[test]
@@ -586,5 +588,14 @@ mod tests_utils {
         let templates = get_map_templates();
         let value_found = templates.get(&key).expect("Should find");
         assert_eq!(test_value,*value_found);
+    }
+
+    #[test]
+    fn test_path_abs() {
+        let export_path = PathBuf::from("/home/user/Downloads/test_out/");
+        let filename = "test.mpdz".to_string();
+        let result_path = PathBuf::from("/home/user/Downloads/test_out/files/file/test.mpdz");
+        let try_res = nitrofs_abs(&export_path, &filename);
+        assert_eq!(try_res,result_path);
     }
 }
