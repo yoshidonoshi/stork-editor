@@ -114,7 +114,6 @@ pub fn compare_vector_u8s(byte_vector_1: &[u8], byte_vector_2: &[u8]) {
 
 pub fn header_to_string(header: &u32) -> String {
     (0..4)
-        .rev()
         .map(|i| std::char::from_u32((header >> (i * 8)) % 0x100).unwrap_or('�'))
         .collect()
 }
