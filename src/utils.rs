@@ -563,4 +563,39 @@ mod tests_utils {
         let maybe = nitrofs_abs(PathBuf::from("yids_extract"),&"test.bin".to_owned());
         assert_eq!(correct,maybe);
     }
+
+    #[test]
+    fn test_header_string() {
+        let obar_num = 0x5241424f;
+        let header_test_1 = header_to_string(&obar_num);
+        assert_eq!(header_test_1,"OBAR");
+        let header_test_num = string_to_header("OBAR".to_string());
+        assert_eq!(header_test_num,obar_num);
+    }
+
+    #[test]
+    fn test_cursor() {
+        let bytes_test: Vec<u8> = vec![0x11,0x22,0x33,0x00];
+        let mut test_cursor = Cursor::new(bytes_test);
+        let dword_test = test_cursor.read_u32::<LittleEndian>().expect("Reads correctly");
+        assert_eq!(dword_test,0x332211);
+    }
+
+    #[test]
+    fn test_sample_map() {
+        let key = "Fortress - Lava".to_string();
+        let test_value = "14k5361.mpdz".to_string();
+        let templates = get_map_templates();
+        let value_found = templates.get(&key).expect("Should find");
+        assert_eq!(test_value,*value_found);
+    }
+
+    #[test]
+    fn test_path_abs() {
+        let export_path = PathBuf::from("/home/user/Downloads/test_out/");
+        let filename = "test.mpdz".to_string();
+        let result_path = PathBuf::from("/home/user/Downloads/test_out/files/file/test.mpdz");
+        let try_res = nitrofs_abs(&export_path, &filename);
+        assert_eq!(try_res,result_path);
+    }
 }
