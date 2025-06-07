@@ -595,7 +595,7 @@ mod tests_utils {
         let export_path = PathBuf::from("/home/user/Downloads/test_out/");
         let filename = "test.mpdz".to_string();
         let result_path = PathBuf::from("/home/user/Downloads/test_out/files/file/test.mpdz");
-        let try_res = nitrofs_abs(&export_path, &filename);
+        let try_res = nitrofs_abs(export_path, &filename);
         assert_eq!(try_res,result_path);
     }
 }
