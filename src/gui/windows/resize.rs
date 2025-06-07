@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use egui::Color32;
 
 use crate::{engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}, NON_MAIN_FOCUSED};
@@ -95,33 +97,35 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
                 info.layer_width,info.layer_height,
                 settings.new_width,settings.new_height), LogLevel::Log);
             // Actual resizing calls
-            if settings.new_width > info.layer_width {
-                // Width is greater, increase width //
-                let Ok(increase_result) = bg.increase_width(settings.new_width) else {
-                    log_write("Error increasing size of layer", LogLevel::Error);
-                    settings.reset_needed = true;
-                    settings.window_open = false;
-                    return;
-                };
-                if increase_result != settings.new_width {
-                    log_write("Mismatch in result width", LogLevel::Error);
-                } else {
-                    log_write("Resize successful, updating", LogLevel::Log);
+            match settings.new_width.cmp(&info.layer_width) {
+                Ordering::Greater => {
+                    // Width is greater, increase width //
+                    let Ok(increase_result) = bg.increase_width(settings.new_width) else {
+                        log_write("Error increasing size of layer", LogLevel::Error);
+                        settings.reset_needed = true;
+                        settings.window_open = false;
+                        return;
+                    };
+                    if increase_result != settings.new_width {
+                        log_write("Mismatch in result width", LogLevel::Error);
+                    } else {
+                        log_write("Resize successful, updating", LogLevel::Log);
+                    }
                 }
-            } else if settings.new_width < info.layer_width {
-                let Ok(decrease_result) = bg.decrease_width(settings.new_width) else {
-                    log_write("Error decreasing size of layer", LogLevel::Error);
-                    settings.reset_needed = true;
-                    settings.window_open = false;
-                    return;
-                };
-                if decrease_result != settings.new_width {
-                    log_write("Mismatch in result width", LogLevel::Error);
-                } else {
-                    log_write("Resize successful, updating", LogLevel::Log);
+                Ordering::Less => {
+                    let Ok(decrease_result) = bg.decrease_width(settings.new_width) else {
+                        log_write("Error decreasing size of layer", LogLevel::Error);
+                        settings.reset_needed = true;
+                        settings.window_open = false;
+                        return;
+                    };
+                    if decrease_result != settings.new_width {
+                        log_write("Mismatch in result width", LogLevel::Error);
+                    } else {
+                        log_write("Resize successful, updating", LogLevel::Log);
+                    }
                 }
-            } else {
-                log_write("No change in layer width", LogLevel::Debug);
+                Ordering::Equal => log_write("No change in layer width", LogLevel::Debug),
             }
             if bg.change_height(settings.new_height).is_err() {
                 log_write("Error changing height of layer", LogLevel::Error);

@@ -969,7 +969,9 @@ impl Gui {
             self.display_engine.graphics_update_needed = true;
             self.display_engine.unsaved_changes = true;
             log_write(format!("Cut {} Sprites onto the clipboard",self.display_engine.clipboard.sprite_clip.sprites.len()), LogLevel::Log);
-        } if self.is_cur_layer_bg() {
+        }
+        // TODO: check if this requires `else if` 
+        if self.is_cur_layer_bg() {
             if self.display_engine.bg_sel_data.selected_map_indexes.is_empty() {
                 log_write("Cannot cut, no BG data selected", LogLevel::Warn);
                 return;

@@ -38,7 +38,7 @@ impl DataSegment {
             println!("Mismatch in file specified internal size vs actual: 0x{:05X} vs 0x{:05X}", size, inside_len);
         }
         Self {
-            header: header,
+            header,
             internal_data: inner_data
         }
     }

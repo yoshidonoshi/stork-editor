@@ -3,6 +3,8 @@
 
 // Clippy warnings
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::collapsible_else_if)]
 
 use std::sync::{LazyLock, Mutex};
 
