@@ -2,6 +2,7 @@ use crate::data::sprites::LevelSprite;
 
 #[allow(clippy::module_inception)]
 pub mod gui;
+pub mod modal;
 pub mod toppanel;
 pub mod sidepanel;
 pub mod windows;
