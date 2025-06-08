@@ -415,6 +415,7 @@ impl Gui {
         self.display_engine.brush_settings.pos_brush_name.clear();
         self.display_engine.brush_settings.cur_selected_brush = Option::None;
         self.display_engine.current_brush.clear();
+        self.display_engine.selected_preview_tile = None;
     }
     pub fn do_change_map(&mut self) {
         if self.display_engine.unsaved_changes {
@@ -1219,13 +1220,13 @@ impl eframe::App for Gui {
                         // TODO: In the future, add custom UI spacing inside tiles_window_show to make that uneeded
                         match *radio {
                             BgValue::BG1 => {
-                                tiles_window_show(ui, &self.bg1_tile_preview_cache);
+                                tiles_window_show(ui, &self.bg1_tile_preview_cache,&mut self.display_engine);
                             }
                             BgValue::BG2 => {
-                                tiles_window_show(ui, &self.bg2_tile_preview_cache);
+                                tiles_window_show(ui, &self.bg2_tile_preview_cache,&mut self.display_engine);
                             }
                             BgValue::BG3 => {
-                                tiles_window_show(ui, &self.bg3_tile_preview_cache);
+                                tiles_window_show(ui, &self.bg3_tile_preview_cache,&mut self.display_engine);
                             }
                         }
                     });
