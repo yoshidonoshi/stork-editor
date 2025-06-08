@@ -121,10 +121,10 @@ impl CourseInfo {
             }
             let cscn: CourseMapInfo = CourseMapInfo {
                 map_music: cscn_music_id,
-                map_filename_noext: mpdz_name_noext.clone(),
+                label: format!("0x{:X}: {}",cscn_index,&mpdz_name_noext),
+                map_filename_noext: mpdz_name_noext,
                 map_entrances: cscn_entrance_vec,
                 map_exits: cscn_exit_vec,
-                label: format!("0x{:X}: {}",cscn_index,&mpdz_name_noext),
                 uuid: Uuid::new_v4()
             };
             cscn_vec.push(cscn); // Move it in

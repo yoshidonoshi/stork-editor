@@ -1034,7 +1034,7 @@ impl Gui {
                 copied_sprite.x_position = true_level_x as u16;
                 copied_sprite.y_position = true_level_y as u16;
                 copied_sprite.uuid = Uuid::new_v4();
-                self.display_engine.loaded_map.add_sprite(copied_sprite);
+                self.display_engine.loaded_map.add_sprite(copied_sprite.clone());
             }
             self.display_engine.graphics_update_needed = true;
             self.display_engine.unsaved_changes = true;

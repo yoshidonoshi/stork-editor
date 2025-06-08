@@ -364,7 +364,7 @@ pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
     let mut p: PathBuf = PathBuf::from(export_dir);
     p.push("backups");
     if !p.exists() {
-        if let Err(error) = fs::create_dir(p.clone()) {
+        if let Err(error) = fs::create_dir(&p) {
             log_write(format!("Error creating backup folder: '{error}'"), LogLevel::Error);
             return Err(());
         }
@@ -376,7 +376,7 @@ pub fn get_template_folder(export_dir: &PathBuf) -> Option<PathBuf> {
     let mut p: PathBuf = PathBuf::from(export_dir);
     p.push("templates");
     if !p.exists() {
-        if let Err(error) = fs::create_dir(p.clone()) {
+        if let Err(error) = fs::create_dir(&p) {
             log_write(format!("Error creating template folder: '{error}'"), LogLevel::Error);
             return None;
         }
