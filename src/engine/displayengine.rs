@@ -68,6 +68,8 @@ pub enum GameVersion {
     EURXX, // Unknown revision
     /// AYWJ
     JAP,
+    /// AYWK
+    KOR,
     /// What?
     Unknown
 }
@@ -80,6 +82,7 @@ pub fn get_gameversion_prettyname(gv: &GameVersion) -> String {
         GameVersion::USA10 => String::from("USA 1.0"),
         GameVersion::USA11 => String::from("USA 1.1 (rev1)"),
         GameVersion::USAXX => String::from("Unknown USA"),
+        GameVersion::KOR => String::from("Korea"),
         GameVersion::Unknown => String::from("Unknown Game Version")
     }
 }
@@ -296,6 +299,7 @@ impl DisplayEngine {
                 "AYWE"=> GameVersion::USAXX,
                 "AYWP"=> GameVersion::EURXX,
                 "AYWJ"=> GameVersion::JAP, // Only one Japanese version
+                "AYWK"=> GameVersion::KOR, // Only one Korean version
                 _=> GameVersion::Unknown
             };
             log_write(format!("Found game version header: '{}'",game_code), LogLevel::Debug);
@@ -356,10 +360,11 @@ impl DisplayEngine {
                 log_write(unsupported_msg.clone(), LogLevel::Error);
                 return Err(DisplayEngineError::new(unsupported_msg));
             }
-            GameVersion::JAP => {
-                let jpn_msg = "JPN version not yet supported, will break".to_owned();
-                log_write(jpn_msg.clone(), LogLevel::Error);
-                return Err(DisplayEngineError::new(jpn_msg))
+            // unsupported game versions
+            GameVersion::JAP|GameVersion::KOR => {
+                let break_msg = format!("{gamever:?} version not yet supported, will break");
+                log_write(break_msg.clone(), LogLevel::Error);
+                return Err(DisplayEngineError::new(break_msg))
             }
             _ => {
                 let bad_logic_gamever = format!("Game version {:?} should not be hit here",gamever);
