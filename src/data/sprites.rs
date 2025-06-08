@@ -108,19 +108,19 @@ impl LevelSpriteSet {
         }
         for uid in &uuids_to_delete {
             let del_res = self.delete_sprite(*uid);
-            if del_res.is_ok() {
+            if del_res {
                 deleted_count += 1
             }
         }
         deleted_count
     }
 
-    pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> Result<(),()> {
+    pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> bool {
         let Some(pos) = self.sprites.iter().position(|x|x.uuid == sprite_uuid) else {
-            return Err(());
+            return false;
         };
         self.sprites.remove(pos);
-        Ok(())
+        true
     }
 }
 impl TopLevelSegment for LevelSpriteSet {
