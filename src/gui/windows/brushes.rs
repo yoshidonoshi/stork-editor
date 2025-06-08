@@ -125,7 +125,21 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     log_write(format!("tile_x too high: 0x{:X}",tile_x), LogLevel::Warn);
                     return;
                 }
-                // TODO: Expand?
+                // TODO: Expand Brush if too small?
+                if tile_x >= de.current_brush.width as u32 {
+                    log_write("tile_x out of bounds for Brush when trying to create tile", LogLevel::Warn);
+                    return;
+                }
+                if tile_y >= de.current_brush.height as u32 {
+                    log_write("tile_y out of bounds for Brush when trying to create tile", LogLevel::Warn);
+                    return;
+                }
+                let tile_index: u32 = tile_y * (de.current_brush.width as u32) + tile_x;
+                if tile_index as usize >= de.current_brush.tiles.len() {
+                    log_write(format!("Tile index too high for Brush when trying to create tile: 0x{:X}",tile_index), LogLevel::Warn);
+                    return;
+                }
+                // We are good to place the new tile!
             }
         }
         if click_response.secondary_clicked() {
