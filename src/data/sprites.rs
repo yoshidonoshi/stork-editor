@@ -99,22 +99,12 @@ impl LevelSpriteSet {
     }
 
     pub fn trim(&mut self, width: u16, height: u16) -> usize {
-        let mut deleted_count: usize = 0;
-        let mut uuids_to_delete: Vec<Uuid> = Vec::new();
-        for spr in &self.sprites {
-            if spr.x_position >= width || spr.y_position >= height {
-                uuids_to_delete.push(spr.uuid);
-            }
-        }
-        for uid in &uuids_to_delete {
-            let del_res = self.delete_sprite(*uid);
-            if del_res {
-                deleted_count += 1
-            }
-        }
-        deleted_count
+        let initial_len = self.sprites.len();
+        self.sprites.retain(|spr| spr.x_position < width && spr.y_position < height);
+        initial_len - self.sprites.len()
     }
 
+    #[allow(dead_code)]
     pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> bool {
         let Some(pos) = self.sprites.iter().position(|x|x.uuid == sprite_uuid) else {
             return false;
