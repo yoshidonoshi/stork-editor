@@ -360,16 +360,16 @@ pub fn nitrofs_abs(export_dir: PathBuf, filename_local: &str) -> PathBuf {
     p
 }
 
-pub fn get_backup_folder(export_dir: &PathBuf) -> Result<PathBuf,()> {
+pub fn get_backup_folder(export_dir: &PathBuf) -> Option<PathBuf> {
     let mut p: PathBuf = PathBuf::from(export_dir);
     p.push("backups");
     if !p.exists() {
         if let Err(error) = fs::create_dir(&p) {
             log_write(format!("Error creating backup folder: '{error}'"), LogLevel::Error);
-            return Err(());
+            return None;
         }
     }
-    Ok(p)
+    Some(p)
 }
 
 pub fn get_template_folder(export_dir: &PathBuf) -> Option<PathBuf> {

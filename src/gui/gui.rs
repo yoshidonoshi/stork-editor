@@ -465,7 +465,7 @@ impl Gui {
         };
     }
 
-    fn backup_map(&mut self) -> Result<PathBuf,()> {
+    fn backup_map(&mut self) -> Option<PathBuf> {
         log_write("Backing up current map file...", LogLevel::Debug);
         let mut backup_folder = get_backup_folder(&self.export_directory)?;
         let filename_path = Path::new(&self.display_engine.loaded_map.src_file);
@@ -475,7 +475,7 @@ impl Gui {
         backup_folder.push(format!("{}.{:?}.bak",file_name,time));
         let _copy_res = fs::copy(&self.display_engine.loaded_map.src_file, &backup_folder);
         log_write(format!("Backed up {} to {}",&self.display_engine.loaded_map.src_file,backup_folder.display()), LogLevel::Log);
-        Ok(backup_folder)
+        Some(backup_folder)
     }
 
     fn save_course(&mut self) {
