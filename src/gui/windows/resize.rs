@@ -100,7 +100,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
             match settings.new_width.cmp(&info.layer_width) {
                 Ordering::Greater => {
                     // Width is greater, increase width //
-                    let Ok(increase_result) = bg.increase_width(settings.new_width) else {
+                    let Some(increase_result) = bg.increase_width(settings.new_width) else {
                         log_write("Error increasing size of layer", LogLevel::Error);
                         settings.reset_needed = true;
                         settings.window_open = false;
@@ -113,7 +113,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
                     }
                 }
                 Ordering::Less => {
-                    let Ok(decrease_result) = bg.decrease_width(settings.new_width) else {
+                    let Some(decrease_result) = bg.decrease_width(settings.new_width) else {
                         log_write("Error decreasing size of layer", LogLevel::Error);
                         settings.reset_needed = true;
                         settings.window_open = false;
@@ -127,7 +127,7 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
                 }
                 Ordering::Equal => log_write("No change in layer width", LogLevel::Debug),
             }
-            if bg.change_height(settings.new_height).is_err() {
+            if bg.change_height(settings.new_height).is_none() {
                 log_write("Error changing height of layer", LogLevel::Error);
                 settings.reset_needed = true;
                 settings.window_open = false;
