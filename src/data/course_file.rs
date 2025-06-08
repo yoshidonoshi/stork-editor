@@ -351,12 +351,7 @@ impl CourseMapInfo {
         segment_wrap(uncomped_bytes, "CSCN".to_owned())
     }
     pub fn get_entrance_index(&self, entrance_uuid: &Uuid) -> Option<u8> {
-        for (index, enter) in self.map_entrances.iter().enumerate() {
-            if enter.uuid == *entrance_uuid {
-                return Some(index as u8);
-            }
-        }
-        Option::None
+        self.map_entrances.iter().position(|enter| enter.uuid == *entrance_uuid).map(|i| i as u8)
     }
     pub fn get_exit(&mut self, uuid: &Uuid) -> Option<&mut MapExit> {
         self.map_exits.iter_mut().find(|x| x.uuid == *uuid)

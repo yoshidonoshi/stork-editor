@@ -798,7 +798,7 @@ impl Gui {
         map_dir.push("file");
         match fs::read_dir(map_dir) {
             Ok(l) => {
-                let good_dirs: Vec<DirEntry> = l.into_iter().filter_map(|x| x.ok() ).collect();
+                let good_dirs: Vec<DirEntry> = l.into_iter().flatten().collect();
                 for files_file in good_dirs {
                     let found_name = files_file.file_name().into_string().expect("NitroFS is ASCII only");
                     if map_filenames.contains(&found_name) {
