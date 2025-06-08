@@ -939,6 +939,7 @@ fn draw_background(
                             println!("Map tile index: 0x{:X}",tile_index);
                             let clicked_map_tile = &map_tiles.tiles[tile_index as usize];
                             println!("{}",clicked_map_tile);
+                            de.selected_preview_tile = Some(clicked_map_tile.tile_id as usize);
                             println!("16 Adjusted Palette: 0x{:X}",clicked_map_tile.palette_id + layer._pal_offset as u16 + 1);
                             // Now print the actual tile values
                             if !info.is_256_colorpal_mode() {

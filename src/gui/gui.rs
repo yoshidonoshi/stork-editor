@@ -1211,6 +1211,11 @@ impl eframe::App for Gui {
                 if cur_palette != self.tile_preview_pal {
                     self.needs_bg_tile_refresh = true;
                 }
+                if let Some(sel_tile) = self.display_engine.selected_preview_tile {
+                    ui.label(format!("Current Tile Index: 0x{:03X}",sel_tile));
+                } else {
+                    ui.label("Current Tile Index: N/A");
+                }
                 ui.add_space(3.0);
                 egui::ScrollArea::vertical()
                     .auto_shrink(false)

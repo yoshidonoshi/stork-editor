@@ -112,30 +112,46 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.add_space(push_height);
         // Interactivity
         let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new("saved_brushes_window_click"), egui::Sense::click());
+        if click_response.clicked() {
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                let local_pos = pointer_pos - top_left;
+                let tile_x: u32 = (local_pos.x/BRUSH_TILE_DIM) as u32;
+                let tile_y: u32 = (local_pos.y/BRUSH_TILE_DIM) as u32;
+                if tile_y >= BRUSH_TILES_WIDE as u32 {
+                    log_write(format!("tile_y too high: 0x{:X}",tile_y), LogLevel::Warn);
+                    return;
+                }
+                if tile_x >= BRUSH_TILES_WIDE as u32 {
+                    log_write(format!("tile_x too high: 0x{:X}",tile_x), LogLevel::Warn);
+                    return;
+                }
+                // TODO: Expand?
+            }
+        }
         if click_response.secondary_clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                 let local_pos = pointer_pos - top_left;
                 let tile_x: u32 = (local_pos.x/BRUSH_TILE_DIM) as u32;
                 let mut should_delete: bool = true;
                 if tile_x >= de.current_brush.width as u32 {
-                    log_write("tile_x out of bounds for Brush", LogLevel::Warn);
+                    log_write("tile_x out of bounds for Brush when trying to delete tile", LogLevel::Warn);
                     should_delete = false;
                 }
                 let tile_y: u32 = (local_pos.y/BRUSH_TILE_DIM) as u32;
                 if tile_y >= de.current_brush.height as u32 {
-                    log_write("tile_y out of bounds for Brush", LogLevel::Warn);
+                    log_write("tile_y out of bounds for Brush when trying to delete tile", LogLevel::Warn);
                     should_delete = false;
                 }
                 let tile_index: u32 = tile_y * (de.current_brush.width as u32) + tile_x;
                 if tile_index as usize >= de.current_brush.tiles.len() {
-                    log_write(format!("Tile index too high for Brush: 0x{:X}",tile_index), LogLevel::Warn);
+                    log_write(format!("Tile index too high for Brush when trying to delete tile: 0x{:X}",tile_index), LogLevel::Warn);
                     should_delete = false;
                 }
                 if should_delete {
                     de.current_brush.tiles[tile_index as usize] = 0x0000;
                 }
             } else {
-                log_write("Failed to get pointer input when clicking Saved Brushes grid", LogLevel::Error);
+                log_write("Failed to get pointer input when right clicking Saved Brushes grid", LogLevel::Error);
             }
         } // End interactivity
         // Helper for selection
