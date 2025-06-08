@@ -115,12 +115,7 @@ impl LevelSpriteSet {
 }
 impl TopLevelSegment for LevelSpriteSet {
     fn compile(&self) -> Vec<u8> {
-        let mut comp: Vec<u8> = vec![];
-        for spr in &self.sprites {
-            let mut sprite_bytes = spr.compile();
-            comp.append(&mut sprite_bytes);
-        }
-        comp
+        self.sprites.iter().map(|spr| spr.compile()).flatten().collect()
     }
     
     fn wrap(&self) -> Vec<u8> {
