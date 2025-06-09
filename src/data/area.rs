@@ -24,12 +24,7 @@ impl fmt::Display for TriggerData {
 }
 impl TopLevelSegment for TriggerData {
     fn compile(&self) -> Vec<u8> {
-        let mut comp: Vec<u8> = vec![];
-        for t in &self.triggers {
-            let mut t_comp: Vec<u8> = t.compile();
-            comp.append(&mut t_comp);
-        }
-        comp
+        self.triggers.iter().map(|trigger| trigger.compile()).flatten().collect()
     }
     // No compression
     fn wrap(&self) -> Vec<u8> {

@@ -465,7 +465,7 @@ impl Gui {
         };
     }
 
-    fn backup_map(&mut self) -> Result<PathBuf,()> {
+    fn backup_map(&mut self) -> Option<PathBuf> {
         log_write("Backing up current map file...", LogLevel::Debug);
         let mut backup_folder = get_backup_folder(&self.export_directory)?;
         let filename_path = Path::new(&self.display_engine.loaded_map.src_file);
@@ -475,7 +475,7 @@ impl Gui {
         backup_folder.push(format!("{}.{:?}.bak",file_name,time));
         let _copy_res = fs::copy(&self.display_engine.loaded_map.src_file, &backup_folder);
         log_write(format!("Backed up {} to {}",&self.display_engine.loaded_map.src_file,backup_folder.display()), LogLevel::Log);
-        Ok(backup_folder)
+        Some(backup_folder)
     }
 
     fn save_course(&mut self) {
@@ -692,7 +692,7 @@ impl Gui {
                     let mut should_update: bool = false;
                     let mut should_deselect: bool = false;
                     for s in &self.display_engine.selected_sprite_uuids {
-                        if let Ok(s) = &self.display_engine.loaded_map.get_sprite_by_uuid(*s) {
+                        if let Some(s) = &self.display_engine.loaded_map.get_sprite_by_uuid(*s) {
                             if i.key_pressed(egui::Key::ArrowUp) {
                                 self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position, s.y_position - 1);
                                 should_update = true;
@@ -798,7 +798,7 @@ impl Gui {
         map_dir.push("file");
         match fs::read_dir(map_dir) {
             Ok(l) => {
-                let good_dirs: Vec<DirEntry> = l.into_iter().filter_map(|x| x.ok() ).collect();
+                let good_dirs: Vec<DirEntry> = l.into_iter().flatten().collect();
                 for files_file in good_dirs {
                     let found_name = files_file.file_name().into_string().expect("NitroFS is ASCII only");
                     if map_filenames.contains(&found_name) {
@@ -826,7 +826,7 @@ impl Gui {
         self.scroll_to = Some(Pos2::new(x_pos, y_pos));
         self.display_engine.selected_sprite_uuids.clear();
         self.display_engine.selected_sprite_uuids.push(*sprite_uuid);
-        if let Ok(spr_res) = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid) {
+        if let Some(spr_res) = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid) {
             self.display_engine.latest_sprite_settings = bytes_to_hex_string(&spr_res.settings);
         } else {
             log_write("Failed to get sprite by UUID in select_sprite_from_list", LogLevel::Error);
@@ -958,7 +958,7 @@ impl Gui {
                     top_left_most = Pos2::new(cur_sprite.x_position as f32, cur_sprite.y_position as f32);
                 }
                 self.display_engine.clipboard.sprite_clip.sprites.push(cur_sprite);
-                if self.display_engine.loaded_map.delete_sprite_by_uuid(*spr_id).is_err() {
+                if !self.display_engine.loaded_map.delete_sprite_by_uuid(*spr_id) {
                     log_write("Failed to delete Sprite by UUID in do_cut", LogLevel::Error);
                 }
             }
@@ -1034,7 +1034,7 @@ impl Gui {
                 copied_sprite.x_position = true_level_x as u16;
                 copied_sprite.y_position = true_level_y as u16;
                 copied_sprite.uuid = Uuid::new_v4();
-                self.display_engine.loaded_map.add_sprite(copied_sprite);
+                self.display_engine.loaded_map.add_sprite(copied_sprite.clone());
             }
             self.display_engine.graphics_update_needed = true;
             self.display_engine.unsaved_changes = true;

@@ -295,17 +295,17 @@ impl BackgroundData {
         Option::None
     }
 
-    pub fn increase_width(&mut self, new_width: u16) -> Result<u16,()> {
+    pub fn increase_width(&mut self, new_width: u16) -> Option<u16> {
         if new_width % 2 != 0 {
             log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width <= old_width {
             log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
-            return Err(());
+            return None;
         }
         let how_much_add = new_width - old_width;
         if let Some(mpbz) = self.get_mpbz_mut() {
@@ -316,20 +316,20 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_width = new_width;
-        Ok(info.layer_width)
+        Some(info.layer_width)
     }
 
-    pub fn decrease_width(&mut self, new_width: u16) -> Result<u16,()> {
+    pub fn decrease_width(&mut self, new_width: u16) -> Option<u16> {
         if new_width % 2 != 0 {
             log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width >= old_width {
             log_write(format!("Cannot decrease, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
-            return Err(());
+            return None;
         }
         let how_much_remove = old_width - new_width;
         if let Some(mpbz) = self.get_mpbz_mut() {
@@ -340,16 +340,16 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_width = new_width;
-        Ok(info.layer_width)
+        Some(info.layer_width)
     }
 
-    pub fn change_height(&mut self, new_height: u16) -> Result<u16,()> {
+    pub fn change_height(&mut self, new_height: u16) -> Option<u16> {
         let info_c = self.get_info().expect("INFO is always there");
         let layer_width = info_c.layer_width;
 
         if new_height % 2 != 0 {
             log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         if let Some(mpbz) = self.get_mpbz_mut() {
             mpbz.change_height(new_height, layer_width);
@@ -359,7 +359,7 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_height = new_height;
-        Ok(info.layer_height)
+        Some(info.layer_height)
     }
 }
 

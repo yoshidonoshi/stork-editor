@@ -351,10 +351,10 @@ impl MapData {
         }
     }
 
-    pub fn add_sprite(&mut self, sprite: &LevelSprite) -> Uuid {
-        let sprite_set: &mut LevelSpriteSet = self.get_setd().expect("Expected SETD to exist");
-        sprite_set.sprites.push(sprite.clone());
-        sprite.uuid
+    pub fn add_sprite(&mut self, sprite: LevelSprite) -> Uuid {
+        let uuid = sprite.uuid;
+        self.get_setd().expect("Expected SETD to exist").sprites.push(sprite);
+        uuid
     }
 
     pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16, meta: &HashMap<u16,SpriteMetadata>) -> Uuid {
@@ -374,42 +374,35 @@ impl MapData {
     }
 
     /// Return a cloned copy of a Sprite from the current level map
-    pub fn get_sprite_by_uuid(&mut self, sprite_uuid: Uuid) -> Result<LevelSprite,()> {
-        let sprite_set = self.get_setd().expect("Expected SETD to exist");
-        for spr in &mut sprite_set.sprites {
-            if spr.uuid == sprite_uuid {
-                return Ok(spr.clone());
-            }
-        }
-        Err(())
+    pub fn get_sprite_by_uuid(&mut self, sprite_uuid: Uuid) -> Option<LevelSprite> {
+            self.get_setd().expect("Expected SETD to exist")
+                .sprites.iter().find(|&spr| spr.uuid == sprite_uuid).cloned()
     }
 
-    pub fn delete_sprite_by_uuid(&mut self, sprite_uuid: Uuid) -> Result<bool,()> {
+    /// Returns true if deleted successfully
+    pub fn delete_sprite_by_uuid(&mut self, sprite_uuid: Uuid) -> bool {
         let sprite_set = self.get_setd().expect("Expected SETD to exist");
-        for (index, spr) in &mut sprite_set.sprites.iter_mut().enumerate() {
-            if spr.uuid == sprite_uuid {
-                sprite_set.sprites.remove(index);
-                return Ok(true);
-            }
-        }
-        Err(())
+        sprite_set.sprites.iter()
+            .position(|spr| spr.uuid == sprite_uuid)
+            .map(|i| sprite_set.sprites.remove(i)).is_some()
     }
 
-    pub fn set_col_tile(&mut self, which_background: u8, tile_index: u16, new_type: u8) -> Result<(),()> {
+    /// Returns if it got successfully set or not
+    pub fn set_col_tile(&mut self, which_background: u8, tile_index: u16, new_type: u8) -> bool {
         #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
             log_write(format!("Extremely unusual which_background value in delete_bg_tile_by_map_index: {}",which_background), LogLevel::Error);
-            return Err(())
+            return false
         }
         let Some(bg) = self.get_background(which_background) else {
             log_write(format!("Failed to get_background '{}' in delete_bg_tile_by_map_index",which_background), LogLevel::Error);
-            return Err(())
+            return false
         };
         if let Some(col) = bg.get_colz_mut() {
             col.col_tiles[tile_index as usize] = new_type;
-            Ok(())
+            true
         } else {
-            Err(())
+            false
         }
     }
 
