@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::consts::PI, fmt::Write, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
+use std::{collections::HashMap, f32::consts::PI, fmt::{Display, Write}, fs::{self, write}, io::{Cursor, Read}, num::ParseIntError, path::PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
@@ -17,8 +17,7 @@ pub enum LogLevel {
     Fatal,
 }
 
-pub fn log_write(msg: impl Into<String>, level: LogLevel) {
-    let msg = msg.into();
+pub fn log_write(msg: impl Display, level: LogLevel) {
     match level {
         LogLevel::Debug => {
             if !is_debug() {
@@ -42,7 +41,7 @@ pub fn log_write(msg: impl Into<String>, level: LogLevel) {
         LogLevel::Fatal => {
             println!("[{}] {msg}","FATAL".red());
             log::error!("{msg}");
-            panic!("{}",msg);
+            panic!("{msg}");
         }
     }
 }
@@ -134,13 +133,12 @@ pub fn bytes_to_hex_string(settings: &[u8]) -> String {
         )
 }
 
-pub fn string_to_settings(settings_string: &str) -> Result<Vec<u8>,String> {
-    let split: Vec<&str> = settings_string.trim().split(' ').collect();
+pub fn string_to_settings(settings_string: &str) -> Result<Vec<u8>, ParseIntError> {
     let mut new_settings: Vec<u8> = Vec::new();
-    for str8 in split {
+    for str8 in settings_string.trim().split(' ') {
         match u8::from_str_radix(str8, 16) {
             Ok(u8val) => new_settings.push(u8val),
-            Err(error) => return Err(error.to_string()),
+            Err(error) => return Err(error),
         }
     }
     Ok(new_settings)

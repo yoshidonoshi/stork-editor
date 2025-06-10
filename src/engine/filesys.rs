@@ -23,12 +23,12 @@ impl Display for RomExtractError {
 pub fn extract_rom_files(nds_file: &Path, output_dir: &Path) -> Result<PathBuf,RomExtractError> {
     let Ok(raw_rom) = raw::Rom::from_file(nds_file) else {
         let open_fail = format!("Failed to open ROM file '{}'", &nds_file.display());
-        log_write(open_fail.clone(), utils::LogLevel::Error);
+        log_write(&open_fail, utils::LogLevel::Error);
         return Err(RomExtractError::new(&open_fail));
     };
     let Ok(rom) = Rom::extract(&raw_rom) else {
         let extract_err = "Failed to extract ROM contents".to_string();
-        log_write(extract_err.clone(), utils::LogLevel::Error);
+        log_write(&extract_err, utils::LogLevel::Error);
         return Err(RomExtractError::new(&extract_err));
     };
     match rom.save(output_dir, None) {
@@ -39,7 +39,7 @@ pub fn extract_rom_files(nds_file: &Path, output_dir: &Path) -> Result<PathBuf,R
         }
         Err(_) => {
             let save_fail = "Failed to save extracted ROM contents".to_string();
-            log_write(save_fail.clone(), utils::LogLevel::Error);
+            log_write(&save_fail, utils::LogLevel::Error);
             Err(RomExtractError::new(&save_fail))
         }
     }

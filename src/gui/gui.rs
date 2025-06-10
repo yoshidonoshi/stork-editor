@@ -271,9 +271,9 @@ impl Gui {
             log_write("Did not get folder path", LogLevel::Warn);
         }
     }
-    pub fn do_alert(&mut self, alert_text: &str) {
+    pub fn do_alert(&mut self, alert_text: String) {
         log_write(format!("Launching alert window with message '{}'",alert_text), LogLevel::Debug);
-        self.general_alert_popup = Some(alert_text.to_string());
+        self.general_alert_popup = Some(alert_text);
     }
     fn open_project(&mut self, path: PathBuf) {
         log_write(format!("Opening Project at '{}'",path.display()), LogLevel::Log);
@@ -287,7 +287,7 @@ impl Gui {
                 self.display_engine.saved_brushes = saved_brushes;
             }
             Err(e) => {
-                self.do_alert(&e.cause);
+                self.do_alert(e.cause);
                 return;
             }
         }
@@ -296,7 +296,7 @@ impl Gui {
         if game_version != GameVersion::USA10 {
             let game_version_pretty = get_gameversion_prettyname(&game_version);
             let unsupported_alert = format!("You are using an unsupported version '{game_version_pretty}', saves will likely break. Supported versions: USA 1.0");
-            self.do_alert(&unsupported_alert);
+            self.do_alert(unsupported_alert);
         }
         self.display_engine.export_folder = self.export_directory.clone();
         // Pre-load some common files
@@ -314,7 +314,7 @@ impl Gui {
                 // TODO: If the first map file of the project is deleted,
                 //   this will soft lock, and they can never open their project...
                 //   Fix this, as rare is at may be
-                self.do_alert(&e);
+                self.do_alert(e.to_string());
                 // It will have reverted, refresh
                 self.display_engine.graphics_update_needed = true;
                 return;
@@ -381,7 +381,7 @@ impl Gui {
         match self.display_engine.load_level(world_index, level_index,0) {
             Ok(_) => { /* Do nothing, it worked */},
             Err(e) => {
-                self.do_alert(&e);
+                self.do_alert(e.to_string());
                 // It will have reverted, refresh
                 self.display_engine.graphics_update_needed = true;
                 return;
@@ -392,7 +392,7 @@ impl Gui {
         self.needs_bg_tile_refresh = true;
         if !self.display_engine.loaded_map.unhandled_headers.is_empty() {
             let segments_str = self.display_engine.loaded_map.unhandled_headers.join(", ");
-            self.do_alert(&format!("Found unhandled map segments {}. Do not save!",segments_str));
+            self.do_alert(format!("Found unhandled map segments {}. Do not save!",segments_str));
         }
     }
     pub fn clear_map_data(&mut self) {
@@ -428,7 +428,7 @@ impl Gui {
         match self.display_engine.load_level(self.cur_world, self.cur_level, map_index) {
             Ok(_) => { /* Do nothing, it worked */},
             Err(e) => {
-                self.do_alert(&e);
+                self.do_alert(e.to_string());
                 // It will have reverted, refresh
                 self.display_engine.graphics_update_needed = true;
                 return;
@@ -437,7 +437,7 @@ impl Gui {
         self.needs_bg_tile_refresh = true;
         if !self.display_engine.loaded_map.unhandled_headers.is_empty() {
             let segments_str = self.display_engine.loaded_map.unhandled_headers.join(", ");
-            self.do_alert(&format!("Found unhandled map segments {}. Do not save!",segments_str));
+            self.do_alert(format!("Found unhandled map segments {}. Do not save!",segments_str));
         }
     }
     fn save_map(&mut self) {
@@ -653,7 +653,7 @@ impl Gui {
             // Open ROM
             if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL | Modifiers::SHIFT, Key::O)) {
                 if let Err(error) = self.do_open_rom() {
-                    self.do_alert(&error.cause);
+                    self.do_alert(error.cause);
                 }
                 return;
             }
@@ -762,19 +762,19 @@ impl Gui {
             if display_string.contains("*") {
                 // User tried to just click the load button right away
                 let bad_name_msg = format!("Attempted to load file with invalid name: '{}'",&display_string);
-                log_write(bad_name_msg.clone(), LogLevel::Warn);
+                log_write(&bad_name_msg, LogLevel::Warn);
                 return Err(RomExtractError::new(&bad_name_msg));
             }
             if let Some(export_directory) = FileDialog::new().set_title("Choose folder to extract project into").pick_folder() {
                 self.export_directory = export_directory;
                 if !fs::exists(&self.export_directory).expect("FS Existence check should not fail") {
                     let exists_fail = "Project path failed existence check".to_string();
-                    log_write(exists_fail.clone(), LogLevel::Log);
+                    log_write(&exists_fail, LogLevel::Log);
                     return Err(RomExtractError::new(&exists_fail));
                 }
                 if let Err(error) = filesys::extract_rom_files(&path_rom, &self.export_directory) {
                     let fail_msg = format!("Failed to extract ROM: '{error}'");
-                    log_write(fail_msg.clone(), LogLevel::Error);
+                    log_write(&fail_msg, LogLevel::Error);
                     return Err(RomExtractError::new(&fail_msg));
                 }
                 self.open_project(self.export_directory.clone());
@@ -1100,8 +1100,8 @@ impl Gui {
             }
             _ => {
                 let msg = format!("Clear Layer not yet supported for {:?}",self.display_engine.display_settings.current_layer);
-                log_write(msg.clone(), LogLevel::Warn);
-                self.do_alert(&msg);
+                log_write(&msg, LogLevel::Warn);
+                self.do_alert(msg);
             }
         }
     }
