@@ -653,7 +653,7 @@ impl Gui {
             // Open ROM
             if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL | Modifiers::SHIFT, Key::O)) {
                 if let Err(error) = self.do_open_rom() {
-                    self.do_alert(error.cause);
+                    self.do_alert(error.to_string());
                 }
                 return;
             }
@@ -761,28 +761,27 @@ impl Gui {
             let display_string: String = path_rom.display().to_string();
             if display_string.contains("*") {
                 // User tried to just click the load button right away
-                let bad_name_msg = format!("Attempted to load file with invalid name: '{}'",&display_string);
+                let bad_name_msg = RomExtractError::LoadFileWithInvalidName(display_string);
                 log_write(&bad_name_msg, LogLevel::Warn);
-                return Err(RomExtractError::new(&bad_name_msg));
+                return Err(bad_name_msg);
             }
             if let Some(export_directory) = FileDialog::new().set_title("Choose folder to extract project into").pick_folder() {
                 self.export_directory = export_directory;
                 if !fs::exists(&self.export_directory).expect("FS Existence check should not fail") {
-                    let exists_fail = "Project path failed existence check".to_string();
+                    let exists_fail = RomExtractError::ProjectFolderDoesntExist;
                     log_write(&exists_fail, LogLevel::Log);
-                    return Err(RomExtractError::new(&exists_fail));
+                    return Err(exists_fail);
                 }
                 if let Err(error) = filesys::extract_rom_files(&path_rom, &self.export_directory) {
-                    let fail_msg = format!("Failed to extract ROM: '{error}'");
-                    log_write(&fail_msg, LogLevel::Error);
-                    return Err(RomExtractError::new(&fail_msg));
+                    log_write(&error, LogLevel::Error);
+                    return Err(error);
                 }
                 self.open_project(self.export_directory.clone());
                 self.create_map_templates();
                 return Ok(());
             }
         }
-        Err(RomExtractError::new("Open ROM failed"))
+        Err(RomExtractError::GenericFail)
     }
 
     fn create_map_templates(&mut self) {

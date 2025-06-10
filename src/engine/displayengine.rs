@@ -116,6 +116,7 @@ impl Display for DisplayEngineError {
         }
     }
 }
+impl Error for DisplayEngineError {}
 
 pub struct SpriteDragStatus {
     pub start_x: f32,

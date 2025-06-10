@@ -14,7 +14,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             if button_open_rom.clicked() {
                 ui.close_menu();
                 if let Err(error) = gui_state.do_open_rom() {
-                    gui_state.do_alert(error.cause);
+                    gui_state.do_alert(error.to_string());
                 }
             }
             let button_open_project = ui.add_enabled(true, Button::new("Open Project..."));
