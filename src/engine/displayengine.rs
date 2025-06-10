@@ -85,19 +85,23 @@ pub fn get_gameversion_prettyname(gv: &GameVersion) -> String {
 }
 
 #[derive(Debug)]
-pub struct DisplayEngineError {
-    pub cause: String
+pub enum DisplayEngineError {
+    FailedToOpen(&'static str, std::io::Error),
+    FailedToParse(&'static str),
+    InvalidArm9Path(String),
+    Arm9IOError(std::io::Error),
 }
 impl DisplayEngineError {
-    pub fn new(cause: String) -> Self {
-        Self {
-            cause,
-        }
-    }
+
 }
 impl Display for DisplayEngineError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Error initializing Display Engine: '{}'", &self.cause)
+        match self {
+            Self::FailedToOpen(file, error) => f.write_fmt(format_args!("Failed to open {file}: {error}")),
+            Self::FailedToParse(file) => f.write_fmt(format_args!("Failed to parse {file}")),
+            Self::InvalidArm9Path(path) => f.write_fmt(format_args!("ARM9 Path invalid: {path}")),
+            Self::Arm9IOError(error) => f.write_fmt(format_args!("ARM9 IO error: {error}")),
+        }
     }
 }
 
@@ -271,9 +275,9 @@ impl DisplayEngine {
         let stamp_rc_path = nitrofs_abs(rc_path, "stamp.rc");
         let build_date = match read_to_string(stamp_rc_path) {
             Err(error) => {
-                let rc_err1 = format!("Failed to open stamp.rc: {error}");
+                let rc_err1 = DisplayEngineError::FailedToOpen("stamp.rc", error);
                 log_write(&rc_err1, LogLevel::Error);
-                return Err(DisplayEngineError::new(rc_err1));
+                return Err(rc_err1);
             }
             Ok(d) => d,
         };
@@ -283,13 +287,13 @@ impl DisplayEngine {
         header_path.push("header.yaml");
         let yaml_content = match read_to_string(header_path) {
             Err(error) => {
-                let yaml_err1 = format!("Failed to open header.yaml: {error}");
+                let yaml_err1 = DisplayEngineError::FailedToOpen("header.yaml", error);
                 log_write(&yaml_err1, LogLevel::Error);
-                return Err(DisplayEngineError::new(yaml_err1));
+                return Err(yaml_err1);
             }
             Ok(s) => s,
         };
-        let yaml: Value = serde_yml::from_str(&yaml_content).expect("Failed to parse header.yaml");
+        let yaml: Value = serde_yml::from_str(&yaml_content).map_err(|_| DisplayEngineError::FailedToParse("header.yaml"))?;
         if let Some(game_code) = yaml["gamecode"].as_str() {
             // Does not get the revision, do that later
             let game_ver = match game_code {
@@ -316,9 +320,9 @@ impl DisplayEngine {
         arm9_path.push("arm9");
         arm9_path.push("arm9.bin");
         if let None|Some(false) = fs::exists(&arm9_path).ok() {
-            let arm9_inval_path = format!("ARM9 Path invalid: '{}'",&arm9_path.display());
+            let arm9_inval_path = DisplayEngineError::InvalidArm9Path(arm9_path.display().to_string());
             log_write(&arm9_inval_path, LogLevel::Error);
-            return Err(DisplayEngineError::new(arm9_inval_path));
+            return Err(arm9_inval_path);
         }
         let contents = match fs::read(&arm9_path) {
             Ok(bytes) => {
@@ -326,9 +330,9 @@ impl DisplayEngine {
                 bytes
             }
             Err(e) => {
-                let arm9_io_err = format!("ARM9 IO error: {}", e);
+                let arm9_io_err = DisplayEngineError::Arm9IOError(e);
                 log_write(&arm9_io_err, LogLevel::Error);
-                return Err(DisplayEngineError::new(arm9_io_err));
+                return Err(arm9_io_err);
             }
         };
         de.loaded_arm9 = Some(contents);
