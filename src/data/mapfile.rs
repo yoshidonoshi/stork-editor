@@ -115,7 +115,7 @@ impl MapData {
             ..Default::default()
         };
         if matches!(fs::exists(filename_abs), Err(_) | Ok(false)) {
-            let file_exists_err = MapDataError::FileNotExist(filename_abs.clone());
+            let file_exists_err = MapDataError::FileNotExist(filename_abs.display().to_string());
             log_write(&file_exists_err, LogLevel::Error);
             return Err(file_exists_err);
         }
@@ -460,7 +460,7 @@ impl MapData {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MapDataError {
-    FileNotExist(PathBuf),
+    FileNotExist(String),
     MasterHeaderNotFound,
     HeaderWasntSet([char; 3]),
     FailedGenerateBackground,
@@ -469,7 +469,7 @@ impl Display for MapDataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MasterHeaderNotFound => f.write_str("Error getting master header from MapData"),
-            Self::FileNotExist(path) => f.write_fmt(format_args!("File does not exist: {}", path.display())),
+            Self::FileNotExist(path) => f.write_fmt(format_args!("File does not exist: {path}")),
             Self::HeaderWasntSet([a,b,c]) => f.write_fmt(format_args!("MapData master header was not 'SET', was instead '{a}{b}{c}'")),
             Self::FailedGenerateBackground => f.write_str("Failed to generate BackgroundData in MapData"),
         }
