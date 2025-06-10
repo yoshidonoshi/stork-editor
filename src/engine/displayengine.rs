@@ -93,9 +93,12 @@ pub enum DisplayEngineError {
     FailedToParse(&'static str),
     InvalidArm9Path(String),
     Arm9IOError(std::io::Error),
-}
-impl DisplayEngineError {
-
+    UnknownGameVersion,
+    UnsupportedGameVersion(GameVersion),
+    BadLogicGameVersion(GameVersion),
+    UnknownRegionalVersion(&'static str),
+    UnsupportedRegionalVersion(&'static str),
+    CouldNotFindIn(&'static str, &'static str),
 }
 impl Display for DisplayEngineError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -104,6 +107,12 @@ impl Display for DisplayEngineError {
             Self::FailedToParse(file) => f.write_fmt(format_args!("Failed to parse {file}")),
             Self::InvalidArm9Path(path) => f.write_fmt(format_args!("ARM9 Path invalid: {path}")),
             Self::Arm9IOError(error) => f.write_fmt(format_args!("ARM9 IO error: {error}")),
+            Self::UnknownGameVersion => f.write_str("Game Version is unknown, canceling load"),
+            Self::UnsupportedGameVersion(game_ver) => f.write_fmt(format_args!("{game_ver:?} version not yet supported, will break")),
+            Self::BadLogicGameVersion(game_ver) => f.write_fmt(format_args!("Game version {game_ver:?} should not be hit here")),
+            Self::UnknownRegionalVersion(version) => f.write_fmt(format_args!("Unknown {version} version")),
+            Self::UnsupportedRegionalVersion(version) => f.write_fmt(format_args!("{version} unsupported")),
+            Self::CouldNotFindIn(from, to) => f.write_fmt(format_args!("Could not find {from} in {to}"))
         }
     }
 }
@@ -360,21 +369,21 @@ impl DisplayEngine {
             }
             GameVersion::Unknown => {
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unknown game");
-                let unsupported_msg = "Game Version is unknown, canceling load".to_owned();
+                let unsupported_msg = DisplayEngineError::UnknownGameVersion;
                 log_write(&unsupported_msg, LogLevel::Error);
-                return Err(DisplayEngineError::new(unsupported_msg));
+                return Err(unsupported_msg);
             }
             // unsupported game versions
             GameVersion::JAP|GameVersion::KOR => {
-                let break_msg = format!("{gamever:?} version not yet supported, will break");
+                let break_msg = DisplayEngineError::UnsupportedGameVersion(gamever);
                 log_write(&break_msg, LogLevel::Error);
-                return Err(DisplayEngineError::new(break_msg))
+                return Err(break_msg);
             }
             _ => {
-                let bad_logic_gamever = format!("Game version {:?} should not be hit here",gamever);
+                let bad_logic_gamever = DisplayEngineError::BadLogicGameVersion(gamever);
                 //let _ = fs::remove_dir_all(extract_dir).expect("Should remove directory on unsupported game");
                 log_write(&bad_logic_gamever, LogLevel::Error);
-                return Err(DisplayEngineError::new(bad_logic_gamever));
+                return Err(bad_logic_gamever);
             }
         }
 
@@ -385,39 +394,39 @@ impl DisplayEngine {
             GameVersion::USA10 => {
                 let found_str = utils::read_fixed_string(got_contents, 0xe1e6e, 6);
                 if !found_str.eq("1-1_D3") {
-                    let unk_ver1 = "Could not find 1-1_D3 in USA 1.0".to_string();
+                    let unk_ver1 = DisplayEngineError::CouldNotFindIn("1-1_D3", "USA 1.0");
                     log_write(&unk_ver1, LogLevel::Error);
-                    return Err(DisplayEngineError::new(unk_ver1));
+                    return Err(unk_ver1);
                 }
             },
             GameVersion::USA11 => {
                 let found_str2 = utils::read_fixed_string(got_contents, 0x0e20ae, 6);
                 if !found_str2.eq("1-1_D3") {
-                    let unk_ver2 = "Could not find 1-1_D3 in USA 1.1".to_string();
+                    let unk_ver2 = DisplayEngineError::CouldNotFindIn("1-1_D3", "USA 1.1");
                     log_write(&unk_ver2, LogLevel::Error);
-                    return Err(DisplayEngineError::new(unk_ver2));
+                    return Err(unk_ver2);
                 }
                 log_write("USA 1.1 is poorly supported, proceed with caution", LogLevel::Warn);
             }
             GameVersion::USAXX => {
-                let unk_ver3 = "Unknown USA version".to_string();
+                let unk_ver3 = DisplayEngineError::UnknownRegionalVersion("USA");
                 log_write(&unk_ver3, LogLevel::Error);
-                return Err(DisplayEngineError::new(unk_ver3));
+                return Err(unk_ver3);
             }
             GameVersion::EURXX => {
-                let unk_ver3 = "Unknown EUR version".to_string();
+                let unk_ver3 = DisplayEngineError::UnknownRegionalVersion("EUR");
                 log_write(&unk_ver3, LogLevel::Error);
-                return Err(DisplayEngineError::new(unk_ver3));
+                return Err(unk_ver3);
             }
             GameVersion::EUR10 => {
-                let unk_ver3 = "EURr0 unsupported".to_string();
+                let unk_ver3 = DisplayEngineError::UnsupportedRegionalVersion("EURr0");
                 log_write(&unk_ver3, LogLevel::Error);
-                return Err(DisplayEngineError::new(unk_ver3));
+                return Err(unk_ver3);
             }
             GameVersion::EUR11 => {
-                let unk_ver3 = "EURr1 unsupported".to_string();
+                let unk_ver3 = DisplayEngineError::UnsupportedRegionalVersion("EURr1");
                 log_write(&unk_ver3, LogLevel::Error);
-                return Err(DisplayEngineError::new(unk_ver3));
+                return Err(unk_ver3);
             }
             _ => {
                 log_write("This should be impossible to hit in version test", LogLevel::Fatal);

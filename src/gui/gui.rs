@@ -287,7 +287,7 @@ impl Gui {
                 self.display_engine.saved_brushes = saved_brushes;
             }
             Err(e) => {
-                self.do_alert(e.cause);
+                self.do_alert(e.to_string());
                 return;
             }
         }
