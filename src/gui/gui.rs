@@ -574,7 +574,7 @@ impl Gui {
     }
 
     pub fn load_sprite_csv(&mut self) -> Result<(), Box<dyn Error>> {
-        log_write("Loading Sprite database...".to_string(), LogLevel::Debug);
+        log_write("Loading Sprite database...", LogLevel::Debug);
         const SPRITE_CSV: &str = include_str!("../../assets/sprites.csv");
         for line in SPRITE_CSV.lines() {
             let record: Vec<&str> = line.split(',').collect();

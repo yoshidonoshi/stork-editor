@@ -44,11 +44,12 @@ impl DataSegment {
     }
     #[allow(dead_code)]
     pub fn new(input: Vec<u8>, header: String) -> Self {
-        if header.len() != 4 {
-            log_write(format!("Bad header string length: '{}'",header.len()), LogLevel::Error);
+        let len = header.len();
+        if len != 4 {
+            log_write(format!("Bad header string length: '{len}'"), LogLevel::Error);
         }
         Self {
-            header: string_to_header(header),
+            header: string_to_header(&header),
             internal_data: input,
         }
     }

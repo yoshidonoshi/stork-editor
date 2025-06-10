@@ -219,7 +219,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 de.current_brush.width = de.bg_sel_data.selection_width as u8;
                 let height = de.bg_sel_data.selected_map_indexes.len() as f32 / de.current_brush.width as f32;
                 de.current_brush.height = height as u8;
-                de.current_brush.tileset = info.imbz_filename_noext.clone().unwrap_or("N/A".to_string());
+                de.current_brush.tileset = info.imbz_filename_noext.clone().unwrap_or_else(|| "N/A".to_string());
                 for selected_index in &de.bg_sel_data.selected_map_indexes {
                     let tile_data = &maptiles.tiles[*selected_index as usize];
                     de.current_brush.tiles.push(tile_data.to_short());

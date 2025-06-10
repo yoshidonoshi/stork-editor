@@ -581,7 +581,7 @@ impl DisplayEngine {
         let mut initial_level_name = self.get_level_filename(&world_index, &level_index);
         initial_level_name.push_str(".crsb");
         let crsb_path = nitrofs_abs(self.export_folder.to_path_buf(), &initial_level_name);
-        let crsb = CourseInfo::new(&crsb_path,&format!("Course {}-{}",world_index+1,level_index+1));
+        let crsb = CourseInfo::new(&crsb_path,format!("Course {}-{}",world_index+1,level_index+1));
         log_write(format!("Loaded Course '{}' from '{}'",&crsb.label,&crsb.src_filename), LogLevel::Log);
         if (map_index as usize) >= crsb.level_map_data.len() {
             let err_msg = LoadLevelError::OutOfBounds(map_index, crsb.level_map_data.len());

@@ -201,9 +201,10 @@ pub fn get_curve_fine(cur_point: &PathPoint, next_point: &PathPoint) -> (Pos2,i3
     (circle_point_fine,radius_fine.abs(),rads)
 }
 
-pub fn string_to_header(header: String) -> u32 {
-    if header.len() != 4 {
-        log_write(format!("string_to_header should intake 4 character String, not {}",header.len()), LogLevel::Error);
+pub fn string_to_header(header: &str) -> u32 {
+    let len = header.len();
+    if len != 4 {
+        log_write(format!("string_to_header should intake 4 character String, not {len}"), LogLevel::Error);
     }
     let header_bytes: &[u8] = header.as_bytes();
     let header_vec = Vec::from(header_bytes);
@@ -567,7 +568,7 @@ mod tests_utils {
         let obar_num = 0x5241424f;
         let header_test_1 = header_to_string(&obar_num);
         assert_eq!(header_test_1,"OBAR");
-        let header_test_num = string_to_header("OBAR".to_string());
+        let header_test_num = string_to_header("OBAR");
         assert_eq!(header_test_num,obar_num);
     }
 
@@ -581,19 +582,19 @@ mod tests_utils {
 
     #[test]
     fn test_sample_map() {
-        let key = "Fortress - Lava".to_string();
-        let test_value = "14k5361.mpdz".to_string();
+        let key = "Fortress - Lava";
+        let test_value = "14k5361.mpdz";
         let templates = get_map_templates();
-        let value_found = templates.get(&key).expect("Should find");
-        assert_eq!(test_value,*value_found);
+        let value_found = templates.get(key).expect("Should find");
+        assert_eq!(test_value,value_found);
     }
 
     #[test]
     fn test_path_abs() {
         let export_path = PathBuf::from("/home/user/Downloads/test_out/");
-        let filename = "test.mpdz".to_string();
+        let filename = "test.mpdz";
         let result_path = PathBuf::from("/home/user/Downloads/test_out/files/file/test.mpdz");
-        let try_res = nitrofs_abs(export_path, &filename);
+        let try_res = nitrofs_abs(export_path, filename);
         assert_eq!(try_res,result_path);
     }
 }
