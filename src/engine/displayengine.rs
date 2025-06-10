@@ -733,7 +733,7 @@ impl DisplayEngine {
 
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum GetLevelFilenameError {
     MaxWorlds,
     MaxLevels,

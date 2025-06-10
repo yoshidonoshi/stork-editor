@@ -24,7 +24,7 @@ impl fmt::Display for TriggerData {
 }
 impl TopLevelSegment for TriggerData {
     fn compile(&self) -> Vec<u8> {
-        self.triggers.iter().map(|trigger| trigger.compile()).flatten().collect()
+        self.triggers.iter().flat_map(|trigger| trigger.compile()).collect()
     }
     // No compression
     fn wrap(&self) -> Vec<u8> {

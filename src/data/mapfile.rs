@@ -213,7 +213,7 @@ impl MapData {
                 }
                 _ => {
                     log_write(format!("Level DataSegment header '{}' unhandled",&seg_header), LogLevel::Warn);
-                    let unkn = GenericTopLevelSegment::new(segment.internal_data.clone(), &seg_header);
+                    let unkn = GenericTopLevelSegment::new(segment.internal_data.clone(), seg_header.clone());
                     ret.unhandled_headers.push(seg_header);
                     ret.segments.push(TopLevelSegmentWrapper::Unknown(unkn));
                 }

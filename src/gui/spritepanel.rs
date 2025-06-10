@@ -120,7 +120,7 @@ fn render_table(ui: &mut egui::Ui, gui_state: &mut Gui) {
             .body(|body| {
                 body.heterogeneous_rows((0..*sprite_count).map(|_| row_height), |mut row| {
                     let index = row.index();
-                    let cur_sprite = &gui_state.display_engine.level_sprites[index].clone();
+                    let cur_sprite = gui_state.display_engine.level_sprites[index].clone();
                     if !sprite_metadata.contains_key(&cur_sprite.object_id) {
                         row.col(|ui| {
                             let missing_sprite = ui.label(format!("Missing metadata (0x{:X}, len {:X})",
