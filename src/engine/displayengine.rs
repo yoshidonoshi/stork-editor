@@ -6,7 +6,7 @@ use egui::{Pos2, Rect};
 use serde_yml::Value;
 use uuid::Uuid;
 
-use crate::{data::{area::TriggerSettings, backgrounddata::BackgroundData, course_file::{CourseInfo, MapExit}, grad::GradientData, mapfile::{MapData, MapDataError}, path::{PathDatabase, PathSettings}, rarc::RenderArchive, sprites::{LevelSprite, SpriteMetadata}, types::{CurrentLayer, MapTileRecordData, Palette, TileCache}, TopLevelSegment}, gui::{gui::{BgSelectData, StorkTheme}, windows::{brushes::{Brush, BrushSettings}, course_win::CourseSettings}}, utils::{self, log_write, nitrofs_abs}};
+use crate::{data::{area::TriggerSettings, backgrounddata::BackgroundData, course_file::{CourseInfo, MapExit}, grad::GradientData, mapfile::{MapData, MapDataError}, path::{PathDatabase, PathSettings}, rarc::RenderArchive, sprites::LevelSprite, types::{CurrentLayer, MapTileRecordData, Palette, TileCache}, TopLevelSegment}, gui::{gui::{BgSelectData, StorkTheme}, windows::{brushes::{Brush, BrushSettings}, course_win::CourseSettings}}, utils::{self, log_write, nitrofs_abs}};
 
 use crate::utils::LogLevel;
 
@@ -216,8 +216,6 @@ pub struct DisplayEngine {
     pub selected_sprite_uuids: Vec<Uuid>,
     pub selected_sprite_to_place: Option<u16>,
     pub col_tile_to_place: u8,
-    // This does not change, and therefore can be cloned at will
-    pub sprite_metadata_copy: HashMap<u16,SpriteMetadata>,
     pub latest_sprite_settings: String,
     pub sprite_search_query: String,
     pub sprite_drag_status: SpriteDragStatus,
@@ -258,7 +256,6 @@ impl Default for DisplayEngine {
             selected_sprite_uuids: Vec::new(),
             selected_sprite_to_place: Option::None,
             col_tile_to_place: 0x1, // Basic square
-            sprite_metadata_copy: HashMap::new(),
             latest_sprite_settings: String::from(""),
             sprite_search_query: String::from(""),
             sprite_drag_status: SpriteDragStatus::default(),
@@ -710,10 +707,6 @@ impl DisplayEngine {
         if let Some(path) = self.loaded_map.get_path() {
             self.path_data = Some(path.clone());
         }
-    }
-
-    pub fn update_sprite_metadata(&mut self, meta: &HashMap<u16,SpriteMetadata>) {
-        self.sprite_metadata_copy = meta.clone();
     }
 
     pub fn get_loaded_sprite_by_uuid(&self, uuid: &Uuid) -> Option<&LevelSprite> {

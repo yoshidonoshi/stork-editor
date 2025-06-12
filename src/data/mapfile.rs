@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 // This is a container for MPDZ files
 // 
 // It represents an entire map, primarily including
@@ -15,6 +14,7 @@ use std::path::{Path, PathBuf};
 use byteorder::{LittleEndian, ReadBytesExt};
 use uuid::Uuid;
 use crate::engine::compression::{lamezip77_lz10_recomp, segment_wrap_u32};
+use crate::load::SPRITE_METADATA;
 use crate::utils::{header_to_string, log_write};
 use crate::{engine::compression, utils::{self, LogLevel}};
 
@@ -26,7 +26,7 @@ use super::brak::BrakData;
 use super::grad::GradientData;
 use super::path::PathDatabase;
 use super::segments::DataSegment;
-use super::sprites::{LevelSprite, LevelSpriteSet, SpriteMetadata};
+use super::sprites::{LevelSprite, LevelSpriteSet};
 use super::types::MapTileRecordData;
 use super::{GenericTopLevelSegment, TopLevelSegment};
 
@@ -361,13 +361,13 @@ impl MapData {
         uuid
     }
 
-    pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16, meta: &HashMap<u16,SpriteMetadata>) -> Uuid {
+    pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16) -> Uuid {
         let Some(sprite_set) = self.get_setd() else {
             // This really shouldn't be possible
             log_write("SETD not loaded when placing sprite".to_owned(),LogLevel::Error);
             return Uuid::nil();
         };
-        let Some(sprite_meta) = meta.get(&sprite_id) else {
+        let Some(sprite_meta) = SPRITE_METADATA.get(&sprite_id) else {
             log_write(format!("No Sprite metadata found for 0x{sprite_id:X}"),LogLevel::Error);
             return Uuid::nil();
         };

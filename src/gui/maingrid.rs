@@ -646,7 +646,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     let local_pos = pointer_pos - ui.min_rect().min;
                     let base_tile_x: u16 = (local_pos.x/TILE_WIDTH_PX) as u16;
                     let base_tile_y: u16 = (local_pos.y/TILE_HEIGHT_PX) as u16;
-                    let new_uuid = de.loaded_map.add_new_sprite_at(new_sprite_id, base_tile_x, base_tile_y, &de.sprite_metadata_copy);
+                    let new_uuid = de.loaded_map.add_new_sprite_at(new_sprite_id, base_tile_x, base_tile_y);
                     log_write(format!("Placed sprite with UUID {new_uuid}"), LogLevel::Debug);
                     de.selected_sprite_uuids = vec![new_uuid]; // Select only it
                     de.unsaved_changes = true;
