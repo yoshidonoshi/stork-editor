@@ -1,15 +1,25 @@
-use std::sync::LazyLock;
+use std::{sync::LazyLock, time::Instant};
 
 use egui::ahash::{HashMap, HashMapExt};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{data::sprites::SpriteMetadata, gui::{gui::Gui, windows::saved_brushes::load_stored_brushes}, utils::{log_write, LogLevel}};
 
 pub static SPRITE_METADATA: LazyLock<HashMap<u16,SpriteMetadata>> = LazyLock::new(load_sprite_csv);
 
 pub fn initial_load(gui: &mut Gui) {
-    load_sprite_metadata();
-    load_stored_brushes();
+    let gui_loading_time = Instant::now();
     gui.display_engine.load_saved_brushes();
+    log_write(format!("Took {:#?} for the GUI load", gui_loading_time.elapsed()), LogLevel::Debug);
+
+    let static_loading_time = Instant::now();
+    [
+        || load_sprite_metadata(),
+        || load_stored_brushes(),
+    ]
+        .into_par_iter()
+        .for_each(|f| f());
+    log_write(format!("Took {:#?} for the STATIC load", static_loading_time.elapsed()), LogLevel::Debug);
 }
 
 const SPRITE_CSV: &str = include_str!("../assets/sprites.csv");
