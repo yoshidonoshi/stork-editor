@@ -52,17 +52,17 @@ fn load_sprite_csv() -> HashMap<u16, SpriteMetadata> {
 
         // LEN parsing
         let is_hex = len.starts_with("0x");
-        let id_result = match is_hex {
-            true => u16::from_str_radix(len.trim_start_matches("0x"), 16),
-            false => len.parse::<u16>(),
+        let settings_len_base = match is_hex {
+            true => 16,
+            false => 10,
         };
-        let default_settings_len = match id_result {
+        let default_settings_len = match u16::from_str_radix(len.trim_start_matches("0x"), settings_len_base) {
             Err(error) => {
-                let error = match is_hex {
-                    true => format!("Error parsing Settings length string '{len}' as hex: '{error}'"),
-                    false => format!("Error parsing Settings Length string '{len}' as decimal: '{error}'"),
+                let kind = match is_hex {
+                    true => "hex",
+                    false => "decimal",
                 };
-                log_write(format!("Error parsing Settings length string '{len}' as hex: '{error}'"), LogLevel::Fatal);
+                log_write(format!("Error parsing Settings length string '{len}' as {kind}: '{error}'"), LogLevel::Fatal);
                 unreachable!()
             }
             Ok(func) => func,
