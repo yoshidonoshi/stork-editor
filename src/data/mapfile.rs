@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 // This is a container for MPDZ files
 // 
 // It represents an entire map, primarily including
@@ -7,12 +6,15 @@ use std::collections::HashMap;
 // It is not read from constantly by the graphics engine,
 // rather it is copied on demand for performance
 
+use std::error::Error;
+use std::fmt::Display;
 use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use byteorder::{LittleEndian, ReadBytesExt};
 use uuid::Uuid;
 use crate::engine::compression::{lamezip77_lz10_recomp, segment_wrap_u32};
+use crate::load::SPRITE_METADATA;
 use crate::utils::{header_to_string, log_write};
 use crate::{engine::compression, utils::{self, LogLevel}};
 
@@ -24,7 +26,7 @@ use super::brak::BrakData;
 use super::grad::GradientData;
 use super::path::PathDatabase;
 use super::segments::DataSegment;
-use super::sprites::{LevelSprite, LevelSpriteSet, SpriteMetadata};
+use super::sprites::{LevelSprite, LevelSpriteSet};
 use super::types::MapTileRecordData;
 use super::{GenericTopLevelSegment, TopLevelSegment};
 
@@ -107,31 +109,33 @@ impl Default for MapData {
     }
 }
 impl MapData {
-    pub fn new(filename_abs: &PathBuf, project_folder: &Path) -> Result<Self,String> {
+    pub fn new(filename_abs: &PathBuf, project_folder: &Path) -> Result<Self, MapDataError> {
         let mut ret: MapData = MapData {
             src_file: filename_abs.to_string_lossy().to_string(),
             ..Default::default()
         };
         if matches!(fs::exists(filename_abs), Err(_) | Ok(false)) {
-            let file_exists_err = format!("File does not exist: '{}'",&filename_abs.display());
-            log_write(file_exists_err.clone(), LogLevel::Error);
+            let file_exists_err = MapDataError::FileNotExist(filename_abs.display().to_string());
+            log_write(&file_exists_err, LogLevel::Error);
             return Err(file_exists_err);
         }
         let file_bytes: Vec<u8> = compression::decompress_file(filename_abs);
         let mut rdr = Cursor::new(&file_bytes);
         let file_header = match rdr.read_u32::<LittleEndian>() {
             Err(_) => {
-                let master_header_err = "Error getting master header from MapData".to_owned();
+                let master_header_err = MapDataError::MasterHeaderNotFound;
                 log_write(&master_header_err, LogLevel::Error);
                 return Err(master_header_err);
             }
             Ok(h) => h,
         };
         // It's 3 characters long, not 4
-        let header_string = &header_to_string(&file_header)[0..3];
-        if header_string != "SET" {
-            let set_missing_msg = format!("MapData master header was not 'SET', was instead '{}'",&header_string);
-            log_write(set_missing_msg.clone(), LogLevel::Error);
+        let header = header_to_string(&file_header);
+        let mut header_iter = header.chars().take(3);
+        let header_chars: [char; 3] = std::array::from_fn(|_| header_iter.next().unwrap());
+        if "SET".chars().ne(header_chars) {
+            let set_missing_msg = MapDataError::HeaderWasntSet(header_chars);
+            log_write(&set_missing_msg, LogLevel::Error);
             return Err(set_missing_msg);
         }
         let _ = rdr.read_u32::<LittleEndian>().unwrap();
@@ -154,8 +158,8 @@ impl MapData {
                     if let Ok(bg) = BackgroundData::new(&segment.internal_data, project_folder) {
                         ret.segments.push(TopLevelSegmentWrapper::SCEN(bg));
                     } else {
-                        let bg_fail_msg = "Failed to generate BackgroundData in MapData".to_string();
-                        log_write(bg_fail_msg.clone(), LogLevel::Error);
+                        let bg_fail_msg = MapDataError::FailedGenerateBackground;
+                        log_write(&bg_fail_msg, LogLevel::Error);
                         return Err(bg_fail_msg);
                     }
                 }
@@ -209,7 +213,7 @@ impl MapData {
                 }
                 _ => {
                     log_write(format!("Level DataSegment header '{}' unhandled",&seg_header), LogLevel::Warn);
-                    let unkn = GenericTopLevelSegment::new(segment.internal_data.clone(), &seg_header);
+                    let unkn = GenericTopLevelSegment::new(segment.internal_data.clone(), seg_header.clone());
                     ret.unhandled_headers.push(seg_header);
                     ret.segments.push(TopLevelSegmentWrapper::Unknown(unkn));
                 }
@@ -357,13 +361,13 @@ impl MapData {
         uuid
     }
 
-    pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16, meta: &HashMap<u16,SpriteMetadata>) -> Uuid {
+    pub fn add_new_sprite_at(&mut self, sprite_id: u16, x: u16, y:u16) -> Uuid {
         let Some(sprite_set) = self.get_setd() else {
             // This really shouldn't be possible
             log_write("SETD not loaded when placing sprite".to_owned(),LogLevel::Error);
             return Uuid::nil();
         };
-        let Some(sprite_meta) = meta.get(&sprite_id) else {
+        let Some(sprite_meta) = SPRITE_METADATA.get(&sprite_id) else {
             log_write(format!("No Sprite metadata found for 0x{sprite_id:X}"),LogLevel::Error);
             return Uuid::nil();
         };
@@ -453,3 +457,22 @@ impl MapData {
     }
 
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MapDataError {
+    FileNotExist(String),
+    MasterHeaderNotFound,
+    HeaderWasntSet([char; 3]),
+    FailedGenerateBackground,
+}
+impl Display for MapDataError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MasterHeaderNotFound => f.write_str("Error getting master header from MapData"),
+            Self::FileNotExist(path) => f.write_fmt(format_args!("File does not exist: {path}")),
+            Self::HeaderWasntSet([a,b,c]) => f.write_fmt(format_args!("MapData master header was not 'SET', was instead '{a}{b}{c}'")),
+            Self::FailedGenerateBackground => f.write_str("Failed to generate BackgroundData in MapData"),
+        }
+    }
+}
+impl Error for MapDataError {}

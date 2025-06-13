@@ -72,7 +72,7 @@ impl LevelSprite {
         LevelSprite {
             object_id: id, settings_length: settings.len() as u16,
             x_position: x_pos, y_position: y_pos,
-            settings: settings.clone(), uuid: Uuid::new_v4()
+            settings, uuid: Uuid::new_v4()
         }
     }
 }
@@ -115,7 +115,7 @@ impl LevelSpriteSet {
 }
 impl TopLevelSegment for LevelSpriteSet {
     fn compile(&self) -> Vec<u8> {
-        self.sprites.iter().map(|spr| spr.compile()).flatten().collect()
+        self.sprites.iter().flat_map(|spr| spr.compile()).collect()
     }
     
     fn wrap(&self) -> Vec<u8> {

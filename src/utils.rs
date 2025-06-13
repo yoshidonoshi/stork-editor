@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::consts::PI, fmt::Write, fs::{self, write}, io::{Cursor, Read}, path::PathBuf};
+use std::{collections::HashMap, f32::consts::PI, fmt::{Display, Write}, fs::{self, write}, io::{Cursor, Read}, num::ParseIntError, path::PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use colored::Colorize;
@@ -17,8 +17,7 @@ pub enum LogLevel {
     Fatal,
 }
 
-pub fn log_write(msg: impl Into<String>, level: LogLevel) {
-    let msg = msg.into();
+pub fn log_write(msg: impl Display, level: LogLevel) {
     match level {
         LogLevel::Debug => {
             if !is_debug() {
@@ -42,7 +41,7 @@ pub fn log_write(msg: impl Into<String>, level: LogLevel) {
         LogLevel::Fatal => {
             println!("[{}] {msg}","FATAL".red());
             log::error!("{msg}");
-            panic!("{}",msg);
+            panic!("{msg}");
         }
     }
 }
@@ -134,13 +133,12 @@ pub fn bytes_to_hex_string(settings: &[u8]) -> String {
         )
 }
 
-pub fn string_to_settings(settings_string: &str) -> Result<Vec<u8>,String> {
-    let split: Vec<&str> = settings_string.trim().split(' ').collect();
+pub fn string_to_settings(settings_string: &str) -> Result<Vec<u8>, ParseIntError> {
     let mut new_settings: Vec<u8> = Vec::new();
-    for str8 in split {
+    for str8 in settings_string.trim().split(' ') {
         match u8::from_str_radix(str8, 16) {
             Ok(u8val) => new_settings.push(u8val),
-            Err(error) => return Err(error.to_string()),
+            Err(error) => return Err(error),
         }
     }
     Ok(new_settings)
@@ -203,9 +201,10 @@ pub fn get_curve_fine(cur_point: &PathPoint, next_point: &PathPoint) -> (Pos2,i3
     (circle_point_fine,radius_fine.abs(),rads)
 }
 
-pub fn string_to_header(header: String) -> u32 {
-    if header.len() != 4 {
-        log_write(format!("string_to_header should intake 4 character String, not {}",header.len()), LogLevel::Error);
+pub fn string_to_header(header: &str) -> u32 {
+    let len = header.len();
+    if len != 4 {
+        log_write(format!("string_to_header should intake 4 character String, not {len}"), LogLevel::Error);
     }
     let header_bytes: &[u8] = header.as_bytes();
     let header_vec = Vec::from(header_bytes);
@@ -569,7 +568,7 @@ mod tests_utils {
         let obar_num = 0x5241424f;
         let header_test_1 = header_to_string(&obar_num);
         assert_eq!(header_test_1,"OBAR");
-        let header_test_num = string_to_header("OBAR".to_string());
+        let header_test_num = string_to_header("OBAR");
         assert_eq!(header_test_num,obar_num);
     }
 
@@ -583,19 +582,19 @@ mod tests_utils {
 
     #[test]
     fn test_sample_map() {
-        let key = "Fortress - Lava".to_string();
-        let test_value = "14k5361.mpdz".to_string();
+        let key = "Fortress - Lava";
+        let test_value = "14k5361.mpdz";
         let templates = get_map_templates();
-        let value_found = templates.get(&key).expect("Should find");
-        assert_eq!(test_value,*value_found);
+        let value_found = templates.get(key).expect("Should find");
+        assert_eq!(test_value,value_found);
     }
 
     #[test]
     fn test_path_abs() {
         let export_path = PathBuf::from("/home/user/Downloads/test_out/");
-        let filename = "test.mpdz".to_string();
+        let filename = "test.mpdz";
         let result_path = PathBuf::from("/home/user/Downloads/test_out/files/file/test.mpdz");
-        let try_res = nitrofs_abs(export_path, &filename);
+        let try_res = nitrofs_abs(export_path, filename);
         assert_eq!(try_res,result_path);
     }
 }

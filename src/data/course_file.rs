@@ -38,7 +38,7 @@ impl Compilable for CourseInfo {
     }
 }
 impl CourseInfo {
-    pub fn new(abs_path: &PathBuf, label: &str) -> Self {
+    pub fn new(abs_path: &PathBuf, label: String) -> Self {
         // It is uncompressed
         let file_bytes = match fs::read(abs_path) {
             Err(error) => {
@@ -133,7 +133,7 @@ impl CourseInfo {
         let mut ret = CourseInfo {
             level_map_data: cscn_vec,
             src_filename: abs_path.to_str().unwrap_or("UNWRAP FAILURE").to_owned(),
-            label: label.to_string()
+            label,
         };
         ret.update_exit_uuids();
         ret
@@ -274,7 +274,7 @@ impl CourseInfo {
                         log_write(format!("Successfully copied '{}' to '{}'",source_file_path.display(),new_path.display()), LogLevel::Log);
                         let file_name_noext = new_file_name.replace(".mpdz", "");
                         // Now add the map to the data files
-                        let new_course = CourseMapInfo::from_template(&file_name_noext);
+                        let new_course = CourseMapInfo::from_template(file_name_noext);
                         self.fix_exits(); // Make sure everything is synced up before we add
                         self.level_map_data.push(new_course);
                         self.update_exit_uuids(); // Then fix the UUIDs (raws will be okay)
@@ -412,13 +412,13 @@ impl CourseMapInfo {
         }
     }
 
-    pub fn from_template(name_no_ext: &str) -> Self {
+    pub fn from_template(name_no_ext: String) -> Self {
         CourseMapInfo {
             map_entrances: vec![MapEntrance::default()],
             map_exits: vec![MapExit::default()],
             map_music: 0,
-            map_filename_noext: name_no_ext.to_string(),
-            label: name_no_ext.to_string(),
+            map_filename_noext: name_no_ext.clone(),
+            label: name_no_ext,
             uuid: Uuid::new_v4()
         }
     }
