@@ -5,7 +5,7 @@
 // Saving will require recompiling it and saving it
 //   back on top of the segment inside MapData
 
-use std::{fmt, io::{Cursor, Read}, path::Path};
+use std::{error::Error, fmt::{self, Display}, io::{Cursor, Read}, path::Path};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -28,8 +28,26 @@ impl fmt::Display for BackgroundData {
         write!(f,"BackgroundData [ segments.len={}, ]",self.scen_segments.len())
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BackgroundDataError {
+    FailedToCreateINFO,
+    UnknownSCENSegment(String),
+    MismatchInLoadedSegments(usize, usize),
+}
+impl Display for BackgroundDataError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::FailedToCreateINFO => f.write_fmt(format_args!("Failed to create INFO")),
+            Self::UnknownSCENSegment(s) => f.write_fmt(format_args!("Unknown segment in SCEN: {s}")),
+            Self::MismatchInLoadedSegments(a, b) => f.write_fmt(format_args!("Mismatch in loaded segments versus load count: {a} vs {b}")),
+        }
+    }
+}
+impl Error for BackgroundDataError {}
+
 impl BackgroundData {
-    pub fn new(vec: &[u8], project_directory: &Path) -> Result<BackgroundData,String> {
+    pub fn new(vec: &[u8], project_directory: &Path) -> Result<BackgroundData, BackgroundDataError> {
         // Since the issue is commonly tied to a specific background, this should stick out
         log_write("> Creating SCEN...", LogLevel::Debug);
         let mut ret: BackgroundData = BackgroundData::default();
@@ -49,7 +67,7 @@ impl BackgroundData {
                     let info = match ScenInfoData::new(&mut rdr, seg_internal_length) {
                         Some(i) => i,
                         None => {
-                            return Err("Failed to create INFO".to_owned());
+                            return Err(BackgroundDataError::FailedToCreateINFO);
                         }
                     };
                     ret.scen_segments.push(ScenSegmentWrapper::INFO(info.clone()));
@@ -168,9 +186,9 @@ impl BackgroundData {
                 _ => {
                     // I wrote a script to check every single one
                     // This should not be possible
-                    let unknown_seg = format!("Unknown segment in SCEN: '{}'",&seg_header_str);
-                    log_write(&unknown_seg, LogLevel::Error);
-                    return Err(unknown_seg);
+                    let error = BackgroundDataError::UnknownSCENSegment(seg_header_str);
+                    log_write(&error, LogLevel::Error);
+                    return Err(error);
                     // let mut _buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     // let _read_res = rdr.read_exact(&mut _buffer);
                 }
@@ -203,8 +221,7 @@ impl BackgroundData {
         }
 
         if ret.scen_segments.len() != test_load_count {
-            let mismatch_msg = format!("Mismatch in loaded segments versus load count: {} vs {}",
-                ret.scen_segments.len(),test_load_count);
+            let mismatch_msg = BackgroundDataError::MismatchInLoadedSegments(ret.scen_segments.len(),test_load_count);
             log_write(&mismatch_msg, LogLevel::Error);
             return Err(mismatch_msg);
         }
@@ -295,17 +312,17 @@ impl BackgroundData {
         Option::None
     }
 
-    pub fn increase_width(&mut self, new_width: u16) -> Result<u16,()> {
+    pub fn increase_width(&mut self, new_width: u16) -> Option<u16> {
         if new_width % 2 != 0 {
             log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width <= old_width {
             log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
-            return Err(());
+            return None;
         }
         let how_much_add = new_width - old_width;
         if let Some(mpbz) = self.get_mpbz_mut() {
@@ -316,20 +333,20 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_width = new_width;
-        Ok(info.layer_width)
+        Some(info.layer_width)
     }
 
-    pub fn decrease_width(&mut self, new_width: u16) -> Result<u16,()> {
+    pub fn decrease_width(&mut self, new_width: u16) -> Option<u16> {
         if new_width % 2 != 0 {
             log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width >= old_width {
             log_write(format!("Cannot decrease, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
-            return Err(());
+            return None;
         }
         let how_much_remove = old_width - new_width;
         if let Some(mpbz) = self.get_mpbz_mut() {
@@ -340,16 +357,16 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_width = new_width;
-        Ok(info.layer_width)
+        Some(info.layer_width)
     }
 
-    pub fn change_height(&mut self, new_height: u16) -> Result<u16,()> {
+    pub fn change_height(&mut self, new_height: u16) -> Option<u16> {
         let info_c = self.get_info().expect("INFO is always there");
         let layer_width = info_c.layer_width;
 
         if new_height % 2 != 0 {
             log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         if let Some(mpbz) = self.get_mpbz_mut() {
             mpbz.change_height(new_height, layer_width);
@@ -359,7 +376,7 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_height = new_height;
-        Ok(info.layer_height)
+        Some(info.layer_height)
     }
 }
 

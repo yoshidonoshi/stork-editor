@@ -1,11 +1,11 @@
-use std::{collections::HashMap, error::Error, fmt, fs::{self, DirEntry, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
+use std::{fmt, fs::{self, DirEntry, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
 
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
 use strum::{EnumIter, IntoEnumIterator};
 use uuid::Uuid;
 
-use crate::{data::{mapfile::MapData, sprites::SpriteMetadata, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette, BgValue}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, bytes_to_hex_string, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
+use crate::{data::{mapfile::MapData, types::{wipe_tile_cache, BgValue, CurrentLayer, MapTileRecordData, Palette}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, bytes_to_hex_string, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -197,7 +197,6 @@ pub struct Gui {
     pub bg2_tile_preview_cache: Vec<TextureHandle>,
     pub bg3_tile_preview_cache: Vec<TextureHandle>,
     pub selected_tile_preview_bg: BgValue,
-    pub sprite_metadata: HashMap<u16,SpriteMetadata>,
     // Tools
     pub undoer: Undoer<MapData>,
     pub scroll_to: Option<Pos2>
@@ -227,7 +226,6 @@ impl Default for Gui {
             bg2_tile_preview_cache: Vec::new(),
             bg3_tile_preview_cache: Vec::new(),
             selected_tile_preview_bg: BgValue::BG2, // 1-1's main ground is this
-            sprite_metadata: HashMap::new(),
             exit_changes_open: false,
             saving_progress: Option::None,
             quit_when_saving_done: false,
@@ -271,9 +269,9 @@ impl Gui {
             log_write("Did not get folder path", LogLevel::Warn);
         }
     }
-    pub fn do_alert(&mut self, alert_text: &str) {
+    pub fn do_alert(&mut self, alert_text: String) {
         log_write(format!("Launching alert window with message '{}'",alert_text), LogLevel::Debug);
-        self.general_alert_popup = Some(alert_text.to_string());
+        self.general_alert_popup = Some(alert_text);
     }
     fn open_project(&mut self, path: PathBuf) {
         log_write(format!("Opening Project at '{}'",path.display()), LogLevel::Log);
@@ -287,7 +285,7 @@ impl Gui {
                 self.display_engine.saved_brushes = saved_brushes;
             }
             Err(e) => {
-                self.do_alert(&e.cause);
+                self.do_alert(e.to_string());
                 return;
             }
         }
@@ -296,11 +294,10 @@ impl Gui {
         if game_version != GameVersion::USA10 {
             let game_version_pretty = get_gameversion_prettyname(&game_version);
             let unsupported_alert = format!("You are using an unsupported version '{game_version_pretty}', saves will likely break. Supported versions: USA 1.0");
-            self.do_alert(&unsupported_alert);
+            self.do_alert(unsupported_alert);
         }
         self.display_engine.export_folder = self.export_directory.clone();
         // Pre-load some common files
-        self.display_engine.update_sprite_metadata(&self.sprite_metadata);
         self.display_engine.get_render_archive("objset.arcz");
         // Load the first level
         // 1 0 3 for BRAK and BLKZ
@@ -314,7 +311,7 @@ impl Gui {
                 // TODO: If the first map file of the project is deleted,
                 //   this will soft lock, and they can never open their project...
                 //   Fix this, as rare is at may be
-                self.do_alert(&e);
+                self.do_alert(e.to_string());
                 // It will have reverted, refresh
                 self.display_engine.graphics_update_needed = true;
                 return;
@@ -381,7 +378,7 @@ impl Gui {
         match self.display_engine.load_level(world_index, level_index,0) {
             Ok(_) => { /* Do nothing, it worked */},
             Err(e) => {
-                self.do_alert(&e);
+                self.do_alert(e.to_string());
                 // It will have reverted, refresh
                 self.display_engine.graphics_update_needed = true;
                 return;
@@ -392,7 +389,7 @@ impl Gui {
         self.needs_bg_tile_refresh = true;
         if !self.display_engine.loaded_map.unhandled_headers.is_empty() {
             let segments_str = self.display_engine.loaded_map.unhandled_headers.join(", ");
-            self.do_alert(&format!("Found unhandled map segments {}. Do not save!",segments_str));
+            self.do_alert(format!("Found unhandled map segments {}. Do not save!",segments_str));
         }
     }
     pub fn clear_map_data(&mut self) {
@@ -429,7 +426,7 @@ impl Gui {
         match self.display_engine.load_level(self.cur_world, self.cur_level, map_index) {
             Ok(_) => { /* Do nothing, it worked */},
             Err(e) => {
-                self.do_alert(&e);
+                self.do_alert(e.to_string());
                 // It will have reverted, refresh
                 self.display_engine.graphics_update_needed = true;
                 return;
@@ -438,7 +435,7 @@ impl Gui {
         self.needs_bg_tile_refresh = true;
         if !self.display_engine.loaded_map.unhandled_headers.is_empty() {
             let segments_str = self.display_engine.loaded_map.unhandled_headers.join(", ");
-            self.do_alert(&format!("Found unhandled map segments {}. Do not save!",segments_str));
+            self.do_alert(format!("Found unhandled map segments {}. Do not save!",segments_str));
         }
     }
     fn save_map(&mut self) {
@@ -466,7 +463,7 @@ impl Gui {
         };
     }
 
-    fn backup_map(&mut self) -> Result<PathBuf,()> {
+    fn backup_map(&mut self) -> Option<PathBuf> {
         log_write("Backing up current map file...", LogLevel::Debug);
         let mut backup_folder = get_backup_folder(&self.export_directory)?;
         let filename_path = Path::new(&self.display_engine.loaded_map.src_file);
@@ -476,7 +473,7 @@ impl Gui {
         backup_folder.push(format!("{}.{:?}.bak",file_name,time));
         let _copy_res = fs::copy(&self.display_engine.loaded_map.src_file, &backup_folder);
         log_write(format!("Backed up {} to {}",&self.display_engine.loaded_map.src_file,backup_folder.display()), LogLevel::Log);
-        Ok(backup_folder)
+        Some(backup_folder)
     }
 
     fn save_course(&mut self) {
@@ -574,52 +571,6 @@ impl Gui {
         }
     }
 
-    pub fn load_sprite_csv(&mut self) -> Result<(), Box<dyn Error>> {
-        log_write("Loading Sprite database...".to_string(), LogLevel::Debug);
-        const SPRITE_CSV: &str = include_str!("../../assets/sprites.csv");
-        for line in SPRITE_CSV.lines() {
-            let record: Vec<&str> = line.split(',').collect();
-            let id = record[0];
-            if id == "Sprite ID" {
-                continue;
-            }
-            let id_no_prefix = id.trim_start_matches("0x");
-            let true_id = match u16::from_str_radix(id_no_prefix, 16) {
-                Err(error) => {
-                    log_write(format!("Failure in parsing '{id_no_prefix}' as a u16: '{error}'"), LogLevel::Error);
-                    continue;
-                }
-                Ok(id) => id,
-            };
-            let name = record[1];
-            let description = record[2];
-            let construction_function = record[3];
-            let mut default_settings_len: u16 = 0xffff;
-            if construction_function.starts_with("0x") {
-                let setlen_no_prefix = construction_function.trim_start_matches("0x");
-                match u16::from_str_radix(setlen_no_prefix, 16) {
-                    Err(error) => {
-                        log_write(format!("Error parsing Settings length string '{construction_function}' as hex: '{error}'"), LogLevel::Fatal);
-                    }
-                    Ok(func) => default_settings_len = func,
-                };
-            } else {
-                match construction_function.parse::<u16>() {
-                    Err(error) => {
-                        log_write(format!("Error parsing Settings Length string '{construction_function}' as decimal: '{error}'"), LogLevel::Fatal);
-                    }
-                    Ok(func) => default_settings_len = func,
-                };
-            }
-            let sprite_meta: SpriteMetadata = SpriteMetadata {
-                sprite_id: true_id,
-                name: name.to_string(), description: description.to_string(), default_settings_len
-            };
-            self.sprite_metadata.insert(true_id, sprite_meta);
-        }
-        Ok(())
-    }
-
     fn handle_input(&mut self, ctx: &egui::Context) {
         puffin::profile_function!();
         if self.project_open { // Don't make loading the level an undo
@@ -654,7 +605,7 @@ impl Gui {
             // Open ROM
             if i.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL | Modifiers::SHIFT, Key::O)) {
                 if let Err(error) = self.do_open_rom() {
-                    self.do_alert(&error.cause);
+                    self.do_alert(error.to_string());
                 }
                 return;
             }
@@ -693,7 +644,7 @@ impl Gui {
                     let mut should_update: bool = false;
                     let mut should_deselect: bool = false;
                     for s in &self.display_engine.selected_sprite_uuids {
-                        if let Ok(s) = &self.display_engine.loaded_map.get_sprite_by_uuid(*s) {
+                        if let Some(s) = &self.display_engine.loaded_map.get_sprite_by_uuid(*s) {
                             if i.key_pressed(egui::Key::ArrowUp) {
                                 self.display_engine.loaded_map.move_sprite(s.uuid, s.x_position, s.y_position - 1);
                                 should_update = true;
@@ -762,28 +713,27 @@ impl Gui {
             let display_string: String = path_rom.display().to_string();
             if display_string.contains("*") {
                 // User tried to just click the load button right away
-                let bad_name_msg = format!("Attempted to load file with invalid name: '{}'",&display_string);
-                log_write(bad_name_msg.clone(), LogLevel::Warn);
-                return Err(RomExtractError::new(&bad_name_msg));
+                let bad_name_msg = RomExtractError::LoadFileWithInvalidName(display_string);
+                log_write(&bad_name_msg, LogLevel::Warn);
+                return Err(bad_name_msg);
             }
             if let Some(export_directory) = FileDialog::new().set_title("Choose folder to extract project into").pick_folder() {
                 self.export_directory = export_directory;
                 if !fs::exists(&self.export_directory).expect("FS Existence check should not fail") {
-                    let exists_fail = "Project path failed existence check".to_string();
-                    log_write(exists_fail.clone(), LogLevel::Log);
-                    return Err(RomExtractError::new(&exists_fail));
+                    let exists_fail = RomExtractError::ProjectFolderDoesntExist;
+                    log_write(&exists_fail, LogLevel::Log);
+                    return Err(exists_fail);
                 }
                 if let Err(error) = filesys::extract_rom_files(&path_rom, &self.export_directory) {
-                    let fail_msg = format!("Failed to extract ROM: '{error}'");
-                    log_write(fail_msg.clone(), LogLevel::Error);
-                    return Err(RomExtractError::new(&fail_msg));
+                    log_write(&error, LogLevel::Error);
+                    return Err(error);
                 }
                 self.open_project(self.export_directory.clone());
                 self.create_map_templates();
                 return Ok(());
             }
         }
-        Err(RomExtractError::new("Open ROM failed"))
+        Err(RomExtractError::GenericFail)
     }
 
     fn create_map_templates(&mut self) {
@@ -799,7 +749,7 @@ impl Gui {
         map_dir.push("file");
         match fs::read_dir(map_dir) {
             Ok(l) => {
-                let good_dirs: Vec<DirEntry> = l.into_iter().filter_map(|x| x.ok() ).collect();
+                let good_dirs: Vec<DirEntry> = l.into_iter().flatten().collect();
                 for files_file in good_dirs {
                     let found_name = files_file.file_name().into_string().expect("NitroFS is ASCII only");
                     if map_filenames.contains(&found_name) {
@@ -827,7 +777,7 @@ impl Gui {
         self.scroll_to = Some(Pos2::new(x_pos, y_pos));
         self.display_engine.selected_sprite_uuids.clear();
         self.display_engine.selected_sprite_uuids.push(*sprite_uuid);
-        if let Ok(spr_res) = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid) {
+        if let Some(spr_res) = self.display_engine.loaded_map.get_sprite_by_uuid(*sprite_uuid) {
             self.display_engine.latest_sprite_settings = bytes_to_hex_string(&spr_res.settings);
         } else {
             log_write("Failed to get sprite by UUID in select_sprite_from_list", LogLevel::Error);
@@ -959,7 +909,7 @@ impl Gui {
                     top_left_most = Pos2::new(cur_sprite.x_position as f32, cur_sprite.y_position as f32);
                 }
                 self.display_engine.clipboard.sprite_clip.sprites.push(cur_sprite);
-                if self.display_engine.loaded_map.delete_sprite_by_uuid(*spr_id).is_err() {
+                if !self.display_engine.loaded_map.delete_sprite_by_uuid(*spr_id) {
                     log_write("Failed to delete Sprite by UUID in do_cut", LogLevel::Error);
                 }
             }
@@ -1035,7 +985,7 @@ impl Gui {
                 copied_sprite.x_position = true_level_x as u16;
                 copied_sprite.y_position = true_level_y as u16;
                 copied_sprite.uuid = Uuid::new_v4();
-                self.display_engine.loaded_map.add_sprite(copied_sprite);
+                self.display_engine.loaded_map.add_sprite(copied_sprite.clone());
             }
             self.display_engine.graphics_update_needed = true;
             self.display_engine.unsaved_changes = true;
@@ -1101,8 +1051,8 @@ impl Gui {
             }
             _ => {
                 let msg = format!("Clear Layer not yet supported for {:?}",self.display_engine.display_settings.current_layer);
-                log_write(msg.clone(), LogLevel::Warn);
-                self.do_alert(&msg);
+                log_write(&msg, LogLevel::Warn);
+                self.do_alert(msg);
             }
         }
     }
@@ -1242,7 +1192,7 @@ impl eframe::App for Gui {
             .max_width(400.0)
             .show(ctx, |ui| {
                 if self.project_open {
-                    sprite_add_window_show(ui, &mut self.display_engine, &self.sprite_metadata);
+                    sprite_add_window_show(ui, &mut self.display_engine);
                 } else {
                     ui.label("No project open");
                 }

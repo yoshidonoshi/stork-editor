@@ -51,14 +51,14 @@ impl PathDatabase {
         ret
     }
 
-    pub fn delete_line(&mut self, line_uuid: Uuid) -> Result<(),()> {
+    pub fn delete_line(&mut self, line_uuid: Uuid) -> bool {
         log_write("Deleting Line", LogLevel::Debug);
         let Some(line_pos) = self.lines.iter().position(|x| x.uuid == line_uuid) else {
-            return Err(());
+            return false;
         };
         self.lines.remove(line_pos);
         log_write("Line data deleted", LogLevel::Debug);
-        Ok(())
+        true
     }
     pub fn fix_term(&mut self) {
         for line in &mut self.lines {
