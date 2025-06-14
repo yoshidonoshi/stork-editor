@@ -37,7 +37,7 @@ fn load_sprite_csv() -> HashMap<u16, SpriteMetadata> {
         let mut iter = line.split(',');
 
         let [id, name, description, len, _construction_function] =
-            std::array::from_fn(|_| iter.next().expect("Invalid CSV, doesn't contain 4 or more columns")); 
+            std::array::from_fn(|_| iter.next().unwrap_or_else(|| panic!("Invalid Sprite CSV, line '{line}', doesn't contain 5 or more columns")));
         // let settings: Vec<&str> = iter.collect(); // this can get uncommented if needed
 
         // ID parsing
