@@ -1152,6 +1152,10 @@ impl eframe::App for Gui {
                 if cur_palette != self.display_engine.tile_preview_pal {
                     self.display_engine.needs_bg_tile_refresh = true;
                 }
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut self.display_engine.brush_settings.flip_x_place, "Flip H");
+                    ui.checkbox(&mut self.display_engine.brush_settings.flip_y_place, "Flip V");
+                });
                 if let Some(sel_tile) = self.display_engine.selected_preview_tile {
                     ui.label(format!("Current Tile Index: 0x{:03X}",sel_tile));
                 } else {
