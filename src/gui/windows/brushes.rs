@@ -112,6 +112,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.add_space(push_height);
         // Interactivity
         let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new("saved_brushes_window_click"), egui::Sense::click());
+        // Left Click = Place New
         if click_response.clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                 let local_pos = pointer_pos - top_left;
@@ -139,9 +140,27 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     log_write(format!("Tile index too high for Brush when trying to create tile: 0x{:X}",tile_index), LogLevel::Warn);
                     return;
                 }
+                let Some(tile_id) = de.selected_preview_tile else {
+                    log_write("No selected preview tile ID", LogLevel::Warn);
+                    return;
+                };
+                let preview_pal = de.tile_preview_pal as i16;
+                println!("_pal_offset: 0x{:X}",layer._pal_offset);
+                let mut true_pal = preview_pal - (layer._pal_offset as i16) - 1;
+                if true_pal < 0 {
+                    log_write(format!("true_pal was less than 0: {}, setting to 0",true_pal), LogLevel::Warn);
+                    true_pal = 0;
+                }
                 // We are good to place the new tile!
+                let new_tile = MapTileRecordData {
+                    tile_id: tile_id as u16, palette_id: true_pal as u16,
+                    flip_h: false, flip_v: false
+                };
+                log_write(format!("Placing new tile to Brush: {}",new_tile), LogLevel::Log);
+                de.current_brush.tiles[tile_index as usize] = new_tile.to_short();
             }
         }
+        // Right Click = Delete
         if click_response.secondary_clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                 let local_pos = pointer_pos - top_left;
@@ -303,7 +322,7 @@ fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], ti
             } else {
                 // Do the actual tile draw
                 if *col_mode == 0x0 {
-                    let tile: MapTileRecordData = MapTileRecordData::new(&brush.tiles[index]);
+                    let tile: MapTileRecordData = MapTileRecordData::new(brush.tiles[index]);
                     // Check if out of bounds (subtract palette offset, +1 for universal palette)
                     let pal_id_signed = tile.palette_id as i32 + *pal_offset as i32 + 1;
                     #[allow(clippy::manual_range_contains)]

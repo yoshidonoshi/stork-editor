@@ -192,7 +192,6 @@ pub struct Gui {
     pub settings_open: bool,
     // Tile preview caching
     pub needs_bg_tile_refresh: bool,
-    pub tile_preview_pal: usize,
     pub bg1_tile_preview_cache: Vec<TextureHandle>,
     pub bg2_tile_preview_cache: Vec<TextureHandle>,
     pub bg3_tile_preview_cache: Vec<TextureHandle>,
@@ -220,7 +219,6 @@ impl Default for Gui {
             settings_open: false,
             display_engine: DisplayEngine::default(),
             needs_bg_tile_refresh: false,
-            tile_preview_pal: 0,
             bg1_tile_preview_cache: Vec::new(),
             bg2_tile_preview_cache: Vec::new(),
             bg3_tile_preview_cache: Vec::new(),
@@ -1013,7 +1011,7 @@ impl Gui {
                 let where_to_place_in_layer = xy_to_index(true_x as u32, true_y as u32, &(layer_width as u32));
                 if tile_data.tile.to_short() != 0x0000 { // Dont paste blank tiles
                     self.display_engine.loaded_map.place_bg_tile_at_map_index(
-                        which_bg, where_to_place_in_layer, &tile_data.tile.to_short());
+                        which_bg, where_to_place_in_layer, tile_data.tile.to_short());
                 }
             }
             self.display_engine.graphics_update_needed = true;
@@ -1102,12 +1100,12 @@ impl eframe::App for Gui {
         if self.needs_bg_tile_refresh {
             log_write("Regenerating BG tile cache", LogLevel::Log);
             self.needs_bg_tile_refresh = false;
-            if self.tile_preview_pal >= 16 {
+            if self.display_engine.tile_preview_pal >= 16 {
                 // Should be completely impossible
-                log_write(format!("Tiles preview palette too high: '{}'",self.tile_preview_pal), LogLevel::Fatal);
+                log_write(format!("Tiles preview palette too high: '{}'",self.display_engine.tile_preview_pal), LogLevel::Fatal);
                 return;
             }
-            let bg_pals: &Palette = &self.display_engine.bg_palettes[self.tile_preview_pal];
+            let bg_pals: &Palette = &self.display_engine.bg_palettes[self.display_engine.tile_preview_pal];
             // Layer 1
             let tex_hands_1 = self.generate_bg_cache(ctx, 1, bg_pals);
             self.bg1_tile_preview_cache.clear();
@@ -1144,15 +1142,15 @@ impl eframe::App for Gui {
                     ui.label("Not on a BG layer");
                     return;
                 }
-                let cur_palette = self.tile_preview_pal;
+                let cur_palette = self.display_engine.tile_preview_pal;
                 egui::ComboBox::from_label("Palette")
-                    .selected_text(format!("{:X}",self.tile_preview_pal))
+                    .selected_text(format!("{:X}",self.display_engine.tile_preview_pal))
                     .show_ui(ui, |ui| {
                         for x in 0..16 {
-                            ui.selectable_value(&mut self.tile_preview_pal, x, format!("0x{:X}",x));
+                            ui.selectable_value(&mut self.display_engine.tile_preview_pal, x, format!("0x{:X}",x));
                         }
                     });
-                if cur_palette != self.tile_preview_pal {
+                if cur_palette != self.display_engine.tile_preview_pal {
                     self.needs_bg_tile_refresh = true;
                 }
                 if let Some(sel_tile) = self.display_engine.selected_preview_tile {

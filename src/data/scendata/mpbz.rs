@@ -29,7 +29,7 @@ impl MapTileDataSegment {
             tile_offset = rdr2.read_u16::<LittleEndian>().unwrap();
             bottom_trim = rdr2.read_u16::<LittleEndian>().unwrap();
             let offset: u32 = (layer_width * tile_offset) as u32;
-            let blank = MapTileRecordData::new(&0x0000);
+            let blank = MapTileRecordData::new(0x0000);
             for _ in 0..offset {
                 mpbz_vec.push(blank);
             }
@@ -44,7 +44,7 @@ impl MapTileDataSegment {
         let mut tile_index = 0;
         while tile_index < count_tiles {
             let short: u16 = rdr2.read_u16::<LittleEndian>().unwrap();
-            let tile = MapTileRecordData::new(&short);
+            let tile = MapTileRecordData::new(short);
             // UPDATED: STOP MODIFYING THE TILES THEMSELVES //
             // The following is an overflow-less "short += 0x1000; // 0201c730 ?"
             // Applies in 16 palette color modes, probably because of universal palette
@@ -73,7 +73,7 @@ impl MapTileDataSegment {
         // Do loop here
         while idx <= self.tiles.len() {
             for _ in 0..increase_by {
-                self.tiles.insert(idx, MapTileRecordData::new(&0x0000));
+                self.tiles.insert(idx, MapTileRecordData::new(0x0000));
             }
             idx = idx + (old_width as usize) + increase_by;
         }
@@ -93,7 +93,7 @@ impl MapTileDataSegment {
 
     pub fn change_height(&mut self, new_height: u16, width: u16) {
         let new_len = (new_height as u32) * (width as u32);
-        self.tiles.resize(new_len as usize, MapTileRecordData::new(&0x0000));
+        self.tiles.resize(new_len as usize, MapTileRecordData::new(0x0000));
     }
 }
 

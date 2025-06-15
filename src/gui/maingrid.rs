@@ -918,7 +918,7 @@ fn draw_background(
                                 }
                                 let map_index = true_y * (info.layer_width as u32) + true_x;
                                 if *tile != 0x0000 { // Don't overwrite tiles with blanks
-                                    de.loaded_map.place_bg_tile_at_map_index(info.which_bg, map_index, tile);
+                                    de.loaded_map.place_bg_tile_at_map_index(info.which_bg, map_index, *tile);
                                 }
                                 tile_index += 1;
                             }

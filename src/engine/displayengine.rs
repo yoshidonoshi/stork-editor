@@ -232,7 +232,8 @@ pub struct DisplayEngine {
     pub trigger_settings: TriggerSettings,
     pub bg_sel_data: BgSelectData,
     pub tile_hover_pos: Pos2,
-    pub selected_preview_tile: Option<usize>
+    pub selected_preview_tile: Option<usize>,
+    pub tile_preview_pal: usize,
 }
 
 impl Default for DisplayEngine {
@@ -273,7 +274,8 @@ impl Default for DisplayEngine {
             trigger_settings: TriggerSettings::default(),
             bg_sel_data: BgSelectData::default(),
             tile_hover_pos: Pos2::ZERO,
-            selected_preview_tile: None
+            selected_preview_tile: None,
+            tile_preview_pal: 0
         }
     }
 }
