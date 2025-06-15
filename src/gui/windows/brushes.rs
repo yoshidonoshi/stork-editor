@@ -129,6 +129,15 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     log_write(format!("tile_x too high: 0x{:X}",tile_x), LogLevel::Warn);
                     return;
                 }
+                if de.current_brush.tiles.is_empty() {
+                    // Add lots of empty tiles to make it fit
+                    de.current_brush.width = (tile_x + 1) as u8;
+                    de.current_brush.height = (tile_y + 1) as u8;
+                    let new_tile_count = (tile_x + 1) * (tile_y + 1);
+                    for _ in 0..new_tile_count {
+                        de.current_brush.tiles.push(0x0000);
+                    }
+                }
                 if tile_x >= de.current_brush.width as u32 {
                     log_write("tile_x out of bounds for Brush when trying to create tile, expanding", LogLevel::Log);
                     let lines_to_add = tile_x - (de.current_brush.width as u32) + 1;

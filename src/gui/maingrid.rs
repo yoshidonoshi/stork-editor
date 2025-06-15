@@ -902,12 +902,12 @@ fn draw_background(
                             if base_tile_y % 2 != 0 { // Don't paste at odd positions
                                 base_tile_y -= 1; // Move to even position
                             }
-                            let mut tile_index = 0;
+                            let mut tile_index: u32 = 0;
                             for tile in &de.current_brush.tiles {
-                                let offset_x = tile_index % de.current_brush.width;
-                                let offset_y = tile_index / de.current_brush.width;
-                                let true_x = base_tile_x + offset_x as u32;
-                                let true_y = base_tile_y + offset_y as u32;
+                                let offset_x = tile_index % (de.current_brush.width as u32);
+                                let offset_y = tile_index / (de.current_brush.width as u32);
+                                let true_x = base_tile_x + offset_x;
+                                let true_y = base_tile_y + offset_y;
                                 if true_y >= info.layer_height as u32 {
                                     tile_index += 1;
                                     continue;
