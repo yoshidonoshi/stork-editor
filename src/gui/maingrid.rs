@@ -929,7 +929,6 @@ fn draw_background(
                         }
                     }
                     if bg_interaction.middle_clicked() {
-                        // DEBUG, maybe remove or limit eventually?
                         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                             let local_pos = pointer_pos - true_rect.min;
                             let tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
@@ -940,7 +939,17 @@ fn draw_background(
                             let clicked_map_tile = &map_tiles.tiles[tile_index as usize];
                             println!("{}",clicked_map_tile);
                             de.selected_preview_tile = Some(clicked_map_tile.tile_id as usize);
-                            println!("16 Adjusted Palette: 0x{:X}",clicked_map_tile.palette_id + layer._pal_offset as u16 + 1);
+                            let mut adjusted_pal = clicked_map_tile.palette_id as i16 + layer._pal_offset as i16 + 1;
+                            println!("16 Adjusted Palette: 0x{:X}",adjusted_pal);
+                            if adjusted_pal < 0 {
+                                adjusted_pal = 0;
+                            }
+                            if adjusted_pal >= 16 {
+                                adjusted_pal = 16;
+                            }
+                            // TODO: Scroll to it in the tiles window?
+                            de.tile_preview_pal = adjusted_pal as usize;
+                            de.needs_bg_tile_refresh = true;
                             // Now print the actual tile values
                             if !info.is_256_colorpal_mode() {
                                 let array_start: usize = clicked_map_tile.tile_id as usize * 32;

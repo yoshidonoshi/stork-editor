@@ -234,6 +234,7 @@ pub struct DisplayEngine {
     pub tile_hover_pos: Pos2,
     pub selected_preview_tile: Option<usize>,
     pub tile_preview_pal: usize,
+    pub needs_bg_tile_refresh: bool
 }
 
 impl Default for DisplayEngine {
@@ -275,7 +276,8 @@ impl Default for DisplayEngine {
             bg_sel_data: BgSelectData::default(),
             tile_hover_pos: Pos2::ZERO,
             selected_preview_tile: None,
-            tile_preview_pal: 0
+            tile_preview_pal: 0,
+            needs_bg_tile_refresh: false
         }
     }
 }
