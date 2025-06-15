@@ -929,7 +929,6 @@ fn draw_background(
                         }
                     }
                     if bg_interaction.middle_clicked() {
-                        // DEBUG, maybe remove or limit eventually?
                         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                             let local_pos = pointer_pos - true_rect.min;
                             let tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
@@ -940,7 +939,17 @@ fn draw_background(
                             let clicked_map_tile = &map_tiles.tiles[tile_index as usize];
                             println!("{}",clicked_map_tile);
                             de.selected_preview_tile = Some(clicked_map_tile.tile_id as usize);
-                            println!("16 Adjusted Palette: 0x{:X}",clicked_map_tile.palette_id + layer._pal_offset as u16 + 1);
+                            let mut adjusted_pal = clicked_map_tile.palette_id as i16 + layer._pal_offset as i16 + 1;
+                            println!("16 Adjusted Palette: 0x{:X}",adjusted_pal);
+                            if adjusted_pal < 0 {
+                                adjusted_pal = 0;
+                            }
+                            if adjusted_pal >= 16 {
+                                adjusted_pal = 16;
+                            }
+                            // TODO: Scroll to it in the tiles window?
+                            de.tile_preview_pal = adjusted_pal as usize;
+                            de.needs_bg_tile_refresh = true;
                             // Now print the actual tile values
                             if !info.is_256_colorpal_mode() {
                                 let array_start: usize = clicked_map_tile.tile_id as usize * 32;
@@ -966,7 +975,7 @@ fn draw_background(
         } else {
             log_write(format!("Map Tiles not found on background '{}' when drawing",&whichbg), LogLevel::Error);
         }
-        // Generic 2x2 Rectangle
+        // Generic Red 2x2 Rectangle and Green Brush Preview
         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
             let local_pos = pointer_pos - true_rect.min;
             let mut tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
@@ -981,7 +990,14 @@ fn draw_background(
                 tile_y -= 1;
             }
             de.latest_square_pos_level_space = Pos2::new(tile_x as f32, tile_y as f32);
-            //println!("x/y: 0x{:X}/0x{:X}",tile_x,tile_y);
+            if !de.current_brush.tiles.is_empty() {
+                let width = de.current_brush.width as f32;
+                let height = de.current_brush.height as f32;
+                let brush_rect = Rect::from_min_size(
+                top_left + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
+                Vec2 { x: TILE_WIDTH_PX * width, y: TILE_HEIGHT_PX * height });
+                ui.painter().rect_stroke(brush_rect, 0.0, Stroke::new(1.0, Color32::GREEN), egui::StrokeKind::Outside);
+            }
             let square_rect = Rect::from_min_size(
                 top_left + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
                 Vec2 { x: TILE_WIDTH_PX * 2.0, y: TILE_HEIGHT_PX * 2.0 });

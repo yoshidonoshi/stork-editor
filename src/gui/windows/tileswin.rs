@@ -24,7 +24,17 @@ pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &[TextureHandle]
         let tile_row_offset = (tile_index / TILES_ARRAY_WIDTH) as f32 * TILE_HEIGHT;
         // Do the render
         let rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_col_offset, tile_row_offset), TILE_RECT);
-        painter.image(*tex_id, rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+        // Find the UV
+        let mut uvs = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+        if de.brush_settings.flip_x_place && !de.brush_settings.flip_y_place {
+            uvs = Rect::from_min_max(pos2(1.0, 0.0), pos2(0.0, 1.0));
+        } else if !de.brush_settings.flip_x_place && de.brush_settings.flip_y_place {
+            uvs = Rect::from_min_max(pos2(0.0, 1.0), pos2(1.0, 0.0));
+        } else if de.brush_settings.flip_x_place && de.brush_settings.flip_y_place {
+            uvs = Rect::from_min_max(pos2(1.0, 1.0), pos2(0.0, 0.0));
+        }
+        // Place it
+        painter.image(*tex_id, rect, uvs, Color32::WHITE);
         if tile_index == selected_tile_index {
             // If we do it here it will be covered up
             outline_rect = Some(rect);

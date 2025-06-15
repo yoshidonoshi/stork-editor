@@ -191,7 +191,7 @@ pub struct Gui {
     pub resize_settings: ResizeSettings,
     pub settings_open: bool,
     // Tile preview caching
-    pub needs_bg_tile_refresh: bool,
+    // pub needs_bg_tile_refresh: bool, in DisplayEngine
     pub bg1_tile_preview_cache: Vec<TextureHandle>,
     pub bg2_tile_preview_cache: Vec<TextureHandle>,
     pub bg3_tile_preview_cache: Vec<TextureHandle>,
@@ -218,7 +218,6 @@ impl Default for Gui {
             resize_settings: ResizeSettings::default(),
             settings_open: false,
             display_engine: DisplayEngine::default(),
-            needs_bg_tile_refresh: false,
             bg1_tile_preview_cache: Vec::new(),
             bg2_tile_preview_cache: Vec::new(),
             bg3_tile_preview_cache: Vec::new(),
@@ -313,7 +312,7 @@ impl Gui {
                 return;
             }
         }
-        self.needs_bg_tile_refresh = true;
+        self.display_engine.needs_bg_tile_refresh = true;
         self.project_open = true;
     }
     pub fn export_rom_file(&mut self, path: String) {
@@ -382,7 +381,7 @@ impl Gui {
         }
         self.cur_level = level_index;
         self.cur_world = world_index;
-        self.needs_bg_tile_refresh = true;
+        self.display_engine.needs_bg_tile_refresh = true;
         if !self.display_engine.loaded_map.unhandled_headers.is_empty() {
             let segments_str = self.display_engine.loaded_map.unhandled_headers.join(", ");
             self.do_alert(format!("Found unhandled map segments {}. Do not save!",segments_str));
@@ -428,7 +427,7 @@ impl Gui {
                 return;
             }
         }
-        self.needs_bg_tile_refresh = true;
+        self.display_engine.needs_bg_tile_refresh = true;
         if !self.display_engine.loaded_map.unhandled_headers.is_empty() {
             let segments_str = self.display_engine.loaded_map.unhandled_headers.join(", ");
             self.do_alert(format!("Found unhandled map segments {}. Do not save!",segments_str));
@@ -1097,9 +1096,9 @@ impl eframe::App for Gui {
         *NON_MAIN_FOCUSED.lock().unwrap() = false; // Reset
 
         // Tile storage //
-        if self.needs_bg_tile_refresh {
+        if self.display_engine.needs_bg_tile_refresh {
             log_write("Regenerating BG tile cache", LogLevel::Log);
-            self.needs_bg_tile_refresh = false;
+            self.display_engine.needs_bg_tile_refresh = false;
             if self.display_engine.tile_preview_pal >= 16 {
                 // Should be completely impossible
                 log_write(format!("Tiles preview palette too high: '{}'",self.display_engine.tile_preview_pal), LogLevel::Fatal);
@@ -1151,8 +1150,12 @@ impl eframe::App for Gui {
                         }
                     });
                 if cur_palette != self.display_engine.tile_preview_pal {
-                    self.needs_bg_tile_refresh = true;
+                    self.display_engine.needs_bg_tile_refresh = true;
                 }
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut self.display_engine.brush_settings.flip_x_place, "Flip H");
+                    ui.checkbox(&mut self.display_engine.brush_settings.flip_y_place, "Flip V");
+                });
                 if let Some(sel_tile) = self.display_engine.selected_preview_tile {
                     ui.label(format!("Current Tile Index: 0x{:03X}",sel_tile));
                 } else {

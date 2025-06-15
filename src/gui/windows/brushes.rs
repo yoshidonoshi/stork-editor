@@ -304,10 +304,6 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
         });
         ui.horizontal(|ui| {
-            ui.checkbox(&mut de.brush_settings.flip_x_place, "Flip X");
-            ui.checkbox(&mut de.brush_settings.flip_y_place, "Flip Y");
-        });
-        ui.horizontal(|ui| {
             // Clear button
             if ui.button("Clear Brush").clicked() {
                 log_write("Clearing current Brush", LogLevel::Log);
