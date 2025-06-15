@@ -966,7 +966,7 @@ fn draw_background(
         } else {
             log_write(format!("Map Tiles not found on background '{}' when drawing",&whichbg), LogLevel::Error);
         }
-        // Generic 2x2 Rectangle
+        // Generic Red 2x2 Rectangle and Green Brush Preview
         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
             let local_pos = pointer_pos - true_rect.min;
             let mut tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
@@ -981,7 +981,14 @@ fn draw_background(
                 tile_y -= 1;
             }
             de.latest_square_pos_level_space = Pos2::new(tile_x as f32, tile_y as f32);
-            //println!("x/y: 0x{:X}/0x{:X}",tile_x,tile_y);
+            if !de.current_brush.tiles.is_empty() {
+                let width = de.current_brush.width as f32;
+                let height = de.current_brush.height as f32;
+                let brush_rect = Rect::from_min_size(
+                top_left + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
+                Vec2 { x: TILE_WIDTH_PX * width, y: TILE_HEIGHT_PX * height });
+                ui.painter().rect_stroke(brush_rect, 0.0, Stroke::new(1.0, Color32::GREEN), egui::StrokeKind::Outside);
+            }
             let square_rect = Rect::from_min_size(
                 top_left + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
                 Vec2 { x: TILE_WIDTH_PX * 2.0, y: TILE_HEIGHT_PX * 2.0 });
