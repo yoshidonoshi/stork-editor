@@ -129,14 +129,30 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     log_write(format!("tile_x too high: 0x{:X}",tile_x), LogLevel::Warn);
                     return;
                 }
-                // TODO: Expand Brush if too small?
                 if tile_x >= de.current_brush.width as u32 {
-                    log_write("tile_x out of bounds for Brush when trying to create tile", LogLevel::Warn);
-                    return;
+                    log_write("tile_x out of bounds for Brush when trying to create tile, expanding", LogLevel::Log);
+                    let lines_to_add = tile_x - (de.current_brush.width as u32) + 1;
+                    let old_width = de.current_brush.width as usize;
+                    let increase_by = lines_to_add as usize;
+                    let mut idx: usize = old_width;
+                    de.current_brush.tiles.resize(((de.current_brush.width + lines_to_add as u8) * de.current_brush.height) as usize, 0x0000);
+                    while idx <= de.current_brush.tiles.len() {
+                        for _ in 0..increase_by {
+                            de.current_brush.tiles.insert(idx, 0x0000);
+                        }
+                        idx += old_width + increase_by;
+                    }
+                    de.current_brush.width += lines_to_add as u8;
+                    // Continue with new width
                 }
                 if tile_y >= de.current_brush.height as u32 {
-                    log_write("tile_y out of bounds for Brush when trying to create tile", LogLevel::Warn);
-                    return;
+                    log_write("tile_y out of bounds for Brush when trying to create tile, expanding", LogLevel::Log);
+                    let lines_to_add = tile_y - (de.current_brush.height as u32) + 1;
+                    de.current_brush.height += lines_to_add as u8;
+                    for _ in 0..(lines_to_add * de.current_brush.width as u32) {
+                        de.current_brush.tiles.push(0x0000);
+                    }
+                    // Continue with new height
                 }
                 let tile_index: u32 = tile_y * (de.current_brush.width as u32) + tile_x;
                 if tile_index as usize >= de.current_brush.tiles.len() {
