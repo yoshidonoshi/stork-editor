@@ -63,7 +63,9 @@ pub struct BrushSettings {
     pub cur_selected_brush: Option<(BrushType, usize)>,
     pub pos_brush_name: String,
     pub cur_search_string: String,
-    pub only_show_same_tileset: bool
+    pub only_show_same_tileset: bool,
+    pub flip_x_place: bool,
+    pub flip_y_place: bool
 }
 impl Default for BrushSettings {
     fn default() -> Self {
@@ -71,7 +73,8 @@ impl Default for BrushSettings {
             cur_selected_brush: Option::None,
             pos_brush_name: String::from("Untitled Brush"),
             cur_search_string: String::from(""),
-            only_show_same_tileset: true
+            only_show_same_tileset: true,
+            flip_x_place: false, flip_y_place: false
         }
     }
 }
@@ -145,7 +148,6 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     return;
                 };
                 let preview_pal = de.tile_preview_pal as i16;
-                println!("_pal_offset: 0x{:X}",layer._pal_offset);
                 let mut true_pal = preview_pal - (layer._pal_offset as i16) - 1;
                 if true_pal < 0 {
                     log_write(format!("true_pal was less than 0: {}, setting to 0",true_pal), LogLevel::Warn);
@@ -154,9 +156,10 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 // We are good to place the new tile!
                 let new_tile = MapTileRecordData {
                     tile_id: tile_id as u16, palette_id: true_pal as u16,
-                    flip_h: false, flip_v: false
+                    flip_h: de.brush_settings.flip_x_place,
+                    flip_v: de.brush_settings.flip_y_place
                 };
-                log_write(format!("Placing new tile to Brush: {}",new_tile), LogLevel::Log);
+                log_write(format!("Placing new tile to Brush: {}",new_tile), LogLevel::Debug);
                 de.current_brush.tiles[tile_index as usize] = new_tile.to_short();
             }
         }
@@ -274,6 +277,10 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     de.current_brush.tiles.push(tile_data.to_short());
                 }
             }
+        });
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut de.brush_settings.flip_x_place, "Flip X");
+            ui.checkbox(&mut de.brush_settings.flip_y_place, "Flip Y");
         });
         ui.horizontal(|ui| {
             // Clear button
