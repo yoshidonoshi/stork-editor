@@ -83,7 +83,7 @@ const BRUSH_TILE_RECT: Vec2 = Vec2::new(BRUSH_TILE_DIM, BRUSH_TILE_DIM);
 pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
     if !de.display_settings.is_cur_layer_bg() {
-        // Technically uneccesary, but good for appearance
+        // Technically unnecessary, but good for appearance
         ui.disable();
     }
     let top_left = ui.min_rect().min;
@@ -97,7 +97,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if layer.get_pltb().is_none() {
             return;
         }
-        let info = layer.get_info().expect("brush layer has info");
+        let info = layer.get_info().expect("Brush layer must have INFO");
         if let Some(tiles) = &layer.pixel_tiles_preview {
             do_tile_draw(
                 ui, &mut de.current_brush, &de.bg_palettes,
@@ -322,6 +322,12 @@ fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], ti
                     let t = ui.ctx().load_texture("brushtile16", color_image, egui::TextureOptions::NEAREST);
                     let uvs = get_uvs_from_tile(&tile);
                     painter.image(t.id(), rect, uvs, Color32::WHITE);
+                    if y + 1 == brush.height {
+                        painter.line(vec![rect.left_bottom(),rect.right_bottom()], egui::Stroke::new(2.0, Color32::GREEN));
+                    }
+                    if x + 1 == brush.width {
+                        painter.line(vec![rect.right_top(),rect.right_bottom()], egui::Stroke::new(2.0, Color32::GREEN));
+                    }
                 } else if *col_mode == 0x1 {
                     // 256 colors
                 }
