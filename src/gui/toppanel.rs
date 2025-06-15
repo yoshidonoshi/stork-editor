@@ -186,6 +186,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             gui_state.display_engine.current_brush.clear();
             gui_state.display_engine.clipboard.bg_clip.clear();
             gui_state.display_engine.bg_sel_data.clear();
+            gui_state.display_engine.selected_preview_tile = None;
         }
         egui::ComboBox::new(egui::Id::new("visible_layers_drop"), "")
             .selected_text("Visible layers")

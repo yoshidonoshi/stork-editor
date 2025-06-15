@@ -902,12 +902,12 @@ fn draw_background(
                             if base_tile_y % 2 != 0 { // Don't paste at odd positions
                                 base_tile_y -= 1; // Move to even position
                             }
-                            let mut tile_index = 0;
+                            let mut tile_index: u32 = 0;
                             for tile in &de.current_brush.tiles {
-                                let offset_x = tile_index % de.current_brush.width;
-                                let offset_y = tile_index / de.current_brush.width;
-                                let true_x = base_tile_x + offset_x as u32;
-                                let true_y = base_tile_y + offset_y as u32;
+                                let offset_x = tile_index % (de.current_brush.width as u32);
+                                let offset_y = tile_index / (de.current_brush.width as u32);
+                                let true_x = base_tile_x + offset_x;
+                                let true_y = base_tile_y + offset_y;
                                 if true_y >= info.layer_height as u32 {
                                     tile_index += 1;
                                     continue;
@@ -918,7 +918,7 @@ fn draw_background(
                                 }
                                 let map_index = true_y * (info.layer_width as u32) + true_x;
                                 if *tile != 0x0000 { // Don't overwrite tiles with blanks
-                                    de.loaded_map.place_bg_tile_at_map_index(info.which_bg, map_index, tile);
+                                    de.loaded_map.place_bg_tile_at_map_index(info.which_bg, map_index, *tile);
                                 }
                                 tile_index += 1;
                             }
@@ -939,6 +939,8 @@ fn draw_background(
                             println!("Map tile index: 0x{:X}",tile_index);
                             let clicked_map_tile = &map_tiles.tiles[tile_index as usize];
                             println!("{}",clicked_map_tile);
+                            de.selected_preview_tile = Some(clicked_map_tile.tile_id as usize);
+                            println!("16 Adjusted Palette: 0x{:X}",clicked_map_tile.palette_id + layer._pal_offset as u16 + 1);
                             // Now print the actual tile values
                             if !info.is_256_colorpal_mode() {
                                 let array_start: usize = clicked_map_tile.tile_id as usize * 32;

@@ -2,10 +2,10 @@ use std::{fmt, fs::{self, DirEntry, File}, io::Write, path::{Path, PathBuf}, tim
 
 use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
 use rfd::FileDialog;
-use strum::{EnumIter, IntoEnumIterator};
+use strum::EnumIter;
 use uuid::Uuid;
 
-use crate::{data::{mapfile::MapData, types::{wipe_tile_cache, BgValue, CurrentLayer, MapTileRecordData, Palette}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, bytes_to_hex_string, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
+use crate::{data::{mapfile::MapData, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, bytes_to_hex_string, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
 
 use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
@@ -192,11 +192,9 @@ pub struct Gui {
     pub settings_open: bool,
     // Tile preview caching
     pub needs_bg_tile_refresh: bool,
-    pub tile_preview_pal: usize,
     pub bg1_tile_preview_cache: Vec<TextureHandle>,
     pub bg2_tile_preview_cache: Vec<TextureHandle>,
     pub bg3_tile_preview_cache: Vec<TextureHandle>,
-    pub selected_tile_preview_bg: BgValue,
     // Tools
     pub undoer: Undoer<MapData>,
     pub scroll_to: Option<Pos2>
@@ -221,11 +219,9 @@ impl Default for Gui {
             settings_open: false,
             display_engine: DisplayEngine::default(),
             needs_bg_tile_refresh: false,
-            tile_preview_pal: 0,
             bg1_tile_preview_cache: Vec::new(),
             bg2_tile_preview_cache: Vec::new(),
             bg3_tile_preview_cache: Vec::new(),
-            selected_tile_preview_bg: BgValue::BG2, // 1-1's main ground is this
             exit_changes_open: false,
             saving_progress: Option::None,
             quit_when_saving_done: false,
@@ -412,6 +408,7 @@ impl Gui {
         self.display_engine.brush_settings.pos_brush_name.clear();
         self.display_engine.brush_settings.cur_selected_brush = Option::None;
         self.display_engine.current_brush.clear();
+        self.display_engine.selected_preview_tile = None;
     }
     pub fn do_change_map(&mut self) {
         if self.display_engine.unsaved_changes {
@@ -1014,7 +1011,7 @@ impl Gui {
                 let where_to_place_in_layer = xy_to_index(true_x as u32, true_y as u32, &(layer_width as u32));
                 if tile_data.tile.to_short() != 0x0000 { // Dont paste blank tiles
                     self.display_engine.loaded_map.place_bg_tile_at_map_index(
-                        which_bg, where_to_place_in_layer, &tile_data.tile.to_short());
+                        which_bg, where_to_place_in_layer, tile_data.tile.to_short());
                 }
             }
             self.display_engine.graphics_update_needed = true;
@@ -1103,12 +1100,12 @@ impl eframe::App for Gui {
         if self.needs_bg_tile_refresh {
             log_write("Regenerating BG tile cache", LogLevel::Log);
             self.needs_bg_tile_refresh = false;
-            if self.tile_preview_pal >= 16 {
+            if self.display_engine.tile_preview_pal >= 16 {
                 // Should be completely impossible
-                log_write(format!("Tiles preview palette too high: '{}'",self.tile_preview_pal), LogLevel::Fatal);
+                log_write(format!("Tiles preview palette too high: '{}'",self.display_engine.tile_preview_pal), LogLevel::Fatal);
                 return;
             }
-            let bg_pals: &Palette = &self.display_engine.bg_palettes[self.tile_preview_pal];
+            let bg_pals: &Palette = &self.display_engine.bg_palettes[self.display_engine.tile_preview_pal];
             // Layer 1
             let tex_hands_1 = self.generate_bg_cache(ctx, 1, bg_pals);
             self.bg1_tile_preview_cache.clear();
@@ -1140,25 +1137,26 @@ impl eframe::App for Gui {
             .vscroll(false)
             .show(ctx, |ui: &mut egui::Ui| {
                 puffin::profile_scope!("BG Tiles");
-                let radio = &mut self.selected_tile_preview_bg;
                 ui.set_min_size(Vec2::new(300.0,500.0));
-                egui::ComboBox::from_label("Background")
-                    .selected_text(format!("{radio:?}"))
-                    .show_ui(ui, |ui| {
-                        for bg in BgValue::iter() {
-                            ui.selectable_value(radio, bg, format!("{bg:?}"));
-                        }
-                    });
-                let cur_palette = self.tile_preview_pal;
+                if !self.display_engine.display_settings.is_cur_layer_bg() {
+                    ui.label("Not on a BG layer");
+                    return;
+                }
+                let cur_palette = self.display_engine.tile_preview_pal;
                 egui::ComboBox::from_label("Palette")
-                    .selected_text(format!("{:X}",self.tile_preview_pal))
+                    .selected_text(format!("{:X}",self.display_engine.tile_preview_pal))
                     .show_ui(ui, |ui| {
                         for x in 0..16 {
-                            ui.selectable_value(&mut self.tile_preview_pal, x, format!("0x{:X}",x));
+                            ui.selectable_value(&mut self.display_engine.tile_preview_pal, x, format!("0x{:X}",x));
                         }
                     });
-                if cur_palette != self.tile_preview_pal {
+                if cur_palette != self.display_engine.tile_preview_pal {
                     self.needs_bg_tile_refresh = true;
+                }
+                if let Some(sel_tile) = self.display_engine.selected_preview_tile {
+                    ui.label(format!("Current Tile Index: 0x{:03X}",sel_tile));
+                } else {
+                    ui.label("Current Tile Index: N/A");
                 }
                 ui.add_space(3.0);
                 egui::ScrollArea::vertical()
@@ -1167,15 +1165,18 @@ impl eframe::App for Gui {
                     .show(ui, |ui| {
                         ui.add_space(1400.0); // Number is arbitrary, just enough to fit max tile count
                         // TODO: In the future, add custom UI spacing inside tiles_window_show to make that uneeded
-                        match *radio {
-                            BgValue::BG1 => {
-                                tiles_window_show(ui, &self.bg1_tile_preview_cache);
+                        match self.display_engine.display_settings.current_layer {
+                            CurrentLayer::BG1 => {
+                                tiles_window_show(ui, &self.bg1_tile_preview_cache,&mut self.display_engine);
                             }
-                            BgValue::BG2 => {
-                                tiles_window_show(ui, &self.bg2_tile_preview_cache);
+                            CurrentLayer::BG2 => {
+                                tiles_window_show(ui, &self.bg2_tile_preview_cache,&mut self.display_engine);
                             }
-                            BgValue::BG3 => {
-                                tiles_window_show(ui, &self.bg3_tile_preview_cache);
+                            CurrentLayer::BG3 => {
+                                tiles_window_show(ui, &self.bg3_tile_preview_cache,&mut self.display_engine);
+                            }
+                            _ => {
+                                /* Do nothing */
                             }
                         }
                     });

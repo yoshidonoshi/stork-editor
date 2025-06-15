@@ -432,7 +432,7 @@ impl MapData {
         true
     }
 
-    pub fn place_bg_tile_at_map_index(&mut self, which_background: u8, map_index: u32, tile: &u16) -> bool {
+    pub fn place_bg_tile_at_map_index(&mut self, which_background: u8, map_index: u32, tile: u16) -> bool {
         #[allow(clippy::manual_range_contains)]
         if which_background < 1 || which_background > 3 {
             log_write(format!("Extremely unusual which_background value in place_bg_tile_at_map_index: '{}'",which_background), LogLevel::Error);

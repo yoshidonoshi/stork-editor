@@ -125,7 +125,7 @@ impl Compilable for MapTileRecordData {
 }
 impl MapTileRecordData {
     // http://problemkaputt.de/gbatek.htm#lcdvrambgscreendataformatbgmap
-    pub fn new(short: &u16) -> Self {
+    pub fn new(short: u16) -> Self {
         let flip_v = ((short >> 11) % 2) == 1;
         let flip_h = ((short >> 10) % 2) == 1;
         let palette_id = short >> 12;
@@ -163,14 +163,6 @@ impl MapTileRecordData {
         }
         pal_index
     }
-}
-
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, PartialEq, Clone, Copy, EnumIter)]
-pub enum BgValue {
-    BG1,
-    BG2,
-    BG3
 }
 
 #[allow(clippy::upper_case_acronyms)]

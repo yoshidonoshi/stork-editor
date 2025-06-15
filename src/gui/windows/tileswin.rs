@@ -1,6 +1,6 @@
 use egui::{pos2, Color32, Pos2, Rect, TextureHandle, Vec2};
 
-use crate::utils::{log_write, LogLevel};
+use crate::{engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
 
 
 const TILE_BOX_WIDTH: f32 = 2.0;
@@ -11,10 +11,13 @@ const TILE_RECT: Vec2 = Vec2::new(TILE_WIDTH, TILE_HEIGHT);
 const TILES_ARRAY_WIDTH: usize = 0x10;
 const TOP_MARGIN: f32 = 1.0;
 
-pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &[TextureHandle]) {
+pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &[TextureHandle], de: &mut DisplayEngine) {
     puffin::profile_function!();
     let painter: &egui::Painter = ui.painter();
     let top_left: Pos2 = ui.min_rect().min + Vec2::new(0.0, TOP_MARGIN);
+    // Unable to be equal to anything if 0xfffff
+    let selected_tile_index = de.selected_preview_tile.unwrap_or(0xfffff);
+    let mut outline_rect: Option<Rect> = None;
     for (tile_index,tile) in preview_tile_cache.iter().enumerate() {
         let tex_id = &tile.id();
         let tile_col_offset = (tile_index % TILES_ARRAY_WIDTH) as f32 * TILE_WIDTH;
@@ -22,6 +25,14 @@ pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &[TextureHandle]
         // Do the render
         let rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_col_offset, tile_row_offset), TILE_RECT);
         painter.image(*tex_id, rect, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+        if tile_index == selected_tile_index {
+            // If we do it here it will be covered up
+            outline_rect = Some(rect);
+        }
+    }
+    if let Some(r) = outline_rect {
+        painter.rect_stroke(r, 0.0, egui::Stroke::new(2.0, Color32::WHITE), egui::StrokeKind::Outside);
+        painter.rect_stroke(r, 0.0, egui::Stroke::new(1.0, Color32::PURPLE), egui::StrokeKind::Outside);
     }
     // Add more clickable space
     ui.allocate_space(Vec2::new(300.0, 0.0));
@@ -32,8 +43,8 @@ pub fn tiles_window_show(ui: &mut egui::Ui, preview_tile_cache: &[TextureHandle]
             let base_tile_x: u32 = (local_pos.x/TILE_WIDTH) as u32;
             let base_tile_y: u32 = (local_pos.y/TILE_HEIGHT) as u32;
             let tile_index = base_tile_x + (base_tile_y * TILES_ARRAY_WIDTH as u32);
-            // Do something more with this eventually
-            println!("pos: {}/{}: 0x{:X}",base_tile_x,base_tile_y,tile_index);
+            log_write(format!("pos: {}/{}: 0x{:X}",base_tile_x,base_tile_y,tile_index),LogLevel::Debug);
+            de.selected_preview_tile = Some(tile_index as usize);
         } else {
             log_write("Unable to get pointer_pos in tileswin", LogLevel::Error);
         }
