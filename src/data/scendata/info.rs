@@ -12,8 +12,6 @@ use super::ScenSegment;
 pub struct ScenInfoData {
     pub layer_width: u16,
     pub layer_height: u16,
-    // /// To save space on hundreds of blank tiles, manually shove it down (check me)
-    // pub height_offset: u32,
     pub x_offset_px: i16,
     pub y_offset_px: i16,
     /// How fast the layer graphics move horizontally relative to Yoshi (0x1000 is matching)
@@ -55,7 +53,6 @@ impl ScenInfoData {
         let initial_position: u64 = rdr.position();
         let layer_width: u16 = utils::read_u16(rdr)?;
         let layer_height: u16 = utils::read_u16(rdr)?;
-        //let height_offset: u32 = utils::read_u32(rdr)?;
         let x_offset_px: i16 = utils::read_i16(rdr)?;
         let y_offset_px: i16 = utils::read_i16(rdr)?;
         let x_scroll: u32 = utils::read_u32(rdr)?;
@@ -126,7 +123,6 @@ impl ScenSegment for ScenInfoData {
         let mut comp: Vec<u8> = vec![];
         let _ = comp.write_u16::<LittleEndian>(self.layer_width);
         let _ = comp.write_u16::<LittleEndian>(self.layer_height);
-        //let _ = comp.write_u32::<LittleEndian>(self.height_offset);
         let _ = comp.write_i16::<LittleEndian>(self.x_offset_px);
         let _ = comp.write_i16::<LittleEndian>(self.y_offset_px);
         let _ = comp.write_u32::<LittleEndian>(self.x_scroll);

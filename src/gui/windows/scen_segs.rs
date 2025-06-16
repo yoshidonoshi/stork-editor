@@ -154,14 +154,20 @@ fn show_info_segment(ui: &mut egui::Ui, info: &mut ScenInfoData) -> bool {
             .hexadecimal(4, false, true)
             .range(i16::MIN..=i16::MAX);
         ui.add(x_offset_drag);
-        ui.label("X Offset (px)");
+        ui.label("X Offset (px)").on_hover_ui(|ui| {
+            ui.label("Higher numbers make the bg position move leftwards");
+            ui.label("Each unit is 1 pixel moved, so it does not show up in the canvas yet");
+        });
     });
     ui.horizontal(|ui| {
         let y_offset_drag = egui::DragValue::new(&mut info.y_offset_px)
             .speed(0x10)
             .hexadecimal(4, false, true)
             .range(i16::MIN..=i16::MAX);
-        ui.add(y_offset_drag);
+        ui.add(y_offset_drag).on_hover_ui(|ui| {
+            ui.label("Higher numbers make the bg position higher");
+            ui.label("Each unit is 1 pixel moved, so it does not show up in the canvas yet");
+        });
         ui.label("Y Offset (px)");
     });
     // Scroll
