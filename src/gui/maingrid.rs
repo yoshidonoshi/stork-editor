@@ -706,7 +706,10 @@ fn draw_background(
             // But not RENDER. Just fill the space
             return;
         }
-        let true_grid_rect = ui.min_rect();
+        let mut true_grid_rect = ui.min_rect();
+        if info.x_offset_px != 0 || info.y_offset_px != 0 {
+            true_grid_rect = true_grid_rect.translate(Vec2::new((info.x_offset_px * -1) as f32, (info.y_offset_px * -1) as f32));
+        }
         let mut temp_selected_indexes: Vec<u32> = Vec::new();
         // MAP TILES //
         if let Some(map_tiles) = layer.get_mpbz() {
@@ -973,32 +976,34 @@ fn draw_background(
             log_write(format!("Map Tiles not found on background '{}' when drawing",&whichbg), LogLevel::Error);
         }
         // Generic Red 2x2 Rectangle and Green Brush Preview
-        if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-            let local_pos = pointer_pos - true_grid_rect.min;
-            let mut tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
-            let mut tile_y: u32 = (local_pos.y/TILE_HEIGHT_PX) as u32;
-            de.tile_hover_pos.x = tile_x as f32;
-            de.tile_hover_pos.y = tile_y as f32;
-            // Ensure its position is even
-            if tile_x % 2 != 0 {
-                tile_x -= 1;
+        if is_selected_layer {
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                let local_pos = pointer_pos - true_grid_rect.min;
+                let mut tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
+                let mut tile_y: u32 = (local_pos.y/TILE_HEIGHT_PX) as u32;
+                de.tile_hover_pos.x = tile_x as f32;
+                de.tile_hover_pos.y = tile_y as f32;
+                // Ensure its position is even
+                if tile_x % 2 != 0 {
+                    tile_x -= 1;
+                }
+                if tile_y % 2 != 0 {
+                    tile_y -= 1;
+                }
+                de.latest_square_pos_level_space = Pos2::new(tile_x as f32, tile_y as f32);
+                if !de.current_brush.tiles.is_empty() {
+                    let width = de.current_brush.width as f32;
+                    let height = de.current_brush.height as f32;
+                    let brush_rect = Rect::from_min_size(
+                    true_grid_rect.min + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
+                    Vec2 { x: TILE_WIDTH_PX * width, y: TILE_HEIGHT_PX * height });
+                    ui.painter().rect_stroke(brush_rect, 0.0, Stroke::new(1.0, Color32::GREEN), egui::StrokeKind::Outside);
+                }
+                let square_rect = Rect::from_min_size(
+                    true_grid_rect.min + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
+                    Vec2 { x: TILE_WIDTH_PX * 2.0, y: TILE_HEIGHT_PX * 2.0 });
+                ui.painter().rect_stroke(square_rect, 0.0, Stroke::new(1.0, Color32::RED), egui::StrokeKind::Outside);
             }
-            if tile_y % 2 != 0 {
-                tile_y -= 1;
-            }
-            de.latest_square_pos_level_space = Pos2::new(tile_x as f32, tile_y as f32);
-            if !de.current_brush.tiles.is_empty() {
-                let width = de.current_brush.width as f32;
-                let height = de.current_brush.height as f32;
-                let brush_rect = Rect::from_min_size(
-                true_grid_rect.min + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
-                Vec2 { x: TILE_WIDTH_PX * width, y: TILE_HEIGHT_PX * height });
-                ui.painter().rect_stroke(brush_rect, 0.0, Stroke::new(1.0, Color32::GREEN), egui::StrokeKind::Outside);
-            }
-            let square_rect = Rect::from_min_size(
-                true_grid_rect.min + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
-                Vec2 { x: TILE_WIDTH_PX * 2.0, y: TILE_HEIGHT_PX * 2.0 });
-            ui.painter().rect_stroke(square_rect, 0.0, Stroke::new(1.0, Color32::RED), egui::StrokeKind::Outside);
         }
     }
 }
