@@ -147,17 +147,45 @@ fn show_info_segment(ui: &mut egui::Ui, info: &mut ScenInfoData) -> bool {
         ui.label(format!("0x{:04X}",info.layer_height));
         ui.label("Layer Height");
     });
+    // Offset
     ui.horizontal(|ui| {
-        ui.label(format!("0x{:08X}",info.height_offset));
-        ui.label("Height Offset (Fine)");
+        let x_offset_drag = egui::DragValue::new(&mut info.x_offset_px)
+            .speed(0x1)
+            .hexadecimal(4, false, true)
+            .range(i16::MIN..=i16::MAX);
+        ui.add(x_offset_drag);
+        ui.label("X Offset (px)");
     });
     ui.horizontal(|ui| {
-        ui.label(format!("0x{:08X}",info.x_scroll));
+        let y_offset_drag = egui::DragValue::new(&mut info.y_offset_px)
+            .speed(0x1)
+            .hexadecimal(4, false, true)
+            .range(i16::MIN..=i16::MAX);
+        ui.add(y_offset_drag);
+        ui.label("Y Offset (px)");
+    });
+    // Scroll
+    ui.horizontal(|ui| {
+        let scroll_drag = egui::DragValue::new(&mut info.x_scroll)
+            .speed(0x100)
+            .hexadecimal(8, false, true)
+            .range(0..=0xffffff);
+        ui.add(scroll_drag);
         ui.label("X Scroll");
+        if ui.button("Match Ground").clicked() {
+            info.x_scroll = 0x1000;
+        }
     });
     ui.horizontal(|ui| {
-        ui.label(format!("0x{:08X}",info.y_scroll));
+        let scroll_drag = egui::DragValue::new(&mut info.y_scroll)
+            .speed(0x100)
+            .hexadecimal(8, false, true)
+            .range(0..=0xffffff);
+        ui.add(scroll_drag);
         ui.label("Y Scroll");
+        if ui.button("Match Ground").clicked() {
+            info.y_scroll = 0x1000;
+        }
     });
     ui.horizontal(|ui| {
         ui.label(format!("{}",info.which_bg));
