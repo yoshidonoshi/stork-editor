@@ -340,7 +340,7 @@ fn show_selected_entrance_settings(ui: &mut egui::Ui, selected_entrance: &mut Ma
     let enter_map_anim = selected_entrance.entrance_flags % 0x1000;
     ui.label(format!("Raw Flags: {:X}",selected_entrance.entrance_flags));
     ui.label(format!("Which Screen: {:X}",which_screen));
-    ui.label(format!("Entrance Animation?: {:X}",enter_map_anim));
+    ui.label(format!("Entrance Animation: {:X}",enter_map_anim));
 }
 
 fn show_exit_pos(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
