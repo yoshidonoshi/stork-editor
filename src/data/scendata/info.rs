@@ -12,8 +12,8 @@ use super::ScenSegment;
 pub struct ScenInfoData {
     pub layer_width: u16,
     pub layer_height: u16,
-    /// To save space on hundreds of blank tiles, manually shove it down (check me)
-    pub height_offset: u32,
+    pub x_offset_px: i16,
+    pub y_offset_px: i16,
     /// How fast the layer graphics move horizontally relative to Yoshi (0x1000 is matching)
     /// 
     /// Lower values move slower than Yoshi, higher values move faster than Yoshi
@@ -37,23 +37,24 @@ impl Default for ScenInfoData {
     fn default() -> Self {
         Self {
             layer_width: 0x0000, layer_height: 0x0000,
-            height_offset: 0xffff, x_scroll: 0x0000,
-            y_scroll: 0x0000, which_bg: 0xff,
+            x_offset_px: 0x0000, y_offset_px: 0x0000,
+            x_scroll: 0x0000, y_scroll: 0x0000, which_bg: 0xff,
             layer_order: 0xff, char_base_block: 0xff,
             screen_base_block: 0xff, color_mode: 0xff,
             imbz_filename_noext: Option::None }
     }
 }
 impl ScenInfoData {
-    pub fn new(rdr: &mut Cursor<&Vec<u8>>, internal_length: u32) -> Option<ScenInfoData> {
+    pub fn new(rdr: &mut Cursor<&[u8]>, internal_length: u32) -> Option<ScenInfoData> {
         // 24, 32, 36 are the only three sizes found with pytools
         if internal_length != 0x18 && internal_length != 0x20 && internal_length != 0x24 {
-            log_write(format!("Unusual INFO size: 0x{:X}",internal_length), LogLevel::WARN);
+            log_write(format!("Unusual INFO size: 0x{:X}",internal_length), LogLevel::Warn);
         }
         let initial_position: u64 = rdr.position();
         let layer_width: u16 = utils::read_u16(rdr)?;
         let layer_height: u16 = utils::read_u16(rdr)?;
-        let height_offset: u32 = utils::read_u32(rdr)?;
+        let x_offset_px: i16 = utils::read_i16(rdr)?;
+        let y_offset_px: i16 = utils::read_i16(rdr)?;
         let x_scroll: u32 = utils::read_u32(rdr)?;
         let y_scroll: u32 = utils::read_u32(rdr)?;
         let which_bg: u8 = utils::read_u8(rdr)?;
@@ -68,7 +69,7 @@ impl ScenInfoData {
         let after_position: u64 = rdr.position();
         let mut read_length = after_position - initial_position;
         if read_length % 4 != 0 {
-            log_write(format!("INFO read size not 4 byte aligned; size was 0x{:X}, padding",read_length), LogLevel::DEBUG);
+            log_write(format!("INFO read size not 4 byte aligned; size was 0x{:X}, padding",read_length), LogLevel::Debug);
             while read_length % 4 != 0 {
                 let _ = rdr.read_u8();
                 read_length = rdr.position() - initial_position;
@@ -77,7 +78,8 @@ impl ScenInfoData {
         Some(ScenInfoData {
             layer_width,
             layer_height,
-            height_offset,
+            x_offset_px,
+            y_offset_px,
             x_scroll,
             y_scroll,
             which_bg,
@@ -89,13 +91,13 @@ impl ScenInfoData {
         })
     }
 
-    pub fn get_imbz_pixels(&self, proj_dir: &PathBuf) -> Option<Vec<u8>> {
+    pub fn get_imbz_pixels(&self, proj_dir: PathBuf) -> Option<Vec<u8>> {
         let mut imbz_withext: String = self.imbz_filename_noext.clone().expect("imbz filename exists");
         imbz_withext.push_str(".imbz");
         let p: PathBuf = nitrofs_abs(proj_dir, &imbz_withext);
         let file_bytes = match fs::read(&p) {
             Err(error) => {
-                log_write(format!("Failed to read IMBZ '{}' from INFO: '{error}'", p.display()), LogLevel::ERROR);
+                log_write(format!("Failed to read IMBZ '{}' from INFO: '{error}'", p.display()), LogLevel::Error);
                 return Option::None;
             }
             Ok(b) => b,
@@ -121,7 +123,8 @@ impl ScenSegment for ScenInfoData {
         let mut comp: Vec<u8> = vec![];
         let _ = comp.write_u16::<LittleEndian>(self.layer_width);
         let _ = comp.write_u16::<LittleEndian>(self.layer_height);
-        let _ = comp.write_u32::<LittleEndian>(self.height_offset);
+        let _ = comp.write_i16::<LittleEndian>(self.x_offset_px);
+        let _ = comp.write_i16::<LittleEndian>(self.y_offset_px);
         let _ = comp.write_u32::<LittleEndian>(self.x_scroll);
         let _ = comp.write_u32::<LittleEndian>(self.y_scroll);
         let _ = comp.write_u8(self.which_bg);
@@ -145,7 +148,7 @@ impl ScenSegment for ScenInfoData {
         let final_comp_len = comp.len();
         // 24, 32, 36 are the only ones found in the base game
         if final_comp_len != 0x18 && final_comp_len != 0x20 && final_comp_len != 0x24 {
-            log_write(format!("Unusual INFO compiled size: 0x{:X}",final_comp_len), LogLevel::ERROR);
+            log_write(format!("Unusual INFO compiled size: 0x{:X}",final_comp_len), LogLevel::Error);
         }
 
         comp
@@ -153,7 +156,7 @@ impl ScenSegment for ScenInfoData {
 
     fn wrap(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
         let comped = self.compile(Option::None);
-        segment_wrap(&comped, self.header())
+        segment_wrap(comped, self.header())
     }
 
     fn header(&self) -> String {

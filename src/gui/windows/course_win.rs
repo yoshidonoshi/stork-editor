@@ -4,7 +4,7 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, nitrofs_abs, LogLevel}};
+use crate::{data::course_file::{exit_type_name, CourseMapInfo, MapEntrance, MapExit}, engine::displayengine::DisplayEngine, utils::{self, log_write, nitrofs_abs, LogLevel}, NON_MAIN_FOCUSED};
 
 pub struct CourseSettings {
     pub selected_map: Option<usize>,
@@ -96,28 +96,28 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine, project_open: boo
         }
         if delete_button.clicked() {
             if !ui.input(|i| i.modifiers.shift) {
-                log_write("Shift must be held down to delete maps", LogLevel::LOG);
+                log_write("Shift must be held down to delete maps", LogLevel::Log);
                 return;
             }
             let Some(selected_map_index) = de.course_settings.selected_map else {
-                log_write("No map selected", LogLevel::DEBUG);
+                log_write("No map selected", LogLevel::Debug);
                 return;
             };
             if selected_map_index >= de.loaded_course.level_map_data.len() {
-                log_write("Selected map overflow when deleting, resetting", LogLevel::ERROR);
+                log_write("Selected map overflow when deleting, resetting", LogLevel::Error);
                 de.course_settings.selected_map = None;
                 return;
             }
-            log_write("Deleting selected Map", LogLevel::LOG);
+            log_write("Deleting selected Map", LogLevel::Log);
             let file_name = &de.loaded_course.level_map_data[selected_map_index].map_filename_noext;
-            let file_to_delete = nitrofs_abs(&de.export_folder, &format!("{}.mpdz",file_name));
+            let file_to_delete = nitrofs_abs(de.export_folder.to_path_buf(), &format!("{}.mpdz",file_name));
             let _did_delete = de.loaded_course.delete_map_info_by_index(selected_map_index);
-            log_write(format!("Deleting file '{}'...",&file_to_delete.display()), LogLevel::DEBUG);
+            log_write(format!("Deleting file '{}'...",&file_to_delete.display()), LogLevel::Debug);
             let del_res = fs::remove_file(&file_to_delete);
             match del_res {
-                Ok(_) => log_write(format!("Deleted file '{}' successfully",&file_to_delete.display()), LogLevel::LOG),
+                Ok(_) => log_write(format!("Deleted file '{}' successfully",&file_to_delete.display()), LogLevel::Log),
                 Err(e) => {
-                    log_write(format!("Failed to delete file '{}': '{}'",&file_to_delete.display(),e), LogLevel::ERROR);
+                    log_write(format!("Failed to delete file '{}': '{}'",&file_to_delete.display(),e), LogLevel::Error);
                     return;
                 }
             }
@@ -137,7 +137,7 @@ fn draw_map_section(ui: &mut egui::Ui, de: &mut DisplayEngine, project_open: boo
                     let row_index = row.index();
                     row.set_selected(de.course_settings.selected_map.unwrap_or(0xffff) == row_index);
                     row.col(|ui| {
-                        let label = ui.label(map.label.to_string());
+                        let label = ui.label(&map.label);
                         if label.clicked() {
                             de.course_settings.selected_map = Some(row_index);
                         }
@@ -156,7 +156,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         return;
     };
     let Some(stored_map_data) = de.loaded_course.level_map_data.get(selected_map_index).cloned() else {
-        log_write("Selected map index out of bounds, clearing", LogLevel::ERROR);
+        log_write("Selected map index out of bounds, clearing", LogLevel::Error);
         de.course_settings.selected_map = Option::None;
         return;
     };
@@ -172,7 +172,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             }
         });
     if old_map_music_val != selected_map_data.map_music {
-        log_write(format!("Changed Map music index to '{}'",&selected_map_data.map_music), LogLevel::LOG);
+        log_write(format!("Changed Map music index to '{}'",&selected_map_data.map_music), LogLevel::Log);
         de.unsaved_changes = true;
     }
     ui.separator();
@@ -187,7 +187,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             de.graphics_update_needed = true;
             de.unsaved_changes = true;
             // This won't mess with anything
-            log_write("New Entrance created", LogLevel::LOG);
+            log_write("New Entrance created", LogLevel::Log);
         }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         // Don't let it delete the last one, should always be at least 1
@@ -195,7 +195,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let del = ui.add_enabled(de.course_settings.selected_entrance.is_some() && entrance_count > 1,
             egui::Button::new("Delete"));
         if del.clicked() {
-            log_write("Deleting Entrance", LogLevel::DEBUG);
+            log_write("Deleting Entrance", LogLevel::Debug);
             let deld = de.loaded_course.level_map_data[selected_map_index]
                 .delete_entrance(de.course_settings.selected_entrance.expect("selected entrance checked earlier"));
             // Deselect regardless of result
@@ -220,7 +220,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 body.row(20.0, |mut row| {
                     row.set_selected(de.course_settings.selected_entrance.unwrap_or(Uuid::nil()) == entrance.uuid);
                     row.col(|ui| {
-                        let label = ui.label(entrance.label.to_string());
+                        let label = ui.label(&entrance.label);
                         if label.clicked() {
                             de.course_settings.selected_entrance = Some(entrance.uuid);
                         }
@@ -244,11 +244,17 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let drag_value_x = egui::DragValue::new(&mut selected_entrance.entrance_x)
                     .hexadecimal(4, false, true)
                     .range(0..=0xffff);
-                ui.add(drag_value_x);
+                let dvx = ui.add(drag_value_x);
+                if dvx.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 let drag_value_y = egui::DragValue::new(&mut selected_entrance.entrance_y)
                     .hexadecimal(4, false, true)
                     .range(0..=0xffff);
-                ui.add(drag_value_y);
+                let dvy = ui.add(drag_value_y);
+                if dvy.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
             });
             show_selected_entrance_settings(ui, selected_entrance);
         });
@@ -266,7 +272,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             de.course_settings.selected_exit = Some(new_uuid);
             de.graphics_update_needed = true;
             de.unsaved_changes = true;
-            log_write("New exit created", LogLevel::LOG);
+            log_write("New exit created", LogLevel::Log);
         }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         // Don't let it delete the last one, should always be at least 1
@@ -274,7 +280,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let del = ui.add_enabled(de.course_settings.selected_exit.is_some() && exit_count > 1,
             egui::Button::new("Delete"));
         if del.clicked() {
-            log_write("Deleting Exit", LogLevel::DEBUG);
+            log_write("Deleting Exit", LogLevel::Debug);
             let deld = de.loaded_course.level_map_data[selected_map_index]
                 .delete_exit(de.course_settings.selected_exit.expect("selected exit checked earlier"));
             // Deselect regardless of result
@@ -299,7 +305,7 @@ fn draw_settings_section(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 body.row(20.0, |mut row| {
                     row.set_selected(de.course_settings.selected_exit.unwrap_or(Uuid::nil()) == exit.uuid);
                     row.col(|ui| {
-                        let label = ui.label(exit.label.to_string());
+                        let label = ui.label(&exit.label);
                         if label.clicked() {
                             de.course_settings.selected_exit = Some(exit.uuid);
                         }
@@ -334,7 +340,7 @@ fn show_selected_entrance_settings(ui: &mut egui::Ui, selected_entrance: &mut Ma
     let enter_map_anim = selected_entrance.entrance_flags % 0x1000;
     ui.label(format!("Raw Flags: {:X}",selected_entrance.entrance_flags));
     ui.label(format!("Which Screen: {:X}",which_screen));
-    ui.label(format!("Entrance Animation?: {:X}",enter_map_anim));
+    ui.label(format!("Entrance Animation: {:X}",enter_map_anim));
 }
 
 fn show_exit_pos(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
@@ -342,11 +348,17 @@ fn show_exit_pos(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
         let drag_value_x = egui::DragValue::new(&mut selected_exit.exit_x)
             .hexadecimal(4, false, true)
             .range(0..=0xffff);
-        ui.add(drag_value_x);
+        let dvx = ui.add(drag_value_x);
+        if dvx.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
         let drag_value_y = egui::DragValue::new(&mut selected_exit.exit_y)
             .hexadecimal(4, false, true)
             .range(0..=0xffff);
-        ui.add(drag_value_y);
+        let dvy = ui.add(drag_value_y);
+        if dvy.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
     });
 }
 
@@ -361,9 +373,9 @@ fn show_exit_type(ui: &mut egui::Ui, selected_exit: &mut MapExit) {
         });
 }
 
-fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
+fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &[CourseMapInfo]) {
     let Some(course) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
-        log_write("Somehow, course was none", LogLevel::ERROR);
+        log_write("Somehow, course was none", LogLevel::Error);
         return;
     };
     let selected_exit_stored = selected_exit.clone();
@@ -376,22 +388,22 @@ fn show_exit_target_map(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &V
         });
     if selected_exit_stored != *selected_exit {
         // The new entrance will be invalid! Reset it to the first one
-        log_write("Selected exit target map changed", LogLevel::DEBUG);
+        log_write("Selected exit target map changed", LogLevel::Debug);
         let Some(course_new) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
-            log_write("Failed to find course for selected exit target map", LogLevel::FATAL);
+            log_write("Failed to find course for selected exit target map", LogLevel::Fatal);
             unreachable!()
         };
         let Some(first_map_entrance) = course_new.map_entrances.first() else {
-            log_write("New exit target map has no entrances",LogLevel::FATAL);
+            log_write("New exit target map has no entrances",LogLevel::Fatal);
             unreachable!()
         };
         selected_exit.target_map_entrance = first_map_entrance.uuid;
     }
 }
 
-fn show_exit_target_entrance(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &Vec<CourseMapInfo>) {
+fn show_exit_target_entrance(ui: &mut egui::Ui, selected_exit: &mut MapExit, maps: &[CourseMapInfo]) {
     let Some(course) = maps.iter().find(|x| x.uuid == selected_exit.target_map) else {
-        log_write("Somehow, course was none", LogLevel::ERROR);
+        log_write("Somehow, course was none", LogLevel::Error);
         return;
     };
     let Some(cur_entrance) = course.get_entrance(&selected_exit.target_map_entrance) else {

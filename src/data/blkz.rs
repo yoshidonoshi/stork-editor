@@ -17,13 +17,13 @@ pub struct SoftRockBackdrop {
 }
 
 impl SoftRockBackdrop {
-    pub fn new(byte_data: &Vec<u8>) -> Option<Self> {
+    pub fn new(byte_data: &[u8]) -> Option<Self> {
         let mut ret = SoftRockBackdrop::default();
         let byte_data = &lamezip77_lz10_decomp(byte_data);
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
         let first_res = match rdr.read_u16::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Failed to get first result in SoftRockBackdrop: '{}'", error), LogLevel::ERROR);
+                log_write(format!("Failed to get first result in SoftRockBackdrop: '{}'", error), LogLevel::Error);
                 return None;
             }
             Ok(fr) => fr,
@@ -36,11 +36,11 @@ impl SoftRockBackdrop {
         let end_len = byte_data.len() as u64;
         while rdr.position() < end_len {
             let tile_short = rdr.read_u16::<LittleEndian>().expect("BLKZ tile read");
-            ret.tiles.push(MapTileRecordData::new(&tile_short));
+            ret.tiles.push(MapTileRecordData::new(tile_short));
         }
         let calced_len = (ret.width as usize) * (ret.height as usize);
         if calced_len != ret.tiles.len() {
-            log_write(format!("Mismatch in height*width to tile len: {} vs {}",calced_len,ret.tiles.len()), LogLevel::ERROR);
+            log_write(format!("Mismatch in height*width to tile len: {} vs {}",calced_len,ret.tiles.len()), LogLevel::Error);
         }
 
         Some(ret)
@@ -64,7 +64,7 @@ impl TopLevelSegment for SoftRockBackdrop {
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
         let comp_bytes = lamezip77_lz10_recomp(&comp_bytes);
-        segment_wrap(&comp_bytes, self.header())
+        segment_wrap(comp_bytes, self.header())
     }
 
     fn header(&self) -> String {

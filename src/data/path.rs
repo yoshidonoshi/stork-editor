@@ -13,12 +13,12 @@ pub struct PathDatabase {
     pub lines: Vec<PathLine>
 }
 impl PathDatabase {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
+    pub fn new(byte_data: &[u8]) -> Self {
         let mut ret: PathDatabase = PathDatabase::default();
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
+        let mut rdr = Cursor::new(byte_data);
         let path_count = match rdr.read_u32::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Failed to get path_count from PathDatabase: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Failed to get path_count from PathDatabase: '{error}'"), LogLevel::Error);
                 return ret;
             }
             Ok(c) => c,
@@ -31,7 +31,7 @@ impl PathDatabase {
             loop { // Build the points
                 let angle = match rdr.read_i16::<LittleEndian>() {
                     Err(error) => {
-                        log_write(format!("Failed to read Path angle: '{error}'"), LogLevel::ERROR);
+                        log_write(format!("Failed to read Path angle: '{error}'"), LogLevel::Error);
                         return ret;
                     },
                     Ok(a) => a,
@@ -51,14 +51,14 @@ impl PathDatabase {
         ret
     }
 
-    pub fn delete_line(&mut self, line_uuid: Uuid) -> Result<(),()> {
-        log_write("Deleting Line", LogLevel::DEBUG);
+    pub fn delete_line(&mut self, line_uuid: Uuid) -> bool {
+        log_write("Deleting Line", LogLevel::Debug);
         let Some(line_pos) = self.lines.iter().position(|x| x.uuid == line_uuid) else {
-            return Err(());
+            return false;
         };
         self.lines.remove(line_pos);
-        log_write("Line data deleted", LogLevel::DEBUG);
-        Ok(())
+        log_write("Line data deleted", LogLevel::Debug);
+        true
     }
     pub fn fix_term(&mut self) {
         for line in &mut self.lines {
@@ -94,7 +94,7 @@ impl TopLevelSegment for PathDatabase {
 
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
-        segment_wrap(&comp_bytes, "PATH".to_owned())
+        segment_wrap(comp_bytes, "PATH".to_owned())
     }
 
     fn header(&self) -> String {

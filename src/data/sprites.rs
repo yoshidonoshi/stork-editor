@@ -32,17 +32,19 @@ impl Default for LevelSprite {
 impl fmt::Display for LevelSprite {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f,"LevelSprite [ id=0x{:X}, uuid={}, x_pos=0x{:X}, y_pos=0x{:X}, settings=[{}] ]",
-            self.object_id, self.uuid, self.x_position, self.y_position, utils::settings_to_string(&self.settings))
+            self.object_id, self.uuid, self.x_position, self.y_position, utils::bytes_to_hex_string(&self.settings))
     }
 }
 impl LevelSprite {
-    pub fn from_cursor(rdr: &mut Cursor<&Vec<u8>>) -> Self {
-        let mut spr = LevelSprite::default();
-        spr.object_id = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.settings_length = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.x_position = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.y_position = rdr.read_u16::<LittleEndian>().unwrap();
-        spr.uuid = Uuid::new_v4();
+    pub fn from_cursor<T: ReadBytesExt>(rdr: &mut T)  -> Self {
+        let mut spr = LevelSprite {
+            object_id: rdr.read_u16::<LittleEndian>().unwrap(),
+            settings_length: rdr.read_u16::<LittleEndian>().unwrap(),
+            x_position: rdr.read_u16::<LittleEndian>().unwrap(),
+            y_position: rdr.read_u16::<LittleEndian>().unwrap(),
+            uuid: Uuid::new_v4(),
+            ..Default::default()
+        };
         let mut setting_index: u16 = 0;
         while setting_index < spr.settings_length {
             let setting_byte = rdr.read_u8().unwrap();
@@ -70,7 +72,7 @@ impl LevelSprite {
         LevelSprite {
             object_id: id, settings_length: settings.len() as u16,
             x_position: x_pos, y_position: y_pos,
-            settings: settings.clone(), uuid: Uuid::new_v4()
+            settings, uuid: Uuid::new_v4()
         }
     }
 }
@@ -80,14 +82,14 @@ pub struct LevelSpriteSet {
     pub sprites: Vec<LevelSprite>
 }
 impl LevelSpriteSet {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
+    pub fn new(byte_data: &[u8]) -> Self {
+        let mut rdr = Cursor::new(byte_data);
         let seg_end: usize = byte_data.len();
         let mut seg: LevelSpriteSet = LevelSpriteSet::default();
         // If all goes well, the terminating position should be equal to the length
         while (rdr.position() as usize) != seg_end {
             if (rdr.position() as usize) > seg_end {
-                log_write("Overflow when reading SETD", LogLevel::ERROR);
+                log_write("Overflow when reading SETD", LogLevel::Error);
                 break;
             }
             let sprite: LevelSprite = LevelSprite::from_cursor(&mut rdr);
@@ -97,43 +99,28 @@ impl LevelSpriteSet {
     }
 
     pub fn trim(&mut self, width: u16, height: u16) -> usize {
-        let mut deleted_count: usize = 0;
-        let mut uuids_to_delete: Vec<Uuid> = Vec::new();
-        for spr in &self.sprites {
-            if spr.x_position >= width || spr.y_position >= height {
-                uuids_to_delete.push(spr.uuid);
-            }
-        }
-        for uid in &uuids_to_delete {
-            let del_res = self.delete_sprite(*uid);
-            if del_res.is_ok() {
-                deleted_count += 1
-            }
-        }
-        deleted_count
+        let initial_len = self.sprites.len();
+        self.sprites.retain(|spr| spr.x_position < width && spr.y_position < height);
+        initial_len - self.sprites.len()
     }
 
-    pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> Result<(),()> {
+    #[allow(dead_code)]
+    pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> bool {
         let Some(pos) = self.sprites.iter().position(|x|x.uuid == sprite_uuid) else {
-            return Err(());
+            return false;
         };
         self.sprites.remove(pos);
-        Ok(())
+        true
     }
 }
 impl TopLevelSegment for LevelSpriteSet {
     fn compile(&self) -> Vec<u8> {
-        let mut comp: Vec<u8> = vec![];
-        for spr in &self.sprites {
-            let mut sprite_bytes = spr.compile();
-            comp.append(&mut sprite_bytes);
-        }
-        comp
+        self.sprites.iter().flat_map(|spr| spr.compile()).collect()
     }
     
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
-        segment_wrap(&comp_bytes, "SETD".to_owned())
+        segment_wrap(comp_bytes, "SETD".to_owned())
     }
 
     fn header(&self) -> String {
@@ -192,7 +179,7 @@ pub fn draw_sprite(
         0x00 => { // Yellow Coin
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
-            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
         }
         0x23 => {
             const PIPE_PALETTE: usize = 0x89;
@@ -241,17 +228,17 @@ pub fn draw_sprite(
         0x28 => { // Flower Collectible
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x16);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x9b, 0, 16);
-            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
         }
         0x3b => { // Red Coin
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0x7e, 0, 16);
-            return gra.render_sprite_frame(ui,6,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,6,&pal,&rect.left_top(),tile_dim,selected)
         }
         0x9F => { // Hint Block
             let gra = get_graphics_segment(de, "objset.arcz".to_owned(), 0x5d);
             let pal = get_palette_from_segment(de, "objset.arcz".to_owned(), 0xa9, 0, 16);
-            return gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected);
+            gra.render_sprite_frame(ui,0,&pal,&rect.left_top(),tile_dim,selected)
         }
         _ => vec![]
     }
@@ -290,8 +277,10 @@ impl SpriteGraphicsSegment {
     pub fn from_data_segment(segment: &DataSegment) -> Self {
         //println!("from_data_segment");
         // Read Frames
-        let mut ret: SpriteGraphicsSegment = SpriteGraphicsSegment::default();
-        ret.internal_data = segment.internal_data.clone();
+        let mut ret: SpriteGraphicsSegment = SpriteGraphicsSegment {
+            internal_data: segment.internal_data.clone(),
+            ..Default::default()
+        };
         //print_vector_u8(&ret.internal_data);
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&segment.internal_data);
         let mut overflow_index: usize = 0;
@@ -311,7 +300,7 @@ impl SpriteGraphicsSegment {
             }
             ret.sprite_frames.push(spr_frame); // Move it on in
         }
-        //log_write(format!("Loaded 0x{:X}/{} SpriteFrames",&ret.sprite_frames.len(),&ret.sprite_frames.len()), LogLevel::LOG);
+        //log_write(format!("Loaded 0x{:X}/{} SpriteFrames",&ret.sprite_frames.len(),&ret.sprite_frames.len()), LogLevel::Log);
         // RDR is now at the start of BuildFrames! //
         ret
     }
@@ -327,7 +316,7 @@ impl SpriteGraphicsSegment {
         rdr.set_position(sprite_frame.build_offset as u64 + sprite_frame._pos);
         let tile_offset = match rdr.read_u16::<LittleEndian>() {
             Err(error) => {
-                log_write(format!("Failed to read tile_offset in render_sprite_frame: '{error}'"), LogLevel::ERROR);
+                log_write(format!("Failed to read tile_offset in render_sprite_frame: '{error}'"), LogLevel::Error);
                 return Vec::new();
             }
             Ok(o) => o,
@@ -422,7 +411,7 @@ fn get_sprite_dims_from_flag_value(val: u16) -> Pos2 {
         0x13 => Pos2::new(4.0,8.0),
         0x14 => Pos2::new(1.0,2.0),
         _ => {
-            log_write(format!("Unknown Sprite Dim value: '{}'",val), LogLevel::WARN);
+            log_write(format!("Unknown Sprite Dim value: '{}'",val), LogLevel::Warn);
             Pos2::new(2.0, 2.0)
         }
     }

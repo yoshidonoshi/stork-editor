@@ -43,8 +43,8 @@ pub struct GenericTopLevelSegment {
 }
 
 impl GenericTopLevelSegment {
-    pub fn new(data: &Vec<u8>, header: &String) -> Self {
-        Self { raw_bytes: data.clone(), header: header.clone() }
+    pub fn new(data: Vec<u8>, header: String) -> Self {
+        Self { raw_bytes: data, header }
     }
 }
 
@@ -54,7 +54,7 @@ impl TopLevelSegment for GenericTopLevelSegment {
     }
 
     fn wrap(&self) -> Vec<u8> {
-        segment_wrap(&self.compile(), self.header.clone())
+        segment_wrap(self.compile(), self.header.clone())
     }
 
     fn header(&self) -> String {

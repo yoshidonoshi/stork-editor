@@ -21,7 +21,7 @@ pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             let true_position: Pos2 = top_left + Vec2::new((x as f32) * COL_TILE_DIM, (y as f32) * COL_TILE_DIM);
             let rect: Rect = Rect::from_min_size(true_position, COLL_RECT);
             if col_type_index > u8::MAX as usize {
-                log_write(format!("Col Type is too high: 0x{:X}",col_type_index), LogLevel::ERROR);
+                log_write(format!("Col Type is too high: 0x{:X}",col_type_index), LogLevel::Error);
             } else {
                 // Draw the tile
                 let selected = de.col_tile_to_place as usize == col_type_index;
@@ -49,9 +49,9 @@ pub fn collision_tiles_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let tile_y: u32 = (local_pos.y/COL_TILE_DIM) as u32;
                 let tile_index: u32 = tile_y * (TILES_WIDE as u32) + tile_x;
                 if tile_index > u8::MAX as u32 {
-                    log_write(format!("Collision tile index out of bounds: 0x{:X}",tile_index), LogLevel::DEBUG);
+                    log_write(format!("Collision tile index out of bounds: 0x{:X}",tile_index), LogLevel::Debug);
                 } else {
-                    log_write(format!("Set collision tile placer to type 0x{:X}",tile_index), LogLevel::LOG);
+                    log_write(format!("Set collision tile placer to type 0x{:X}",tile_index), LogLevel::Log);
                     de.col_tile_to_place = tile_index as u8;
                 }
             }

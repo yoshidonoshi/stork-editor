@@ -33,6 +33,13 @@ Stork Editor
 - Partial support is available for **USA 1.1** (aka r1), but not every change is documented
 - Other versions will eventually have partial support
 
+## Planned Features
+
+- [x] Path editing
+- [ ] Soft Rock background editing
+- [ ] Hint Block text editing
+- [ ] Music file replacement
+
 ## Building
 
 `cargo build --release`

@@ -1,6 +1,6 @@
 use byteorder::{LittleEndian, WriteBytesExt};
 
-use crate::data::sprites::LevelSprite;
+use crate::{data::sprites::LevelSprite, NON_MAIN_FOCUSED};
 
 use super::SpriteSettings;
 
@@ -59,7 +59,10 @@ impl SpriteSettings for HintBlock {
             let drag_val = egui::DragValue::new(&mut self.message)
                 .hexadecimal(2, false, true)
                 .range(0..=0x150);
-            ui.add(drag_val);
+            let dvres = ui.add(drag_val);
+            if dvres.has_focus() {
+                *NON_MAIN_FOCUSED.lock().unwrap() = true;
+            }
             ui.label("Message ID");
         }).response
     }
@@ -167,7 +170,11 @@ impl SpriteSettings for GreenPipe {
         let drag_val = egui::DragValue::new(&mut self.length)
             .hexadecimal(4, false, true)
             .range(0..=0xffff);
-        ui.add(drag_val)
+        let dvres = ui.add(drag_val);
+        if dvres.has_focus() {
+            *NON_MAIN_FOCUSED.lock().unwrap() = true;
+        }
+        dvres
     }
 
     fn compile(&self) -> Vec<u8> {

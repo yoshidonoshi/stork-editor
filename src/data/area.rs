@@ -24,17 +24,12 @@ impl fmt::Display for TriggerData {
 }
 impl TopLevelSegment for TriggerData {
     fn compile(&self) -> Vec<u8> {
-        let mut comp: Vec<u8> = vec![];
-        for t in &self.triggers {
-            let mut t_comp: Vec<u8> = t.compile();
-            comp.append(&mut t_comp);
-        }
-        comp
+        self.triggers.iter().flat_map(|trigger| trigger.compile()).collect()
     }
     // No compression
     fn wrap(&self) -> Vec<u8> {
         let comp_bytes: Vec<u8> = self.compile();
-        segment_wrap(&comp_bytes, "AREA".to_owned())
+        segment_wrap(comp_bytes, "AREA".to_owned())
     }
 
     fn header(&self) -> String {
@@ -42,14 +37,14 @@ impl TopLevelSegment for TriggerData {
     }
 }
 impl TriggerData {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
-        let mut rdr: Cursor<&Vec<u8>> = Cursor::new(byte_data);
+    pub fn new(byte_data: &[u8]) -> Self {
+        let mut rdr = Cursor::new(byte_data);
         let seg_end: usize = byte_data.len();
         let mut ret: TriggerData = TriggerData::default(); // Empty
         while rdr.position() < seg_end as u64 {
             let left_x = match rdr.read_u16::<LittleEndian>() {
                 Err(error) => {
-                    log_write(format!("Error reading LeftX for TriggerData: '{}'", error), LogLevel::ERROR);
+                    log_write(format!("Error reading LeftX for TriggerData: '{}'", error), LogLevel::Error);
                     break;
                 }
                 Ok(left_x) => left_x,
@@ -66,7 +61,7 @@ impl TriggerData {
     pub fn delete(&mut self, uuid: Uuid) -> bool {
         if let Some(pos) = self.triggers.iter().position(|x| x.uuid == uuid) {
             self.triggers.remove(pos);
-            log_write("Trigger data deleted", LogLevel::DEBUG);
+            log_write("Trigger data deleted", LogLevel::Debug);
             true
         } else {
             false

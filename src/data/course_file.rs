@@ -1,4 +1,4 @@
-use std::{fs, io::Cursor, path::PathBuf};
+use std::{fs, io::Cursor, path::{Path, PathBuf}};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use uuid::Uuid;
 
@@ -38,11 +38,11 @@ impl Compilable for CourseInfo {
     }
 }
 impl CourseInfo {
-    pub fn new(abs_path: &PathBuf, label: &String) -> Self {
+    pub fn new(abs_path: &PathBuf, label: String) -> Self {
         // It is uncompressed
         let file_bytes = match fs::read(abs_path) {
             Err(error) => {
-                utils::log_write(format!("Failed to read Course file: '{}'", error), utils::LogLevel::ERROR);
+                utils::log_write(format!("Failed to read Course file: '{}'", error), utils::LogLevel::Error);
                 return CourseInfo::default();
             }
             Ok(b) => b,
@@ -50,13 +50,13 @@ impl CourseInfo {
         let mut rdr: Cursor<&Vec<u8>> = Cursor::new(&file_bytes);
         let file_header = match rdr.read_u32::<LittleEndian>() {
             Err(error) => {
-                utils::log_write(format!("Failed to read file header: '{}'", error), utils::LogLevel::ERROR);
+                utils::log_write(format!("Failed to read file header: '{}'", error), utils::LogLevel::Error);
                 return CourseInfo::default();
             }
             Ok(h) => h,
         };
         if utils::header_to_string(&file_header) != "CRSB" {
-            utils::log_write("Course data header was not CRSB", utils::LogLevel::WARN);
+            utils::log_write("Course data header was not CRSB", utils::LogLevel::Warn);
         }
         // Okay, checks are out of the way. Lets start reading!
         let _crsb_internal_size = rdr.read_u32::<LittleEndian>().unwrap();
@@ -69,7 +69,7 @@ impl CourseInfo {
             let cscn_header = rdr.read_u32::<LittleEndian>().unwrap();
             let cscn_header_string = utils::header_to_string(&cscn_header);
             if cscn_header_string != "CSCN" {
-                utils::log_write(format!("Wrong header, expected CSCN, got '{}'/0x{:08X}",cscn_header_string,&cscn_header), utils::LogLevel::WARN);
+                utils::log_write(format!("Wrong header, expected CSCN, got '{}'/0x{:08X}",cscn_header_string,&cscn_header), utils::LogLevel::Warn);
             }
             let _cscn_internal_size: u32 = rdr.read_u32::<LittleEndian>().unwrap();
             let cscn_entrance_count: u16 = rdr.read_u16::<LittleEndian>().unwrap();
@@ -121,10 +121,10 @@ impl CourseInfo {
             }
             let cscn: CourseMapInfo = CourseMapInfo {
                 map_music: cscn_music_id,
-                map_filename_noext: mpdz_name_noext.clone(),
+                label: format!("0x{:X}: {}",cscn_index,&mpdz_name_noext),
+                map_filename_noext: mpdz_name_noext,
                 map_entrances: cscn_entrance_vec,
                 map_exits: cscn_exit_vec,
-                label: format!("0x{:X}: {}",cscn_index,&mpdz_name_noext),
                 uuid: Uuid::new_v4()
             };
             cscn_vec.push(cscn); // Move it in
@@ -133,7 +133,7 @@ impl CourseInfo {
         let mut ret = CourseInfo {
             level_map_data: cscn_vec,
             src_filename: abs_path.to_str().unwrap_or("UNWRAP FAILURE").to_owned(),
-            label: label.clone()
+            label,
         };
         ret.update_exit_uuids();
         ret
@@ -143,23 +143,23 @@ impl CourseInfo {
         self.update_exit_indexes();
         let uncomped_bytes: Vec<u8> = self.compile();
         // SCEN files are not compressed, though sub-segments are
-        segment_wrap(&uncomped_bytes, "CRSB".to_owned())
+        segment_wrap(uncomped_bytes, "CRSB".to_owned())
     }
 
     /// Update UUID lists from indexes
     pub fn update_exit_uuids(&mut self) {
-        log_write(format!("Updating Exit UUIDs for {}",self.src_filename), LogLevel::DEBUG);
+        log_write(format!("Updating Exit UUIDs for {}",self.src_filename), LogLevel::Debug);
         let maps_ro = self.level_map_data.clone();
         for map in &mut self.level_map_data {
             for exit in &mut map.map_exits {
                 if exit.target_map_raw as usize >= maps_ro.len() {
-                    log_write("Target Map Raw out of bounds!", LogLevel::ERROR);
+                    log_write("Target Map Raw out of bounds!", LogLevel::Error);
                     return;
                 }
                 let target_map = &maps_ro[exit.target_map_raw as usize];
                 exit.target_map = target_map.uuid;
                 if exit.target_map_entrance_raw as usize >= target_map.map_entrances.len() {
-                    log_write("Target Map Entrance Raw out of bounds!", LogLevel::ERROR);
+                    log_write("Target Map Entrance Raw out of bounds!", LogLevel::Error);
                     return;
                 }
                 let target_map_entrance = &target_map.map_entrances[exit.target_map_entrance_raw as usize];
@@ -169,7 +169,7 @@ impl CourseInfo {
     }
 
     fn update_exit_indexes(&mut self) {
-        log_write(format!("Updating Exit indexes for {}",self.src_filename), LogLevel::DEBUG);
+        log_write(format!("Updating Exit indexes for {}",self.src_filename), LogLevel::Debug);
         let maps_ro = self.level_map_data.clone();
         for map in &mut self.level_map_data {
             for exit in &mut map.map_exits {
@@ -182,7 +182,7 @@ impl CourseInfo {
                     map_index += 1;
                 }
                 if map_index as usize >= maps_ro.len() {
-                    log_write("map_index was out of bounds, setting to first", LogLevel::ERROR);
+                    log_write("map_index was out of bounds, setting to first", LogLevel::Error);
                     map_index = 0;
                 }
                 exit.target_map_raw = map_index;
@@ -190,13 +190,13 @@ impl CourseInfo {
                 let target_map = &maps_ro[map_index as usize];
                 if let Some(ent_index) = target_map.get_entrance_index(&exit.target_map_entrance) {
                     if ent_index as usize >= target_map.map_entrances.len() {
-                        log_write("ent_index out of bounds, setting to first", LogLevel::ERROR);
+                        log_write("ent_index out of bounds, setting to first", LogLevel::Error);
                         exit.target_map_entrance_raw = 0;
                     } else {
                         exit.target_map_entrance_raw = ent_index;
                     }
                 } else {
-                    log_write(format!("No index found for entrance with uuid {}, setting to first",exit.target_map_entrance.to_string()), LogLevel::ERROR);
+                    log_write(format!("No index found for entrance with uuid {}, setting to first",exit.target_map_entrance), LogLevel::Error);
                     exit.target_map_entrance_raw = 0;
                 }
             }
@@ -220,7 +220,7 @@ impl CourseInfo {
                     // The only guaranteed entrance on index 0 map
                     exit.target_map_entrance_raw = 0;
                     // No need to fix entrance, we already set it to , go to next
-                    log_write(format!("Target map was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::DEBUG);
+                    log_write(format!("Target map was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::Debug);
                     continue;
                 }
 
@@ -232,7 +232,7 @@ impl CourseInfo {
                 } else {
                     // Entrance no longer exists, set it to guarantee
                     exit.target_map_entrance_raw = 0;
-                    log_write(format!("Target entrance was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::DEBUG);
+                    log_write(format!("Target entrance was missing for {} - {}, setting to first",map.label,exit.label), LogLevel::Debug);
                 }
             }
         }
@@ -240,18 +240,18 @@ impl CourseInfo {
         self.update_exit_uuids();
     }
 
-    pub fn add_template(&mut self, template_file: &str, template_folder: &PathBuf) {
-        log_write(format!("Adding new template map: '{}'",template_file), LogLevel::LOG);
+    pub fn add_template(&mut self, template_file: &str, template_folder: &Path) {
+        log_write(format!("Adding new template map: '{}'",template_file), LogLevel::Log);
         let root_path = template_folder.parent().expect("Every possible path has a parent");
-        let mut source_file_path = template_folder.clone();
+        let mut source_file_path = template_folder.to_path_buf();
         source_file_path.push(template_file);
         match fs::exists(&source_file_path) {
             Err(error) => {
-                log_write(format!("source_file_path existence check failed: '{error}'"), LogLevel::ERROR);
+                log_write(format!("source_file_path existence check failed: '{error}'"), LogLevel::Error);
                 return;
             }
             Ok(false) => {
-                log_write(format!("Template file '{}' does not exist", &source_file_path.display()), LogLevel::ERROR);
+                log_write(format!("Template file '{}' does not exist", &source_file_path.display()), LogLevel::Error);
                 return;
             }
             _ => {}
@@ -261,9 +261,9 @@ impl CourseInfo {
         loop {
             four_num += 1;
             let new_file_name = format!("{}{:04}.mpdz",&template_file[0..3],four_num);
-            let new_path = utils::nitrofs_abs(&root_path.to_path_buf(), &new_file_name);
+            let new_path = utils::nitrofs_abs(root_path.to_path_buf(), &new_file_name);
             let Ok(new_path_exists) = fs::exists(&new_path) else {
-                log_write("New Template path existence check failed", LogLevel::ERROR);
+                log_write("New Template path existence check failed", LogLevel::Error);
                 continue;
             };
             if !new_path_exists {
@@ -271,17 +271,17 @@ impl CourseInfo {
                 let copy_res = fs::copy(&source_file_path, &new_path);
                 match copy_res {
                     Ok(_) => {
-                        log_write(format!("Successfully copied '{}' to '{}'",source_file_path.display(),new_path.display()), LogLevel::LOG);
+                        log_write(format!("Successfully copied '{}' to '{}'",source_file_path.display(),new_path.display()), LogLevel::Log);
                         let file_name_noext = new_file_name.replace(".mpdz", "");
                         // Now add the map to the data files
-                        let new_course = CourseMapInfo::from_template(&file_name_noext);
+                        let new_course = CourseMapInfo::from_template(file_name_noext);
                         self.fix_exits(); // Make sure everything is synced up before we add
                         self.level_map_data.push(new_course);
                         self.update_exit_uuids(); // Then fix the UUIDs (raws will be okay)
                         return;
                     },
                     Err(e) => {
-                        log_write(format!("Error in template file copy: '{}'",e), LogLevel::ERROR);
+                        log_write(format!("Error in template file copy: '{}'",e), LogLevel::Error);
                         return;
                     }
                 }
@@ -291,7 +291,7 @@ impl CourseInfo {
 
     pub fn delete_map_info_by_index(&mut self, index: usize) -> bool {
         if index >= self.level_map_data.len() {
-            log_write("Overflow in delete_map_info_by_index", LogLevel::ERROR);
+            log_write("Overflow in delete_map_info_by_index", LogLevel::Error);
             return false;
         }
         self.level_map_data.remove(index);
@@ -348,17 +348,10 @@ impl CourseMapInfo {
     fn wrap(&self) -> Vec<u8> {
         let uncomped_bytes: Vec<u8> = self.compile();
         // SCEN files are not compressed, though sub-segments are
-        segment_wrap(&uncomped_bytes, "CSCN".to_owned())
+        segment_wrap(uncomped_bytes, "CSCN".to_owned())
     }
     pub fn get_entrance_index(&self, entrance_uuid: &Uuid) -> Option<u8> {
-        let mut index: u8 = 0;
-        for enter in &self.map_entrances {
-            if enter.uuid == *entrance_uuid {
-                return Some(index);
-            }
-            index += 1;
-        }
-        Option::None
+        self.map_entrances.iter().position(|enter| enter.uuid == *entrance_uuid).map(|i| i as u8)
     }
     pub fn get_exit(&mut self, uuid: &Uuid) -> Option<&mut MapExit> {
         self.map_exits.iter_mut().find(|x| x.uuid == *uuid)
@@ -401,31 +394,31 @@ impl CourseMapInfo {
     pub fn delete_exit(&mut self, exit_uuid: Uuid) -> bool {
         if let Some(pos) = self.map_exits.iter().position(|x| x.uuid == exit_uuid) {
             self.map_exits.remove(pos);
-            log_write("Exit data deleted", LogLevel::DEBUG);
+            log_write("Exit data deleted", LogLevel::Debug);
             true
         } else {
-            log_write(format!("Failed to delete MapExit with UUID {}",exit_uuid), LogLevel::ERROR);
+            log_write(format!("Failed to delete MapExit with UUID {}",exit_uuid), LogLevel::Error);
             false
         }
     }
     pub fn delete_entrance(&mut self, entrance_uuid: Uuid) -> bool {
         if let Some(pos) = self.map_entrances.iter().position(|x| x.uuid == entrance_uuid) {
             self.map_entrances.remove(pos);
-            log_write("Entrance data deleted", LogLevel::DEBUG);
+            log_write("Entrance data deleted", LogLevel::Debug);
             true
         } else {
-            log_write(format!("Failed to delete MapEntrance with UUID {}",entrance_uuid), LogLevel::ERROR);
+            log_write(format!("Failed to delete MapEntrance with UUID {}",entrance_uuid), LogLevel::Error);
             false
         }
     }
 
-    pub fn from_template(name_no_ext: &str) -> Self {
+    pub fn from_template(name_no_ext: String) -> Self {
         CourseMapInfo {
             map_entrances: vec![MapEntrance::default()],
             map_exits: vec![MapExit::default()],
             map_music: 0,
-            map_filename_noext: name_no_ext.to_string(),
-            label: name_no_ext.to_string(),
+            map_filename_noext: name_no_ext.clone(),
+            label: name_no_ext,
             uuid: Uuid::new_v4()
         }
     }

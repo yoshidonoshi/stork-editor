@@ -3,7 +3,7 @@ use egui::Color32;
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use uuid::Uuid;
 
-use crate::{data::{mapfile::TopLevelSegmentWrapper, path::{PathDatabase, PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}};
+use crate::{data::{mapfile::TopLevelSegmentWrapper, path::{PathDatabase, PathLine, PathPoint}, types::CurrentLayer}, engine::displayengine::DisplayEngine, utils::{log_write, LogLevel}, NON_MAIN_FOCUSED};
 
 const CHANGE_RATE: u32 = 0x1000;
 
@@ -23,7 +23,7 @@ pub fn show_paths_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if create.clicked() {
             let pd = PathDatabase::default();
             de.loaded_map.segments.push(TopLevelSegmentWrapper::PATH(pd));
-            log_write("Create PATH database", LogLevel::LOG);
+            log_write("Create PATH database", LogLevel::Log);
             return;
         }
         ui.disable();
@@ -49,7 +49,7 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
         let btn_add = ui.add(egui::Button::new("New"));
         if btn_add.clicked() {
-            log_write("Creating new PathLine", LogLevel::LOG);
+            log_write("Creating new PathLine", LogLevel::Log);
             let Some(path) = de.loaded_map.get_path() else {
                 de.path_settings.selected_line = Uuid::nil();
                 de.path_settings.selected_point = Uuid::nil();
@@ -62,7 +62,7 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             path.fix_term();
             de.graphics_update_needed = true;
             de.unsaved_changes = true;
-            log_write("New PathLine created", LogLevel::DEBUG);
+            log_write("New PathLine created", LogLevel::Debug);
         }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let del = ui.add_enabled(!de.path_settings.selected_line.is_nil(), egui::Button::new("Delete"));
@@ -78,7 +78,7 @@ fn draw_path_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
             path.fix_term();
-            log_write("Line deleted", LogLevel::LOG);
+            log_write("Line deleted", LogLevel::Log);
         }
     });
     ui.add_space(5.0);
@@ -115,14 +115,14 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     ui.horizontal(|ui| {
         let new_btn = ui.add(egui::Button::new("New"));
         if new_btn.clicked() {
-            log_write("Creating PathPoint", LogLevel::DEBUG);
+            log_write("Creating PathPoint", LogLevel::Debug);
             let Some(path) = de.loaded_map.get_path() else {
-                log_write("Cannot get PATH for point creation", LogLevel::ERROR);
+                log_write("Cannot get PATH for point creation", LogLevel::Error);
                 return;
             };
             // Now get the line
             let Some(line) = path.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) else {
-                log_write("Cannot get Line for point creation", LogLevel::ERROR);
+                log_write("Cannot get Line for point creation", LogLevel::Error);
                 return;
             };
             let new_point = PathPoint::default();
@@ -130,30 +130,30 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             de.unsaved_changes = true;
             de.graphics_update_needed = true;
             path.fix_term();
-            log_write("PathPoint created", LogLevel::LOG);
+            log_write("PathPoint created", LogLevel::Log);
         }
         ui.style_mut().visuals.widgets.hovered.weak_bg_fill = Color32::RED;
         let del = ui.add_enabled(!de.path_settings.selected_point.is_nil(), egui::Button::new("Delete"));
         if del.clicked() {
             let Some(path) = de.loaded_map.get_path() else {
-                log_write("Cannot get PATH for point deletion", LogLevel::ERROR);
+                log_write("Cannot get PATH for point deletion", LogLevel::Error);
                 de.path_settings.selected_line = Uuid::nil();
                 de.path_settings.selected_point = Uuid::nil();
                 return;
             };
             // Now get the line
             let Some(line) = path.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line) else {
-                log_write("Cannot get Line for point deletion", LogLevel::ERROR);
+                log_write("Cannot get Line for point deletion", LogLevel::Error);
                 de.path_settings.selected_line = Uuid::nil();
                 de.path_settings.selected_point = Uuid::nil();
                 return;
             };
             if line.points.len() <= 1 {
-                log_write("There can only be (at least) one (point)!", LogLevel::WARN);
+                log_write("There can only be (at least) one (point)!", LogLevel::Warn);
                 return;
             }
             let Some(point_pos) = line.points.iter().position(|x| x.uuid == de.path_settings.selected_point) else {
-                log_write("Cannot get Point for point deletion", LogLevel::ERROR);
+                log_write("Cannot get Point for point deletion", LogLevel::Error);
                 de.path_settings.selected_point = Uuid::nil();
                 return;
             };
@@ -162,7 +162,7 @@ fn draw_point_list(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             de.graphics_update_needed = true;
             de.unsaved_changes = true;
             path.fix_term();
-            log_write("Point deleted", LogLevel::LOG);
+            log_write("Point deleted", LogLevel::Log);
         }
     });
     ui.add_space(5.0);
@@ -213,13 +213,19 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 let angle = egui::DragValue::new(&mut point.angle)
                     .speed(0x10)
                     .hexadecimal(5, false, true);
-                ui.add(angle);
+                let angleres = ui.add(angle);
+                if angleres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.label("Angle");
             });
             ui.horizontal(|ui| {
                 let distance = egui::DragValue::new(&mut point.distance)
                     .hexadecimal(4, false,true);
-                ui.add(distance);
+                let distres = ui.add(distance);
+                if distres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.label("Distance");
             });
             // Then X and Y
@@ -228,7 +234,10 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     .hexadecimal(8, false, true)
                     .speed(CHANGE_RATE)
                     .range(0..=u32::MAX);
-                ui.label("X (Fine)");
+                let xres = ui.label("X (Fine)");
+                if xres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.add(x_drag);
             });
             ui.horizontal(|ui| {
@@ -236,7 +245,10 @@ fn draw_point_settings(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     .hexadecimal(8, false, true)
                     .speed(CHANGE_RATE)
                     .range(0..=u32::MAX);
-                ui.label("Y (Fine)");
+                let yres = ui.label("Y (Fine)");
+                if yres.has_focus() {
+                    *NON_MAIN_FOCUSED.lock().unwrap() = true;
+                }
                 ui.add(y_drag);
             });
             if point_before != *point {

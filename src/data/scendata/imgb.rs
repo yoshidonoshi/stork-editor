@@ -8,9 +8,9 @@ pub struct ImgbData {
 }
 
 impl ImgbData {
-    pub fn new(byte_data: &Vec<u8>) -> Self {
+    pub fn new(byte_data: Vec<u8>) -> Self {
         Self {
-            pixel_tiles: byte_data.clone()
+            pixel_tiles: byte_data,
         }
     }
 }
@@ -21,7 +21,7 @@ impl ScenSegment for ImgbData {
     }
 
     fn wrap(&self, info: Option<&ScenInfoData>) -> Vec<u8> {
-        segment_wrap(&self.compile(info), self.header())
+        segment_wrap(self.compile(info), self.header())
     }
 
     fn header(&self) -> String {

@@ -14,9 +14,9 @@ pub fn stork_settings_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         });
     let sys_theme = ui.ctx().system_theme().unwrap_or(egui::Theme::Dark);
     ui.ctx().set_theme(match de.display_settings.stork_theme {
-        StorkTheme::DARK => egui::Theme::Dark,
-        StorkTheme::LIGHT => egui::Theme::Light,
-        StorkTheme::AUTO => sys_theme,
+        StorkTheme::Dark => egui::Theme::Dark,
+        StorkTheme::Light => egui::Theme::Light,
+        StorkTheme::Auto => sys_theme,
     });
     // TODO: Sticky backgrounds. Check for primary layers with 256
     // Sprite Graphics Render Mode

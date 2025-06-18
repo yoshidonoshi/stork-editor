@@ -7,20 +7,20 @@ use lamezip77::{self, nintendo_lz::Compress, VecBuf};
 pub fn decompress_file(file_path: &PathBuf) -> Vec<u8> {
     let data = match fs::read(file_path) {
         Err(error) => {
-            log_write(format!("Could not decompress file at path: '{}', reason: '{error}'", file_path.display()), LogLevel::FATAL);
+            log_write(format!("Could not decompress file at path: '{}', reason: '{error}'", file_path.display()), LogLevel::Fatal);
             return Vec::new();
         }
         Ok(b) => b
     };
     let first_byte = data.first();
     if first_byte != Some(&0x10) {
-        log_write("First byte was not 0x10".to_owned(), LogLevel::WARN);
+        log_write("First byte was not 0x10".to_owned(), LogLevel::Warn);
     }
     let res: Vec<u8> = lamezip77_lz10_decomp(&data);
     res
 }
 
-pub fn lamezip77_lz10_decomp(data: &Vec<u8>) -> Vec<u8> {
+pub fn lamezip77_lz10_decomp(data: &[u8]) -> Vec<u8> {
     let mut vec_buf: VecBuf = VecBuf::new(0, u32::MAX as usize);
     {
         lamezip77::nintendo_lz::decompress_make!(decompressor,&mut vec_buf);
@@ -31,7 +31,7 @@ pub fn lamezip77_lz10_decomp(data: &Vec<u8>) -> Vec<u8> {
 }
 
 /// Also includes the 0x10 magic number and uncompressed length
-pub fn lamezip77_lz10_recomp(data: &Vec<u8>) -> Vec<u8> {
+pub fn lamezip77_lz10_recomp(data: &[u8]) -> Vec<u8> {
     let mut compressor = Compress::new();
     let mut output: Vec<u8> = Vec::new();
     let og_data_len = data.len();
@@ -49,8 +49,8 @@ pub fn lamezip77_lz10_recomp(data: &Vec<u8>) -> Vec<u8> {
 }
 
 // #[allow(dead_code)]
-// pub fn cue_compress(data: &Vec<u8>) -> Vec<u8> {
-//     //log_write(format!("Performing CUE compression"), LogLevel::LOG);
+// pub fn cue_compress(data: &[u8]) -> Vec<u8> {
+//     //log_write(format!("Performing CUE compression"), LogLevel::Log);
 //     let temp_filename = String::from("TEMP_COMP.bin");
 //     let write_attempt = fs::write(&temp_filename, data);
 //     if write_attempt.is_err() {
@@ -78,7 +78,7 @@ pub fn lamezip77_lz10_recomp(data: &Vec<u8>) -> Vec<u8> {
 //     }
 //     let call_result_string = call_result_string.as_ref().unwrap();
 //     if !call_result_string.contains("Done") {
-//         log_write("Compression call did not return 'Done', instead:".to_owned(), LogLevel::WARN);
+//         log_write("Compression call did not return 'Done', instead:".to_owned(), LogLevel::Warn);
 //     }
 //     let data = fs::read(temp_filename);
 //     if data.is_err() {
@@ -86,18 +86,18 @@ pub fn lamezip77_lz10_recomp(data: &Vec<u8>) -> Vec<u8> {
 //     }
 //     let remove = fs::remove_file("TEMP_COMP.bin");
 //     if remove.is_err() {
-//         log_write(format!("Failed to delete compression temp file: '{}'",remove.unwrap_err()),LogLevel::ERROR);
+//         log_write(format!("Failed to delete compression temp file: '{}'",remove.unwrap_err()),LogLevel::Error);
 //     }
 //     data.unwrap()
 // }
 
-pub fn segment_wrap(data: &Vec<u8>, magic: String) -> Vec<u8> {
+pub fn segment_wrap(data: Vec<u8>, magic: String) -> Vec<u8> {
     let mut ret: Vec<u8> = vec![];
     if magic.len() != 4 {
-        log_write(format!("Header String was not length 4 in segment_wrap, was '{}'",magic), LogLevel::ERROR);
+        log_write(format!("Header String was not length 4 in segment_wrap, was '{}'",magic), LogLevel::Error);
         return ret;
     }
-    let mut internal_data = data.clone();
+    let mut internal_data = data;
     while internal_data.len() % 4 != 0 {
         internal_data.push(0x00);
     }
@@ -112,7 +112,7 @@ pub fn segment_wrap(data: &Vec<u8>, magic: String) -> Vec<u8> {
     ret
 }
 
-pub fn segment_wrap_u32(data: &Vec<u8>, magic: u32) -> Vec<u8> {
+pub fn segment_wrap_u32(data: Vec<u8>, magic: u32) -> Vec<u8> {
     let mut ret: Vec<u8> = vec![];
     let mut internal_data = data.clone();
     while internal_data.len() % 4 != 0 {

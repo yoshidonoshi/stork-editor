@@ -24,18 +24,18 @@ impl fmt::Display for RenderArchive {
     }
 }
 impl RenderArchive {
-    pub fn new(filename_local: String, project_directory: &PathBuf) -> Self {
-        log_write(format!("Loading new RenderArchive '{}'",&filename_local), LogLevel::DEBUG);
-        let true_path: PathBuf = nitrofs_abs(project_directory,&filename_local);
+    pub fn new(filename_local: String, project_directory: PathBuf) -> Self {
+        log_write(format!("Loading new RenderArchive '{filename_local}'"), LogLevel::Debug);
+        let true_path: PathBuf = nitrofs_abs(project_directory, &filename_local);
         let file_bytes: Vec<u8> = compression::decompress_file(&true_path);
         let mut rdr = Cursor::new(&file_bytes);
         let Ok(file_header) = rdr.read_u32::<LittleEndian>() else {
-            utils::log_write("Error getting master header from RenderArchive".to_owned(), LogLevel::ERROR);
+            utils::log_write("Error getting master header from RenderArchive".to_owned(), LogLevel::Error);
             return Self::default();
         };
         let header_string = utils::header_to_string(&file_header);
         if header_string != "OBAR" {
-            utils::log_write(format!("RenderArchive master header was not OBAR, was instead '{}'",header_string), LogLevel::ERROR);
+            utils::log_write(format!("RenderArchive master header was not OBAR, was instead '{}'",header_string), LogLevel::Error);
             return Self::default();
         }
         let _ = rdr.read_u32::<LittleEndian>().unwrap();
@@ -44,10 +44,7 @@ impl RenderArchive {
         while rdr.position() < file_end_pos {
             let section_head: u32 = rdr.read_u32::<LittleEndian>().unwrap();
             let section_size: usize = rdr.read_u32::<LittleEndian>().unwrap() as usize;
-            let mut internal_vec: Vec<u8> = vec![0;section_size];
-            for i in 0..section_size {
-                internal_vec[i] = rdr.read_u8().unwrap();
-            }
+            let internal_vec = (0..section_size).map(|_| rdr.read_u8().unwrap()).collect();
             let cur_segment: DataSegment = DataSegment { header: section_head, internal_data: internal_vec };
             segments.push(cur_segment);
         }

@@ -19,18 +19,11 @@ impl PltbData {
 
 impl ScenSegment for PltbData {
     fn compile(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
-        let mut ret: Vec<u8> = vec![];
-
-        for p in &self.palettes {
-            let mut pbytes: Vec<u8> = p.compile();
-            ret.append(&mut pbytes);
-        }
-
-        ret
+        self.palettes.iter().flat_map(|palette| palette.compile()).collect()
     }
 
     fn wrap(&self, _info: Option<&ScenInfoData>) -> Vec<u8> {
-        segment_wrap(&self.compile(Option::None), self.header())
+        segment_wrap(self.compile(Option::None), self.header())
     }
 
     fn header(&self) -> String {

@@ -12,7 +12,7 @@ const TILE_OUTER_PADDING: f32 = 10.0;
 const RECT_TRIM_PADDING_TILE: f32 = 1.0;
 const SPRITE_RECT: Vec2 = Vec2::new(TILE_WIDTH_PX * 2.0, TILE_HEIGHT_PX * 2.0);
 const SPRITE_BG_COLOR: Color32 = Color32::from_rgba_premultiplied(0xff, 0x00, 0xff, 0x40);
-const SPRITE_BG_COLOR_SELECTED: Color32 = Color32::from_rgba_premultiplied(0x00, 0xff, 0x00, 0x40);
+const SPRITE_BG_COLOR_SELECTED: Color32 = Color32::from_rgba_premultiplied(0x00, 0xff, 0x00, 0xff);
 const FONT: FontId = FontId { size: 12.0, family: egui::FontFamily::Monospace };
 const BG_SELECTION_FILL: Color32 = Color32::from_rgba_premultiplied(0x80, 0x65, 0xb5, 0xA0);
 const BG_SELECTION_FILL_INVERT: Color32 = Color32::from_rgba_premultiplied(0x65, 0x80, 0xb5, 0xA0);
@@ -137,10 +137,10 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
                 let local_pos = pointer_pos - true_rect.min;
                 let tile_index = local_pos_to_col_index(&local_pos, grid_width);
                 if tile_index as usize >= col.col_tiles.len() {
-                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
+                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::Error);
                     return;
                 }
-                let _ = de.loaded_map.set_col_tile(bg_with_col, tile_index as u16, de.col_tile_to_place);
+                de.loaded_map.set_col_tile(bg_with_col, tile_index as u16, de.col_tile_to_place);
                 de.graphics_update_needed = true;
                 de.unsaved_changes = true;
             }
@@ -150,11 +150,11 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
                 let local_pos = pointer_pos - true_rect.min;
                 let tile_index = local_pos_to_col_index(&local_pos, grid_width);
                 if tile_index as usize >= col.col_tiles.len() {
-                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
+                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::Error);
                     return;
                 }
                 // 0x00 is empty
-                let _ = de.loaded_map.set_col_tile(bg_with_col, tile_index as u16, 0x00);
+                de.loaded_map.set_col_tile(bg_with_col, tile_index as u16, 0x00);
                 de.graphics_update_needed = true;
                 de.unsaved_changes = true;
             }
@@ -164,13 +164,13 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
                 let local_pos = pointer_pos - true_rect.min;
                 let tile_index = local_pos_to_col_index(&local_pos, grid_width);
                 if tile_index as usize >= col.col_tiles.len() {
-                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::ERROR);
+                    log_write(format!("Index out of bounds: {} >= {}",tile_index,col.col_tiles.len()), LogLevel::Error);
                     return;
                 }
                 let tile = &col.col_tiles[tile_index as usize];
                 // Don't copy empty ones, that's for right clicking
                 if *tile != 0x00 {
-                    log_write(format!("Copied tile of type '0x{:X}' at index 0x{:X}",tile,tile_index), LogLevel::LOG);
+                    log_write(format!("Copied tile of type '0x{:X}' at index 0x{:X}",tile,tile_index), LogLevel::Log);
                     de.col_tile_to_place = *tile; // Copies it in
                 }
             }
@@ -191,7 +191,7 @@ fn draw_collision_layer(ui: &mut egui::Ui, de: &mut DisplayEngine,vrect: &Rect) 
                 return;
             }
             let Some(cur_pos) = ui.ctx().pointer_interact_pos() else {
-                log_write("Failed to get pointer_interact_pos in col .dragged", LogLevel::ERROR);
+                log_write("Failed to get pointer_interact_pos in col .dragged", LogLevel::Error);
                 return;
             };
             de.col_selector_status.end_pos = cur_pos;
@@ -253,7 +253,7 @@ fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     let Some(blkz_data) = de.loaded_map.get_blkz().cloned() else { return };
 
     let Some(colz_layer) = de.loaded_map.get_bg_with_colz() else {
-        log_write("There is no layer with COLZ", LogLevel::ERROR);
+        log_write("There is no layer with COLZ", LogLevel::Error);
         return;
     };
     let bg = de.loaded_map.get_background(colz_layer).expect("Already confirmed COLZ");
@@ -272,12 +272,12 @@ fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         let true_rect: Rect = Rect::from_min_size(top_left_screen + Vec2::new(screen_x, screen_y), TILE_RECT);
         let render_pal_id = tile.get_render_pal_id(bg._pal_offset, info.color_mode);
         if render_pal_id >= 16 {
-            log_write(format!("palette id for render too high in draw_breakable_rock: {}", render_pal_id), LogLevel::ERROR);
+            log_write(format!("palette id for render too high in draw_breakable_rock: {}", render_pal_id), LogLevel::Error);
             continue;
         }
         let palette = &de.bg_palettes[render_pal_id];
         let pixel_tiles = bg.pixel_tiles_preview.as_ref().expect("There should be pixel tiles on the background with COLZ");
-        draw_blkz_tile(tile, palette, &pixel_tiles, &true_rect,ui.ctx(),ui.painter());
+        draw_blkz_tile(tile, palette, pixel_tiles, &true_rect,ui.ctx(),ui.painter());
         // Placement is good!
         //ui.painter().rect_filled(true_rect, 0.0, Color32::RED);
         tile_index += 1;
@@ -286,7 +286,7 @@ fn draw_breakable_rock(ui: &mut egui::Ui, de: &mut DisplayEngine) {
 
 fn draw_blkz_tile(
     tile: &MapTileRecordData, palette: &Palette,
-    pixel_tiles: &Vec<u8>, true_rect: &Rect,
+    pixel_tiles: &[u8], true_rect: &Rect,
     ctx: &Context, painter: &Painter
 ) {
     let byte_array = &utils::get_pixel_bytes_16(pixel_tiles, &tile.tile_id);
@@ -306,7 +306,7 @@ fn draw_entrances(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         // This will cause an overflow panic
         log_write(format!(
             "Map Index is somehow greater than level map data length ({} >= {})",
-            &map_index,&maps_count), LogLevel::FATAL);
+            &map_index,&maps_count), LogLevel::Fatal);
         return;
     }
     let entrances = &de.loaded_course.level_map_data[map_index].map_entrances;
@@ -335,7 +335,7 @@ fn draw_exits(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         // This will cause an overflow panic if not stopped
         log_write(format!(
             "Map Index is somehow greater than level map data length ({} >= {})",
-            &map_index,&maps_count), LogLevel::FATAL);
+            &map_index,&maps_count), LogLevel::Fatal);
         return;
     }
     let exits = &de.loaded_course.level_map_data[map_index].map_exits;
@@ -383,7 +383,7 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     egui::StrokeKind::Outside
                 );
                 if point.distance >= 0 && point.distance != 0 {
-                    let test_val = utils::get_sin_cos_table_value(&arm9, point.angle as u16,de.game_version);
+                    let test_val = utils::get_sin_cos_table_value(arm9, point.angle as u16,de.game_version);
                     let x_offset = ((test_val.x as i32) * (point.distance as i32)) >> 12; // Note: this includes the tile width
                     let y_offset = ((test_val.y as i32) * (point.distance as i32)) >> 12; // This will need changing once zoom is added
                     //println!("test_val: {:?}", test_val);
@@ -470,28 +470,26 @@ fn draw_paths(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                     }
                 }
             }
-            if click_response.secondary_clicked() {
-                if !de.path_settings.selected_line.is_nil(){
-                    if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-                        let local_pos = pointer_pos - ui.min_rect().min;
-                        let x_fine = ((local_pos.x / TILE_WIDTH_PX) as u32) << 15;
-                        let y_fine = ((local_pos.y / TILE_HEIGHT_PX) as u32) << 15;
-                        // You are adding it on the end, therefore distance defaults to 0
-                        let p = PathPoint::new(0, 0, x_fine, y_fine);
-                        let puuid = p.uuid; // Copies
-                        let Some(path_data) = de.loaded_map.get_path() else {
-                            log_write("Failed to get PathDatabase", LogLevel::ERROR);
-                            return;
-                        };
-                        let line = path_data.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
-                        if let Some(l) = line {
-                            l.points.push(p);
-                            de.path_settings.selected_point = puuid;
-                            de.graphics_update_needed = true;
-                            de.unsaved_changes = true;
-                        } else {
-                            log_write("Failed to get PathLine for new PathPoint", LogLevel::ERROR);
-                        }
+            if click_response.secondary_clicked() && !de.path_settings.selected_line.is_nil() {
+                if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                    let local_pos = pointer_pos - ui.min_rect().min;
+                    let x_fine = ((local_pos.x / TILE_WIDTH_PX) as u32) << 15;
+                    let y_fine = ((local_pos.y / TILE_HEIGHT_PX) as u32) << 15;
+                    // You are adding it on the end, therefore distance defaults to 0
+                    let p = PathPoint::new(0, 0, x_fine, y_fine);
+                    let puuid = p.uuid; // Copies
+                    let Some(path_data) = de.loaded_map.get_path() else {
+                        log_write("Failed to get PathDatabase", LogLevel::Error);
+                        return;
+                    };
+                    let line = path_data.lines.iter_mut().find(|x| x.uuid == de.path_settings.selected_line);
+                    if let Some(l) = line {
+                        l.points.push(p);
+                        de.path_settings.selected_point = puuid;
+                        de.graphics_update_needed = true;
+                        de.unsaved_changes = true;
+                    } else {
+                        log_write("Failed to get PathLine for new PathPoint", LogLevel::Error);
                     }
                 }
             }
@@ -563,7 +561,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     de.selected_sprite_uuids.dedup();
                     // If length is one, handle gui
                     if de.selected_sprite_uuids.len() == 1 {
-                        de.latest_sprite_settings = utils::settings_to_string(&level_sprite.settings);
+                        de.latest_sprite_settings = utils::bytes_to_hex_string(&level_sprite.settings);
                     }
                 }
                 // Debug
@@ -581,7 +579,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                     }
                     // Drag logic
                     if interaction.drag_started() {
-                        log_write("Started dragging sprite", LogLevel::DEBUG);
+                        log_write("Started dragging sprite", LogLevel::Debug);
                         de.sprite_drag_status.dragging_uuid = level_sprite.uuid; // Implements copy
                         ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::Move);
                         let cur_pos = ui.ctx().pointer_interact_pos().expect("Failed to get pointer interaction position");
@@ -611,7 +609,7 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                         let y_tile_movement = (true_new_y as i32) - og_sprite_tile_y;
                         for selspr in &de.selected_sprite_uuids {
                             let Some(og_sprite_data) = de.get_loaded_sprite_by_uuid(selspr) else {
-                                log_write(format!("Sprite Uuid '{}' not found when moving",selspr), LogLevel::ERROR);
+                                log_write(format!("Sprite Uuid '{}' not found when moving",selspr), LogLevel::Error);
                                 continue;
                             };
                             let mut move_to_x = og_sprite_data.x_position as i32 + x_tile_movement;
@@ -638,23 +636,23 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
                 de.selected_sprite_uuids.clear();
             }
             if cfr.secondary_clicked() { // Right clicked on empty background = place
-                log_write("Placing new sprite from right click...", LogLevel::DEBUG);
+                log_write("Placing new sprite from right click...", LogLevel::Debug);
                 // Retrieve the base sprite ID to create, usually set by Add Sprite
                 let Some(new_sprite_id) = de.selected_sprite_to_place else {
-                    log_write("Could not place sprite, none selected to add", LogLevel::DEBUG);
+                    log_write("Could not place sprite, none selected to add", LogLevel::Debug);
                     return;
                 };
                 if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                     let local_pos = pointer_pos - ui.min_rect().min;
                     let base_tile_x: u16 = (local_pos.x/TILE_WIDTH_PX) as u16;
                     let base_tile_y: u16 = (local_pos.y/TILE_HEIGHT_PX) as u16;
-                    let new_uuid = de.loaded_map.add_new_sprite_at(new_sprite_id, base_tile_x, base_tile_y, &de.sprite_metadata_copy);
-                    log_write(format!("Placed sprite with UUID {}",new_uuid.to_string()), LogLevel::DEBUG);
+                    let new_uuid = de.loaded_map.add_new_sprite_at(new_sprite_id, base_tile_x, base_tile_y);
+                    log_write(format!("Placed sprite with UUID {new_uuid}"), LogLevel::Debug);
                     de.selected_sprite_uuids = vec![new_uuid]; // Select only it
                     de.unsaved_changes = true;
                     update_map = true;
                 } else {
-                    log_write("Could not get pointer pos when right clicking Sprite", LogLevel::ERROR);
+                    log_write("Could not get pointer pos when right clicking Sprite", LogLevel::Error);
                 }
             }
         }
@@ -670,9 +668,6 @@ fn draw_background(
     show: bool
 ) {
     puffin::profile_function!();
-    // This is used to offset the drawing to the window
-    //   Otherwise it doesn't "stick to the window"
-    let top_left: Pos2 = ui.min_rect().min;
     // These will be used for rendering fewer tiles to save CPU
     let leftmost_tile = vrect.left() / TILE_WIDTH_PX;
     let rightmost_tile = vrect.right() / TILE_WIDTH_PX;
@@ -696,7 +691,7 @@ fn draw_background(
             tc = Some(&mut de.tile_cache_bg3);
         }
         _ => {
-            log_write(format!("Unusual whichbg value in draw_background: '{}'",whichbg), LogLevel::ERROR);
+            log_write(format!("Unusual whichbg value in draw_background: '{}'",whichbg), LogLevel::Error);
             return;
         }
     }
@@ -711,7 +706,10 @@ fn draw_background(
             // But not RENDER. Just fill the space
             return;
         }
-        let true_rect = ui.min_rect();
+        let mut true_grid_rect = ui.min_rect();
+        if info.x_offset_px != 0 || info.y_offset_px != 0 {
+            true_grid_rect = true_grid_rect.translate(Vec2::new((info.x_offset_px * -1) as f32, (info.y_offset_px * -1) as f32));
+        }
         let mut temp_selected_indexes: Vec<u32> = Vec::new();
         // MAP TILES //
         if let Some(map_tiles) = layer.get_mpbz() {
@@ -749,8 +747,8 @@ fn draw_background(
                     let tile_y_px: f32 = tile_y * TILE_HEIGHT_PX;
                     let pal_id = map_tile.get_render_pal_id(layer._pal_offset, info.color_mode);
                     if pal_id >= 16 {
-                        log_write(format!("Palette ID was too high when attempting to draw tile on bg {} (was 0x{:X})",whichbg,pal_id), LogLevel::ERROR);
-                        log_write(format!("Offending MapTile data: {}",map_tile), LogLevel::LOG);
+                        log_write(format!("Palette ID was too high when attempting to draw tile on bg {} (was 0x{:X})",whichbg,pal_id), LogLevel::Error);
+                        log_write(format!("Offending MapTile data: {}",map_tile), LogLevel::Log);
                         // skip
                         map_index += 1;
                         continue;
@@ -758,16 +756,16 @@ fn draw_background(
                     let cur_pal = &de.bg_palettes[pal_id];
                     // Check if the tile id is out of bounds (Often caused by missing ANMZ data)
                     if map_tile.tile_id as usize >= pixel_tiles.len() {
-                        log_write(format!("Tile ID was too high when attempting to draw tile on bg {} (was 0x{:X})",whichbg,map_tile.tile_id), LogLevel::ERROR);
-                        log_write(format!("Offending MapTile data: {}",map_tile), LogLevel::LOG);
+                        log_write(format!("Tile ID was too high when attempting to draw tile on bg {} (was 0x{:X})",whichbg,map_tile.tile_id), LogLevel::Error);
+                        log_write(format!("Offending MapTile data: {}",map_tile), LogLevel::Log);
                         // skip
                         map_index += 1;
                         continue;
                     }
                     // This is the actual rectangle the tile will be rendered in
-                    let true_rect: Rect = Rect::from_min_size(top_left + Vec2::new(tile_x_px, tile_y_px), TILE_RECT);
+                    let true_tile_rect: Rect = Rect::from_min_size(true_grid_rect.min + Vec2::new(tile_x_px, tile_y_px), TILE_RECT);
                     let mut selected: bool = false;
-                    if de.bg_sel_data.selecting_rect.intersects(true_rect) && is_selected_layer {
+                    if de.bg_sel_data.selecting_rect.intersects(true_tile_rect) && is_selected_layer {
                         selected = true;
                         // Add to temporary index
                         if !temp_selected_indexes.contains(&map_index) {
@@ -785,28 +783,26 @@ fn draw_background(
                             draw_tile_16(
                                 map_tile, cur_pal, ctx, pixel_tiles,
                                 painter, tilecache,
-                                &true_rect, selected,dim);
-                        } else {
-                            if let Some(pltb) = layer.get_pltb() {
-                                if pltb.palettes.is_empty() {
-                                    log_write("PLTB palettes were empty when trying to draw 256 tile!".to_owned(), LogLevel::ERROR);
-                                } else {
-                                    draw_tile_256(
-                                        map_tile, &pltb.palettes[0], ctx,
-                                        pixel_tiles, painter, tilecache,
-                                        &true_rect, selected, dim);
-                                }
+                                &true_tile_rect, selected,dim);
+                        } else if let Some(pltb) = layer.get_pltb() {
+                            if pltb.palettes.is_empty() {
+                                log_write("PLTB palettes were empty when trying to draw 256 tile!".to_owned(), LogLevel::Error);
                             } else {
-                                log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::ERROR);
+                                draw_tile_256(
+                                    map_tile, &pltb.palettes[0], ctx,
+                                    pixel_tiles, painter, tilecache,
+                                    &true_tile_rect, selected, dim);
                             }
+                        } else {
+                            log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::Error);
                         }
                         
                     }
                     // Draw lines to show true edges of layers //
                     if tile_y as u32 == info.layer_height as u32 - 1 {
                         // True rect is the bottommost tile
-                        let point_1 = true_rect.left_bottom() + Vec2::new(1.0, 1.0);
-                        let point_2 = true_rect.right_bottom() + Vec2::new(-1.0, 1.0);
+                        let point_1 = true_tile_rect.left_bottom() + Vec2::new(1.0, 1.0);
+                        let point_2 = true_tile_rect.right_bottom() + Vec2::new(-1.0, 1.0);
                         ui.painter().line(vec![point_1,point_2], egui::Stroke::new(1.0, if is_selected_layer {
                             Color32::RED
                         } else {
@@ -815,8 +811,8 @@ fn draw_background(
                     }
                     if tile_x as u32 == info.layer_width as u32 - 1 {
                         // True rect is the rightmost tile
-                        let point_1 = true_rect.right_top() + Vec2::new(1.0, 1.0);
-                        let point_2 = true_rect.right_bottom() + Vec2::new(1.0, -1.0);
+                        let point_1 = true_tile_rect.right_top() + Vec2::new(1.0, 1.0);
+                        let point_2 = true_tile_rect.right_bottom() + Vec2::new(1.0, -1.0);
                         ui.painter().line(vec![point_1,point_2], egui::Stroke::new(1.0, if is_selected_layer {
                             Color32::RED
                         } else {
@@ -830,13 +826,13 @@ fn draw_background(
                 if is_selected_layer {
                     let interaction_id = egui::Id::new(format!("map_tile_interact_{}",whichbg));
                     // all() because it uses click, drag, and hover
-                    let bg_interaction = ui.interact(true_rect, interaction_id, egui::Sense::all());
+                    let bg_interaction = ui.interact(true_grid_rect, interaction_id, egui::Sense::all());
                     if bg_interaction.drag_started() {
-                        log_write("Started dragging in BG render function", LogLevel::DEBUG);
+                        log_write("Started dragging in BG render function", LogLevel::Debug);
                         de.bg_sel_data.dragging = true;
                         let Some(cur_pos) = ui.ctx().pointer_interact_pos() else {
                             // This has failed before, somehow, so don't panic
-                            log_write("Failed to get pointer_interact_pos in BG .drag_started", LogLevel::ERROR);
+                            log_write("Failed to get pointer_interact_pos in BG .drag_started", LogLevel::Error);
                             return;
                         };
                         de.bg_sel_data.start_pos = cur_pos;
@@ -844,7 +840,7 @@ fn draw_background(
                     }
                     if bg_interaction.dragged() {
                         let Some(cur_pos) = ui.ctx().pointer_interact_pos() else {
-                            log_write("Failed to get pointer_interact_pos in BG .dragged", LogLevel::ERROR);
+                            log_write("Failed to get pointer_interact_pos in BG .dragged", LogLevel::Error);
                             return;
                         };
                         de.bg_sel_data.end_pos = cur_pos;
@@ -859,7 +855,7 @@ fn draw_background(
                         de.bg_sel_data.selecting_rect = drag_rect; // Pass the data on in
                     }
                     if bg_interaction.drag_stopped() {
-                        log_write("Stopped dragging in draw_background", LogLevel::DEBUG);
+                        log_write("Stopped dragging in draw_background", LogLevel::Debug);
                         let shift_held = ui.input(|i| i.modifiers.shift);
                         let ctrl_held = ui.input(|i| i.modifiers.ctrl);
                         if shift_held { // Add
@@ -889,15 +885,15 @@ fn draw_background(
                     ////////////////////////
                     if bg_interaction.clicked() {
                         // Deselect
-                        //log_write(format!("Clearing BG selection"), LogLevel::DEBUG);
+                        //log_write(format!("Clearing BG selection"), LogLevel::Debug);
                         de.bg_sel_data.clear();
                     }
                     if bg_interaction.secondary_clicked() {
                         // Place tile //
                         // Lots of opportunities to crash here, so include Debug
-                        log_write("Stamping Brush to BG", LogLevel::DEBUG);
+                        log_write("Stamping Brush to BG", LogLevel::Debug);
                         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-                            let local_pos = pointer_pos - true_rect.min;
+                            let local_pos = pointer_pos - true_grid_rect.min;
                             let mut base_tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
                             if base_tile_x % 2 != 0 { // Don't paste at odd positions
                                 base_tile_x -= 1; // Move to even position
@@ -906,12 +902,12 @@ fn draw_background(
                             if base_tile_y % 2 != 0 { // Don't paste at odd positions
                                 base_tile_y -= 1; // Move to even position
                             }
-                            let mut tile_index = 0;
+                            let mut tile_index: u32 = 0;
                             for tile in &de.current_brush.tiles {
-                                let offset_x = tile_index % de.current_brush.width;
-                                let offset_y = tile_index / de.current_brush.width;
-                                let true_x = base_tile_x + offset_x as u32;
-                                let true_y = base_tile_y + offset_y as u32;
+                                let offset_x = tile_index % (de.current_brush.width as u32);
+                                let offset_y = tile_index / (de.current_brush.width as u32);
+                                let true_x = base_tile_x + offset_x;
+                                let true_y = base_tile_y + offset_y;
                                 if true_y >= info.layer_height as u32 {
                                     tile_index += 1;
                                     continue;
@@ -922,20 +918,19 @@ fn draw_background(
                                 }
                                 let map_index = true_y * (info.layer_width as u32) + true_x;
                                 if *tile != 0x0000 { // Don't overwrite tiles with blanks
-                                    de.loaded_map.place_bg_tile_at_map_index(info.which_bg, map_index, tile);
+                                    de.loaded_map.place_bg_tile_at_map_index(info.which_bg, map_index, *tile);
                                 }
                                 tile_index += 1;
                             }
                             de.graphics_update_needed = true;
                             de.unsaved_changes = true;
                         } else {
-                            log_write("Failed to get pointer when stamping Brush", LogLevel::ERROR);
+                            log_write("Failed to get pointer when stamping Brush", LogLevel::Error);
                         }
                     }
                     if bg_interaction.middle_clicked() {
-                        // DEBUG, maybe remove or limit eventually?
                         if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-                            let local_pos = pointer_pos - true_rect.min;
+                            let local_pos = pointer_pos - true_grid_rect.min;
                             let tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
                             let tile_y: u32 = (local_pos.y/TILE_HEIGHT_PX) as u32;
                             let tile_index: u32 = tile_y * grid_width + tile_x;
@@ -943,6 +938,13 @@ fn draw_background(
                             println!("Map tile index: 0x{:X}",tile_index);
                             let clicked_map_tile = &map_tiles.tiles[tile_index as usize];
                             println!("{}",clicked_map_tile);
+                            de.selected_preview_tile = Some(clicked_map_tile.tile_id as usize);
+                            let mut adjusted_pal = clicked_map_tile.palette_id as i16 + layer._pal_offset as i16 + 1;
+                            println!("16 Adjusted Palette: 0x{:X}",adjusted_pal);
+                            adjusted_pal = adjusted_pal.clamp(0x0, 0xF);
+                            // TODO: Scroll to it in the tiles window?
+                            de.tile_preview_pal = adjusted_pal as usize;
+                            de.needs_bg_tile_refresh = true;
                             // Now print the actual tile values
                             if !info.is_256_colorpal_mode() {
                                 let array_start: usize = clicked_map_tile.tile_id as usize * 32;
@@ -963,31 +965,40 @@ fn draw_background(
                 // End Interactivity
             } else {
                 // Not a guarantee that every background will have pixel tiles
-                //log_write(format!("Pixel Tiles not found on background '{}' when drawing",&whichbg), LogLevel::ERROR);
+                //log_write(format!("Pixel Tiles not found on background '{}' when drawing",&whichbg), LogLevel::Error);
             }
         } else {
-            log_write(format!("Map Tiles not found on background '{}' when drawing",&whichbg), LogLevel::ERROR);
+            log_write(format!("Map Tiles not found on background '{}' when drawing",&whichbg), LogLevel::Error);
         }
-        // Generic 2x2 Rectangle
-        if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
-            let local_pos = pointer_pos - true_rect.min;
-            let mut tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
-            let mut tile_y: u32 = (local_pos.y/TILE_HEIGHT_PX) as u32;
-            de.tile_hover_pos.x = tile_x as f32;
-            de.tile_hover_pos.y = tile_y as f32;
-            // Ensure its position is even
-            if tile_x % 2 != 0 {
-                tile_x -= 1;
+        // Generic Red 2x2 Rectangle and Green Brush Preview
+        if is_selected_layer {
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                let local_pos = pointer_pos - true_grid_rect.min;
+                let mut tile_x: u32 = (local_pos.x/TILE_WIDTH_PX) as u32;
+                let mut tile_y: u32 = (local_pos.y/TILE_HEIGHT_PX) as u32;
+                de.tile_hover_pos.x = tile_x as f32;
+                de.tile_hover_pos.y = tile_y as f32;
+                // Ensure its position is even
+                if tile_x % 2 != 0 {
+                    tile_x -= 1;
+                }
+                if tile_y % 2 != 0 {
+                    tile_y -= 1;
+                }
+                de.latest_square_pos_level_space = Pos2::new(tile_x as f32, tile_y as f32);
+                if !de.current_brush.tiles.is_empty() {
+                    let width = de.current_brush.width as f32;
+                    let height = de.current_brush.height as f32;
+                    let brush_rect = Rect::from_min_size(
+                    true_grid_rect.min + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
+                    Vec2 { x: TILE_WIDTH_PX * width, y: TILE_HEIGHT_PX * height });
+                    ui.painter().rect_stroke(brush_rect, 0.0, Stroke::new(1.0, Color32::GREEN), egui::StrokeKind::Outside);
+                }
+                let square_rect = Rect::from_min_size(
+                    true_grid_rect.min + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
+                    Vec2 { x: TILE_WIDTH_PX * 2.0, y: TILE_HEIGHT_PX * 2.0 });
+                ui.painter().rect_stroke(square_rect, 0.0, Stroke::new(1.0, Color32::RED), egui::StrokeKind::Outside);
             }
-            if tile_y % 2 != 0 {
-                tile_y -= 1;
-            }
-            de.latest_square_pos_level_space = Pos2::new(tile_x as f32, tile_y as f32);
-            //println!("x/y: 0x{:X}/0x{:X}",tile_x,tile_y);
-            let square_rect = Rect::from_min_size(
-                top_left + Vec2::new((tile_x as f32) * TILE_WIDTH_PX, (tile_y as f32) * TILE_HEIGHT_PX),
-                Vec2 { x: TILE_WIDTH_PX * 2.0, y: TILE_HEIGHT_PX * 2.0 });
-            ui.painter().rect_stroke(square_rect, 0.0, Stroke::new(1.0, Color32::RED), egui::StrokeKind::Outside);
         }
     }
 }
@@ -1001,11 +1012,11 @@ fn local_pos_to_col_index(local_pos: &Vec2, std_grid_width: u32) -> u32 {
 
 fn draw_tile(
     tile: &MapTileRecordData,
-    ctx: &Context, pixel_tiles: &Vec<u8>,
+    ctx: &Context, pixel_tiles: &[u8],
     painter: &Painter, tc: &mut TileCache,
     true_rect: &Rect, selected: bool,
     dim: bool,
-    create_texture_image: impl Fn(&MapTileRecordData, &Vec<u8>) -> ColorImage, texture_name: &str
+    create_texture_image: impl Fn(&MapTileRecordData, &[u8]) -> ColorImage, texture_name: &str
 ) {
     puffin::profile_function!();
     if let Some(t) = get_cached_texture(tc,tile.palette_id as usize, tile.tile_id as usize) {
@@ -1027,7 +1038,7 @@ fn draw_tile(
 
 pub fn draw_tile_16(
     tile: &MapTileRecordData, palette: &Palette,
-    ctx: &Context, pixel_tiles: &Vec<u8>,
+    ctx: &Context, pixel_tiles: &[u8],
     painter: &Painter, tc: &mut TileCache,
     true_rect: &Rect, selected: bool,
     dim: bool
@@ -1044,7 +1055,7 @@ pub fn draw_tile_16(
 
 pub fn draw_tile_256(
     tile: &MapTileRecordData, palette256: &Palette,
-    ctx: &Context, pixel_tiles: &Vec<u8>,
+    ctx: &Context, pixel_tiles: &[u8],
     painter: &Painter, tc: &mut TileCache,
     true_rect: &Rect, selected: bool,
     dim: bool

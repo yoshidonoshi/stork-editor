@@ -50,7 +50,7 @@ impl Palette {
     pub fn from_segment_index(source: &DataSegment, index: u32, pal_len: usize) -> Self {
         let data_header_str: String = utils::header_to_string(&source.header);
         if data_header_str != "PLTB" {
-            log_write(format!("DataSegment was {} not PLTB, proceed with caution",&data_header_str), LogLevel::ERROR);
+            log_write(format!("DataSegment was {} not PLTB, proceed with caution",&data_header_str), LogLevel::Error);
         }
         let mut cols: [PalColor; 256] = [PalColor::default(); 256];
         let internal_position = index * 16;
@@ -69,15 +69,15 @@ impl Palette {
             _pal_len: pal_len
         }
     }
-    pub fn from_cur(cur: &mut Cursor<&Vec<u8>>, pal_len: usize) -> Self {
+    pub fn from_cursor(rdr: &mut Cursor<&[u8]>, pal_len: usize) -> Self {
         let mut cols: [PalColor; 256] = [PalColor::default(); 256];
         let mut i: usize = 0;
         while i < pal_len {
-            let short: u16 = cur.read_u16::<LittleEndian>().unwrap();
+            let short: u16 = rdr.read_u16::<LittleEndian>().unwrap();
             let color = utils::color_from_u16(&short);
             cols[i].color = color;
             cols[i]._short = short;
-            cols[i]._addr = cur.position() as u32;
+            cols[i]._addr = rdr.position() as u32;
             i += 1;
         }
         Self {
@@ -125,7 +125,7 @@ impl Compilable for MapTileRecordData {
 }
 impl MapTileRecordData {
     // http://problemkaputt.de/gbatek.htm#lcdvrambgscreendataformatbgmap
-    pub fn new(short: &u16) -> Self {
+    pub fn new(short: u16) -> Self {
         let flip_v = ((short >> 11) % 2) == 1;
         let flip_h = ((short >> 10) % 2) == 1;
         let palette_id = short >> 12;
@@ -137,7 +137,7 @@ impl MapTileRecordData {
             tile_id
         }
     }
-    pub fn to_short(&self) -> u16 {
+    pub fn to_short(self) -> u16 {
         let mut short_val: u16 = self.tile_id | ((self.flip_h as u16) << 10) | ((self.flip_v as u16) << 11);
         // Palette Id is unused in 256 mode
         // https://problemkaputt.de/gbatek.htm#lcdvrambgscreendataformatbgmap
@@ -157,7 +157,7 @@ impl MapTileRecordData {
         } else if color_mode == 0x1 {
             // Do nothing
         } else {
-            log_write(format!("Unusual color mode in get_render_pal_id: {}",color_mode), LogLevel::WARN);
+            log_write(format!("Unusual color mode in get_render_pal_id: {}",color_mode), LogLevel::Warn);
             // I think its color16
             pal_index += 1;
         }
@@ -165,13 +165,7 @@ impl MapTileRecordData {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, EnumIter)]
-pub enum BGVALUE {
-    BG1,
-    BG2,
-    BG3
-}
-
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, EnumIter)]
 pub enum CurrentLayer {
     BG1 = 1,
@@ -197,11 +191,11 @@ pub fn wipe_tile_cache(tc: &mut TileCache) {
 
 pub fn get_cached_texture(tc: &TileCache, global_palette_index: usize, tile_index: usize) -> Option<&TextureHandle> {
     if global_palette_index >= 16 {
-        log_write(format!("texture cache: global_palette_index out of bounds: {}",global_palette_index), utils::LogLevel::ERROR);
+        log_write(format!("texture cache: global_palette_index out of bounds: {}",global_palette_index), utils::LogLevel::Error);
         return Option::None;
     }
     if tile_index >= 1024 {
-        log_write(format!("texture cache: tile_index out of bounds: {}",tile_index), utils::LogLevel::ERROR);
+        log_write(format!("texture cache: tile_index out of bounds: {}",tile_index), utils::LogLevel::Error);
         return Option::None;
     }
     tc[global_palette_index][tile_index].as_ref()
