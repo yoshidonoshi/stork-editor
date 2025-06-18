@@ -63,7 +63,9 @@ pub struct BrushSettings {
     pub cur_selected_brush: Option<(BrushType, usize)>,
     pub pos_brush_name: String,
     pub cur_search_string: String,
-    pub only_show_same_tileset: bool
+    pub only_show_same_tileset: bool,
+    pub flip_x_place: bool,
+    pub flip_y_place: bool
 }
 impl Default for BrushSettings {
     fn default() -> Self {
@@ -71,7 +73,8 @@ impl Default for BrushSettings {
             cur_selected_brush: Option::None,
             pos_brush_name: String::from("Untitled Brush"),
             cur_search_string: String::from(""),
-            only_show_same_tileset: true
+            only_show_same_tileset: true,
+            flip_x_place: false, flip_y_place: false
         }
     }
 }
@@ -83,7 +86,7 @@ const BRUSH_TILE_RECT: Vec2 = Vec2::new(BRUSH_TILE_DIM, BRUSH_TILE_DIM);
 pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
     puffin::profile_function!();
     if !de.display_settings.is_cur_layer_bg() {
-        // Technically uneccesary, but good for appearance
+        // Technically unnecessary, but good for appearance
         ui.disable();
     }
     let top_left = ui.min_rect().min;
@@ -97,7 +100,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         if layer.get_pltb().is_none() {
             return;
         }
-        let info = layer.get_info().expect("brush layer has info");
+        let info = layer.get_info().expect("Brush layer must have INFO");
         if let Some(tiles) = &layer.pixel_tiles_preview {
             do_tile_draw(
                 ui, &mut de.current_brush, &de.bg_palettes,
@@ -112,30 +115,104 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
         ui.add_space(push_height);
         // Interactivity
         let click_response: Response = ui.interact(ui.min_rect(), egui::Id::new("saved_brushes_window_click"), egui::Sense::click());
+        // Left Click = Place New
+        if click_response.clicked() {
+            if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
+                let local_pos = pointer_pos - top_left;
+                let tile_x: u32 = (local_pos.x/BRUSH_TILE_DIM) as u32;
+                let tile_y: u32 = (local_pos.y/BRUSH_TILE_DIM) as u32;
+                if tile_y >= BRUSH_TILES_WIDE as u32 {
+                    log_write(format!("tile_y too high: 0x{:X}",tile_y), LogLevel::Warn);
+                    return;
+                }
+                if tile_x >= BRUSH_TILES_WIDE as u32 {
+                    log_write(format!("tile_x too high: 0x{:X}",tile_x), LogLevel::Warn);
+                    return;
+                }
+                if de.current_brush.tiles.is_empty() {
+                    // Add lots of empty tiles to make it fit
+                    de.current_brush.width = (tile_x + 1) as u8;
+                    de.current_brush.height = (tile_y + 1) as u8;
+                    let new_tile_count = (tile_x + 1) * (tile_y + 1);
+                    for _ in 0..new_tile_count {
+                        de.current_brush.tiles.push(0x0000);
+                    }
+                }
+                if tile_x >= de.current_brush.width as u32 {
+                    log_write("tile_x out of bounds for Brush when trying to create tile, expanding", LogLevel::Log);
+                    let lines_to_add = tile_x - (de.current_brush.width as u32) + 1;
+                    let old_width = de.current_brush.width as usize;
+                    let increase_by = lines_to_add as usize;
+                    let mut idx: usize = old_width;
+                    de.current_brush.tiles.resize(((de.current_brush.width + lines_to_add as u8) * de.current_brush.height) as usize, 0x0000);
+                    while idx <= de.current_brush.tiles.len() {
+                        for _ in 0..increase_by {
+                            de.current_brush.tiles.insert(idx, 0x0000);
+                        }
+                        idx += old_width + increase_by;
+                    }
+                    de.current_brush.width += lines_to_add as u8;
+                    // Continue with new width
+                }
+                if tile_y >= de.current_brush.height as u32 {
+                    log_write("tile_y out of bounds for Brush when trying to create tile, expanding", LogLevel::Log);
+                    let lines_to_add = tile_y - (de.current_brush.height as u32) + 1;
+                    de.current_brush.height += lines_to_add as u8;
+                    for _ in 0..(lines_to_add * de.current_brush.width as u32) {
+                        de.current_brush.tiles.push(0x0000);
+                    }
+                    // Continue with new height
+                }
+                let tile_index: u32 = tile_y * (de.current_brush.width as u32) + tile_x;
+                if tile_index as usize >= de.current_brush.tiles.len() {
+                    log_write(format!("Tile index too high for Brush when trying to create tile: 0x{:X}",tile_index), LogLevel::Warn);
+                    return;
+                }
+                let Some(tile_id) = de.selected_preview_tile else {
+                    log_write("No selected preview tile ID", LogLevel::Warn);
+                    return;
+                };
+                let preview_pal = de.tile_preview_pal as i16;
+                let mut true_pal = preview_pal - (layer._pal_offset as i16) - 1;
+                if true_pal < 0 {
+                    log_write(format!("true_pal was less than 0: {}, setting to 0",true_pal), LogLevel::Warn);
+                    true_pal = 0;
+                }
+                // We are good to place the new tile!
+                let new_tile = MapTileRecordData {
+                    tile_id: tile_id as u16, palette_id: true_pal as u16,
+                    flip_h: de.brush_settings.flip_x_place,
+                    flip_v: de.brush_settings.flip_y_place
+                };
+                log_write(format!("Placing new tile to Brush: {}",new_tile), LogLevel::Debug);
+                de.current_brush.tiles[tile_index as usize] = new_tile.to_short();
+            }
+        }
+        // Right Click = Delete
         if click_response.secondary_clicked() {
             if let Some(pointer_pos) = ui.input(|i| i.pointer.latest_pos()) {
                 let local_pos = pointer_pos - top_left;
                 let tile_x: u32 = (local_pos.x/BRUSH_TILE_DIM) as u32;
                 let mut should_delete: bool = true;
                 if tile_x >= de.current_brush.width as u32 {
-                    log_write("tile_x out of bounds for Brush", LogLevel::Warn);
+                    log_write("tile_x out of bounds for Brush when trying to delete tile", LogLevel::Warn);
                     should_delete = false;
                 }
                 let tile_y: u32 = (local_pos.y/BRUSH_TILE_DIM) as u32;
                 if tile_y >= de.current_brush.height as u32 {
-                    log_write("tile_y out of bounds for Brush", LogLevel::Warn);
+                    log_write("tile_y out of bounds for Brush when trying to delete tile", LogLevel::Warn);
                     should_delete = false;
                 }
                 let tile_index: u32 = tile_y * (de.current_brush.width as u32) + tile_x;
                 if tile_index as usize >= de.current_brush.tiles.len() {
-                    log_write(format!("Tile index too high for Brush: 0x{:X}",tile_index), LogLevel::Warn);
+                    log_write(format!("Tile index too high for Brush when trying to delete tile: 0x{:X}",tile_index), LogLevel::Warn);
                     should_delete = false;
                 }
                 if should_delete {
                     de.current_brush.tiles[tile_index as usize] = 0x0000;
                 }
             } else {
-                log_write("Failed to get pointer input when clicking Saved Brushes grid", LogLevel::Error);
+                log_write("Failed to get pointer input when right clicking Saved Brushes grid", LogLevel::Error);
             }
         } // End interactivity
         // Helper for selection
@@ -219,7 +296,7 @@ pub fn show_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
                 de.current_brush.width = de.bg_sel_data.selection_width as u8;
                 let height = de.bg_sel_data.selected_map_indexes.len() as f32 / de.current_brush.width as f32;
                 de.current_brush.height = height as u8;
-                de.current_brush.tileset = info.imbz_filename_noext.clone().unwrap_or("N/A".to_string());
+                de.current_brush.tileset = info.imbz_filename_noext.clone().unwrap_or_else(|| "N/A".to_string());
                 for selected_index in &de.bg_sel_data.selected_map_indexes {
                     let tile_data = &maptiles.tiles[*selected_index as usize];
                     de.current_brush.tiles.push(tile_data.to_short());
@@ -273,7 +350,7 @@ fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], ti
             } else {
                 // Do the actual tile draw
                 if *col_mode == 0x0 {
-                    let tile: MapTileRecordData = MapTileRecordData::new(&brush.tiles[index]);
+                    let tile: MapTileRecordData = MapTileRecordData::new(brush.tiles[index]);
                     // Check if out of bounds (subtract palette offset, +1 for universal palette)
                     let pal_id_signed = tile.palette_id as i32 + *pal_offset as i32 + 1;
                     #[allow(clippy::manual_range_contains)]
@@ -292,6 +369,12 @@ fn do_tile_draw(ui: &mut egui::Ui, brush: &mut Brush, palette: &[Palette;16], ti
                     let t = ui.ctx().load_texture("brushtile16", color_image, egui::TextureOptions::NEAREST);
                     let uvs = get_uvs_from_tile(&tile);
                     painter.image(t.id(), rect, uvs, Color32::WHITE);
+                    if y + 1 == brush.height {
+                        painter.line(vec![rect.left_bottom(),rect.right_bottom()], egui::Stroke::new(2.0, Color32::GREEN));
+                    }
+                    if x + 1 == brush.width {
+                        painter.line(vec![rect.right_top(),rect.right_bottom()], egui::Stroke::new(2.0, Color32::GREEN));
+                    }
                 } else if *col_mode == 0x1 {
                     // 256 colors
                 }

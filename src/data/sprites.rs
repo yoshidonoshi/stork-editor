@@ -72,7 +72,7 @@ impl LevelSprite {
         LevelSprite {
             object_id: id, settings_length: settings.len() as u16,
             x_position: x_pos, y_position: y_pos,
-            settings: settings.clone(), uuid: Uuid::new_v4()
+            settings, uuid: Uuid::new_v4()
         }
     }
 }
@@ -99,38 +99,23 @@ impl LevelSpriteSet {
     }
 
     pub fn trim(&mut self, width: u16, height: u16) -> usize {
-        let mut deleted_count: usize = 0;
-        let mut uuids_to_delete: Vec<Uuid> = Vec::new();
-        for spr in &self.sprites {
-            if spr.x_position >= width || spr.y_position >= height {
-                uuids_to_delete.push(spr.uuid);
-            }
-        }
-        for uid in &uuids_to_delete {
-            let del_res = self.delete_sprite(*uid);
-            if del_res.is_ok() {
-                deleted_count += 1
-            }
-        }
-        deleted_count
+        let initial_len = self.sprites.len();
+        self.sprites.retain(|spr| spr.x_position < width && spr.y_position < height);
+        initial_len - self.sprites.len()
     }
 
-    pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> Result<(),()> {
+    #[allow(dead_code)]
+    pub fn delete_sprite(&mut self, sprite_uuid: Uuid) -> bool {
         let Some(pos) = self.sprites.iter().position(|x|x.uuid == sprite_uuid) else {
-            return Err(());
+            return false;
         };
         self.sprites.remove(pos);
-        Ok(())
+        true
     }
 }
 impl TopLevelSegment for LevelSpriteSet {
     fn compile(&self) -> Vec<u8> {
-        let mut comp: Vec<u8> = vec![];
-        for spr in &self.sprites {
-            let mut sprite_bytes = spr.compile();
-            comp.append(&mut sprite_bytes);
-        }
-        comp
+        self.sprites.iter().flat_map(|spr| spr.compile()).collect()
     }
     
     fn wrap(&self) -> Vec<u8> {

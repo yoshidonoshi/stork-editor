@@ -38,7 +38,7 @@ impl Compilable for CourseInfo {
     }
 }
 impl CourseInfo {
-    pub fn new(abs_path: &PathBuf, label: &str) -> Self {
+    pub fn new(abs_path: &PathBuf, label: String) -> Self {
         // It is uncompressed
         let file_bytes = match fs::read(abs_path) {
             Err(error) => {
@@ -121,10 +121,10 @@ impl CourseInfo {
             }
             let cscn: CourseMapInfo = CourseMapInfo {
                 map_music: cscn_music_id,
-                map_filename_noext: mpdz_name_noext.clone(),
+                label: format!("0x{:X}: {}",cscn_index,&mpdz_name_noext),
+                map_filename_noext: mpdz_name_noext,
                 map_entrances: cscn_entrance_vec,
                 map_exits: cscn_exit_vec,
-                label: format!("0x{:X}: {}",cscn_index,&mpdz_name_noext),
                 uuid: Uuid::new_v4()
             };
             cscn_vec.push(cscn); // Move it in
@@ -133,7 +133,7 @@ impl CourseInfo {
         let mut ret = CourseInfo {
             level_map_data: cscn_vec,
             src_filename: abs_path.to_str().unwrap_or("UNWRAP FAILURE").to_owned(),
-            label: label.to_string()
+            label,
         };
         ret.update_exit_uuids();
         ret
@@ -274,7 +274,7 @@ impl CourseInfo {
                         log_write(format!("Successfully copied '{}' to '{}'",source_file_path.display(),new_path.display()), LogLevel::Log);
                         let file_name_noext = new_file_name.replace(".mpdz", "");
                         // Now add the map to the data files
-                        let new_course = CourseMapInfo::from_template(&file_name_noext);
+                        let new_course = CourseMapInfo::from_template(file_name_noext);
                         self.fix_exits(); // Make sure everything is synced up before we add
                         self.level_map_data.push(new_course);
                         self.update_exit_uuids(); // Then fix the UUIDs (raws will be okay)
@@ -351,12 +351,7 @@ impl CourseMapInfo {
         segment_wrap(uncomped_bytes, "CSCN".to_owned())
     }
     pub fn get_entrance_index(&self, entrance_uuid: &Uuid) -> Option<u8> {
-        for (index, enter) in self.map_entrances.iter().enumerate() {
-            if enter.uuid == *entrance_uuid {
-                return Some(index as u8);
-            }
-        }
-        Option::None
+        self.map_entrances.iter().position(|enter| enter.uuid == *entrance_uuid).map(|i| i as u8)
     }
     pub fn get_exit(&mut self, uuid: &Uuid) -> Option<&mut MapExit> {
         self.map_exits.iter_mut().find(|x| x.uuid == *uuid)
@@ -417,13 +412,13 @@ impl CourseMapInfo {
         }
     }
 
-    pub fn from_template(name_no_ext: &str) -> Self {
+    pub fn from_template(name_no_ext: String) -> Self {
         CourseMapInfo {
             map_entrances: vec![MapEntrance::default()],
             map_exits: vec![MapExit::default()],
             map_music: 0,
-            map_filename_noext: name_no_ext.to_string(),
-            label: name_no_ext.to_string(),
+            map_filename_noext: name_no_ext.clone(),
+            label: name_no_ext,
             uuid: Uuid::new_v4()
         }
     }

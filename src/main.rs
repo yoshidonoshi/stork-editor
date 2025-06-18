@@ -10,10 +10,13 @@ use std::sync::{LazyLock, Mutex};
 
 use clap::Parser;
 use egui::Vec2;
-use gui::{gui::Gui, windows::saved_brushes::load_stored_brushes};
+use gui::gui::Gui;
 use log::LevelFilter;
 use utils::{log_write, LogLevel};
 
+use crate::load::initial_load;
+
+mod load;
 mod utils;
 mod engine;
 mod data;
@@ -63,15 +66,4 @@ fn main() -> eframe::Result {
             Ok(gui)
         })
     )
-}
-
-fn initial_load(gui: &mut Gui) {
-    if let Err(error) = gui.load_sprite_csv() {
-        // The software simply won't work without this. It shouldn't be possible
-        log_write(format!("Sprite database load error: '{error}'"), LogLevel::Fatal);
-    } else {
-        log_write("Sprite database loaded successfully", LogLevel::Log);
-    }
-    load_stored_brushes();
-    gui.display_engine.load_saved_brushes();
 }

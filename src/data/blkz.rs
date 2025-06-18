@@ -36,7 +36,7 @@ impl SoftRockBackdrop {
         let end_len = byte_data.len() as u64;
         while rdr.position() < end_len {
             let tile_short = rdr.read_u16::<LittleEndian>().expect("BLKZ tile read");
-            ret.tiles.push(MapTileRecordData::new(&tile_short));
+            ret.tiles.push(MapTileRecordData::new(tile_short));
         }
         let calced_len = (ret.width as usize) * (ret.height as usize);
         if calced_len != ret.tiles.len() {

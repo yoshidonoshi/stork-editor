@@ -5,7 +5,7 @@
 // Saving will require recompiling it and saving it
 //   back on top of the segment inside MapData
 
-use std::{fmt, io::{Cursor, Read}, path::Path};
+use std::{error::Error, fmt::{self, Display}, io::{Cursor, Read}, path::Path};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -15,8 +15,6 @@ use super::{scendata::{anmz::AnmzDataSegment, colz::CollisionData, imbz::ImbzDat
 
 #[derive(Debug,Clone,PartialEq,Default)]
 pub struct BackgroundData {
-    /// TODO: Get rid of this, only left in constructor
-    pub info_ro: ScenInfoData,
     /// This is used to offset map tile palette values during render
     pub _pal_offset: u8,
     /// Unedited, straight out of the data. Cache it once rendered
@@ -28,11 +26,30 @@ impl fmt::Display for BackgroundData {
         write!(f,"BackgroundData [ segments.len={}, ]",self.scen_segments.len())
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BackgroundDataError {
+    FailedToCreateINFO,
+    UnknownSCENSegment(String),
+    MismatchInLoadedSegments(usize, usize),
+}
+impl Display for BackgroundDataError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::FailedToCreateINFO => f.write_fmt(format_args!("Failed to create INFO")),
+            Self::UnknownSCENSegment(s) => f.write_fmt(format_args!("Unknown segment in SCEN: {s}")),
+            Self::MismatchInLoadedSegments(a, b) => f.write_fmt(format_args!("Mismatch in loaded segments versus load count: {a} vs {b}")),
+        }
+    }
+}
+impl Error for BackgroundDataError {}
+
 impl BackgroundData {
-    pub fn new(vec: &[u8], project_directory: &Path) -> Result<BackgroundData,String> {
+    pub fn new(vec: &[u8], project_directory: &Path) -> Result<BackgroundData, BackgroundDataError> {
         // Since the issue is commonly tied to a specific background, this should stick out
         log_write("> Creating SCEN...", LogLevel::Debug);
         let mut ret: BackgroundData = BackgroundData::default();
+        let mut info_store = ScenInfoData::default();
         let mut rdr = Cursor::new(vec);
         let file_end_pos: u64 = vec.len().try_into().unwrap();
         let mut test_load_count: usize = 0;
@@ -49,7 +66,7 @@ impl BackgroundData {
                     let info = match ScenInfoData::new(&mut rdr, seg_internal_length) {
                         Some(i) => i,
                         None => {
-                            return Err("Failed to create INFO".to_owned());
+                            return Err(BackgroundDataError::FailedToCreateINFO);
                         }
                     };
                     ret.scen_segments.push(ScenSegmentWrapper::INFO(info.clone()));
@@ -63,7 +80,7 @@ impl BackgroundData {
                             continue;
                         }
                     }
-                    ret.info_ro = info;
+                    info_store = info.clone();
                 }
                 "COLZ" => {
                     let mut compressed_buffer: Vec<u8> = vec![0;seg_internal_length as usize];
@@ -73,10 +90,10 @@ impl BackgroundData {
                 }
                 "PLTB" => {
                     let mut pal_vec: Vec<Palette> = Vec::new();
-                    if ret.info_ro.color_mode > 0x1 {
-                        log_write(format!("Warning: PLTB color mode {} may be poorly supported",ret.info_ro.color_mode), LogLevel::Warn);
+                    if info_store.color_mode > 0x1 {
+                        log_write(format!("Warning: PLTB color mode {} may be poorly supported",info_store.color_mode), LogLevel::Warn);
                     }
-                    if !ret.info_ro.is_256_colorpal_mode() {
+                    if !info_store.is_256_colorpal_mode() {
                         log_write("Loading PLTB with 16 color format", LogLevel::Debug);
                         // Palette in 16 mode: each is 16 colors * 2 bytes
                         let count_16: u32 = seg_internal_length / (16*2);
@@ -104,9 +121,9 @@ impl BackgroundData {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
                     let mp_decomp = lamezip77_lz10_decomp(&buffer);
-                    let mpbz = MapTileDataSegment::from_decomped_vec(&mp_decomp,ret.info_ro.layer_width);
+                    let mpbz = MapTileDataSegment::from_decomped_vec(&mp_decomp,info_store.layer_width);
                     // Probably get rid of this eventually, or only activate in debug mode
-                    mpbz.test_against_raw_decomp(Some(&ret.info_ro), &mp_decomp);
+                    mpbz.test_against_raw_decomp(Some(&info_store), &mp_decomp);
                     let mpbz_wrapped = ScenSegmentWrapper::MPBZ(mpbz);
                     ret.scen_segments.push(mpbz_wrapped);
                 }
@@ -168,9 +185,9 @@ impl BackgroundData {
                 _ => {
                     // I wrote a script to check every single one
                     // This should not be possible
-                    let unknown_seg = format!("Unknown segment in SCEN: '{}'",&seg_header_str);
-                    log_write(&unknown_seg, LogLevel::Error);
-                    return Err(unknown_seg);
+                    let error = BackgroundDataError::UnknownSCENSegment(seg_header_str);
+                    log_write(&error, LogLevel::Error);
+                    return Err(error);
                     // let mut _buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     // let _read_res = rdr.read_exact(&mut _buffer);
                 }
@@ -180,10 +197,10 @@ impl BackgroundData {
         // Apply ANMZ preview //
         if let Some(anmz_data) = ret.get_anmz().cloned() {
             let mut cur_vram_offset: usize = anmz_data.vram_offset as usize;
-            if ret.info_ro.color_mode > 0x1 {
+            if info_store.color_mode > 0x1 {
                 log_write("Color Modes above 1 may be poorly supported", LogLevel::Warn);
             }
-            if ret.info_ro.is_256_colorpal_mode() {
+            if info_store.is_256_colorpal_mode() {
                 cur_vram_offset *= 64;
             } else {
                 cur_vram_offset *= 32;
@@ -203,13 +220,12 @@ impl BackgroundData {
         }
 
         if ret.scen_segments.len() != test_load_count {
-            let mismatch_msg = format!("Mismatch in loaded segments versus load count: {} vs {}",
-                ret.scen_segments.len(),test_load_count);
+            let mismatch_msg = BackgroundDataError::MismatchInLoadedSegments(ret.scen_segments.len(),test_load_count);
             log_write(&mismatch_msg, LogLevel::Error);
             return Err(mismatch_msg);
         }
 
-        log_write(format!("> Created SCEN for background {}",ret.info_ro.which_bg), LogLevel::Debug);
+        log_write(format!("> Created SCEN for background {}",info_store.which_bg), LogLevel::Debug);
 
         Ok(ret)
     }
@@ -295,17 +311,17 @@ impl BackgroundData {
         Option::None
     }
 
-    pub fn increase_width(&mut self, new_width: u16) -> Result<u16,()> {
+    pub fn increase_width(&mut self, new_width: u16) -> Option<u16> {
         if new_width % 2 != 0 {
             log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width <= old_width {
             log_write(format!("Cannot increase, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
-            return Err(());
+            return None;
         }
         let how_much_add = new_width - old_width;
         if let Some(mpbz) = self.get_mpbz_mut() {
@@ -316,20 +332,20 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_width = new_width;
-        Ok(info.layer_width)
+        Some(info.layer_width)
     }
 
-    pub fn decrease_width(&mut self, new_width: u16) -> Result<u16,()> {
+    pub fn decrease_width(&mut self, new_width: u16) -> Option<u16> {
         if new_width % 2 != 0 {
             log_write(format!("Cannot make width odd (0x{:X})",new_width),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         log_write(format!("Changing width of layer to 0x{:X}",new_width),LogLevel::Log);
         let info_c = self.get_info().expect("INFO is always there");
         let old_width = info_c.layer_width;
         if new_width >= old_width {
             log_write(format!("Cannot decrease, new width vs old: {:X} vs {:X}",new_width,old_width), LogLevel::Error);
-            return Err(());
+            return None;
         }
         let how_much_remove = old_width - new_width;
         if let Some(mpbz) = self.get_mpbz_mut() {
@@ -340,16 +356,16 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_width = new_width;
-        Ok(info.layer_width)
+        Some(info.layer_width)
     }
 
-    pub fn change_height(&mut self, new_height: u16) -> Result<u16,()> {
+    pub fn change_height(&mut self, new_height: u16) -> Option<u16> {
         let info_c = self.get_info().expect("INFO is always there");
         let layer_width = info_c.layer_width;
 
         if new_height % 2 != 0 {
             log_write(format!("Cannot make height odd (0x{:X})",new_height),LogLevel::Warn);
-            return Err(());
+            return None;
         }
         if let Some(mpbz) = self.get_mpbz_mut() {
             mpbz.change_height(new_height, layer_width);
@@ -359,7 +375,7 @@ impl BackgroundData {
         }
         let info = self.get_info_mut().expect("Done earlier");
         info.layer_height = new_height;
-        Ok(info.layer_height)
+        Some(info.layer_height)
     }
 }
 

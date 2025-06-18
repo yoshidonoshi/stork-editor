@@ -1,35 +1,45 @@
-use std::{fmt::Display, path::{Path, PathBuf}};
+use std::{error::Error, fmt::Display, path::{Path, PathBuf}};
 
 use ds_rom::rom::{raw, Rom, RomLoadOptions};
 use crate::utils::{self, log_write, LogLevel};
 
 /// Only a placeholder for now
-pub struct RomExtractError {
-    pub cause: String
-}
-impl RomExtractError {
-    pub fn new(cause: &str) -> Self {
-        Self {
-            cause: cause.to_string()
-        }
-    }
+#[derive(Debug, Clone)]
+pub enum RomExtractError {
+    FailedToOpenRom(String),
+    FailedToExtractRom,
+    FailedToSaveExtractedRom,
+
+    LoadFileWithInvalidName(String),
+    ProjectFolderDoesntExist,
+
+    GenericFail,
 }
 impl Display for RomExtractError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Error extracting ROM: '{}'", &self.cause)
+        match self {
+            Self::FailedToOpenRom(path) => f.write_fmt(format_args!("Failed to open ROM file '{path}'")),
+            Self::FailedToExtractRom => f.write_str("Failed to extract ROM contents"),
+            Self::FailedToSaveExtractedRom => f.write_str("Failed to save extracted ROM contents"),
+
+            Self::LoadFileWithInvalidName(path) => f.write_fmt(format_args!("Attempted to load file with invalid name: '{path}'")),
+            Self::ProjectFolderDoesntExist => f.write_str("Project path failed existence check"),
+            Self::GenericFail => f.write_str("Open ROM failed"),
+        }
     }
 }
+impl Error for RomExtractError {}
 
 pub fn extract_rom_files(nds_file: &Path, output_dir: &Path) -> Result<PathBuf,RomExtractError> {
     let Ok(raw_rom) = raw::Rom::from_file(nds_file) else {
-        let open_fail = format!("Failed to open ROM file '{}'", &nds_file.display());
-        log_write(open_fail.clone(), utils::LogLevel::Error);
-        return Err(RomExtractError::new(&open_fail));
+        let open_fail = RomExtractError::FailedToOpenRom(nds_file.display().to_string());
+        log_write(&open_fail, utils::LogLevel::Error);
+        return Err(open_fail);
     };
     let Ok(rom) = Rom::extract(&raw_rom) else {
-        let extract_err = "Failed to extract ROM contents".to_string();
-        log_write(extract_err.clone(), utils::LogLevel::Error);
-        return Err(RomExtractError::new(&extract_err));
+        let extract_err = RomExtractError::FailedToExtractRom;
+        log_write(&extract_err, utils::LogLevel::Error);
+        return Err(extract_err);
     };
     match rom.save(output_dir, None) {
         Ok(_) => {
@@ -38,9 +48,9 @@ pub fn extract_rom_files(nds_file: &Path, output_dir: &Path) -> Result<PathBuf,R
             Ok(ret_dir)
         }
         Err(_) => {
-            let save_fail = "Failed to save extracted ROM contents".to_string();
-            log_write(save_fail.clone(), utils::LogLevel::Error);
-            Err(RomExtractError::new(&save_fail))
+            let save_fail = RomExtractError::FailedToSaveExtractedRom;
+            log_write(&save_fail, utils::LogLevel::Error);
+            Err(save_fail)
         }
     }
 }

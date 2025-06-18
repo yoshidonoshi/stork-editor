@@ -14,7 +14,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             if button_open_rom.clicked() {
                 ui.close_menu();
                 if let Err(error) = gui_state.do_open_rom() {
-                    gui_state.do_alert(&error.cause);
+                    gui_state.do_alert(error.to_string());
                 }
             }
             let button_open_project = ui.add_enabled(true, Button::new("Open Project..."));
@@ -122,14 +122,14 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
                     ui.close_menu();
                 } else if gui_state.display_engine.display_settings.current_layer == CurrentLayer::Collision {
                     if let Some(colz_layer) = gui_state.display_engine.loaded_map.get_bg_with_colz() {
-                        gui_state.do_alert(&format!("Cannot resize collision, as it is attached to the layer '{colz_layer}'"));
+                        gui_state.do_alert(format!("Cannot resize collision, as it is attached to the layer '{colz_layer}'"));
                     } else {
                         log_write("Could not get COLZ layer when attempting to open resize modal", LogLevel::Debug);
                     }
                     ui.close_menu();
                 } else {
                     let cur_layer = gui_state.display_engine.display_settings.current_layer;
-                    gui_state.do_alert(&format!("Cannot resize on layer '{:?}', dimensions controlled by BG layers",cur_layer));
+                    gui_state.do_alert(format!("Cannot resize on layer '{:?}', dimensions controlled by BG layers",cur_layer));
                 }
             }
         });
@@ -186,6 +186,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             gui_state.display_engine.current_brush.clear();
             gui_state.display_engine.clipboard.bg_clip.clear();
             gui_state.display_engine.bg_sel_data.clear();
+            gui_state.display_engine.selected_preview_tile = None;
         }
         egui::ComboBox::new(egui::Id::new("visible_layers_drop"), "")
             .selected_text("Visible layers")

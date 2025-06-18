@@ -12,8 +12,8 @@ use super::ScenSegment;
 pub struct ScenInfoData {
     pub layer_width: u16,
     pub layer_height: u16,
-    /// To save space on hundreds of blank tiles, manually shove it down (check me)
-    pub height_offset: u32,
+    pub x_offset_px: i16,
+    pub y_offset_px: i16,
     /// How fast the layer graphics move horizontally relative to Yoshi (0x1000 is matching)
     /// 
     /// Lower values move slower than Yoshi, higher values move faster than Yoshi
@@ -37,8 +37,8 @@ impl Default for ScenInfoData {
     fn default() -> Self {
         Self {
             layer_width: 0x0000, layer_height: 0x0000,
-            height_offset: 0xffff, x_scroll: 0x0000,
-            y_scroll: 0x0000, which_bg: 0xff,
+            x_offset_px: 0x0000, y_offset_px: 0x0000,
+            x_scroll: 0x0000, y_scroll: 0x0000, which_bg: 0xff,
             layer_order: 0xff, char_base_block: 0xff,
             screen_base_block: 0xff, color_mode: 0xff,
             imbz_filename_noext: Option::None }
@@ -53,7 +53,8 @@ impl ScenInfoData {
         let initial_position: u64 = rdr.position();
         let layer_width: u16 = utils::read_u16(rdr)?;
         let layer_height: u16 = utils::read_u16(rdr)?;
-        let height_offset: u32 = utils::read_u32(rdr)?;
+        let x_offset_px: i16 = utils::read_i16(rdr)?;
+        let y_offset_px: i16 = utils::read_i16(rdr)?;
         let x_scroll: u32 = utils::read_u32(rdr)?;
         let y_scroll: u32 = utils::read_u32(rdr)?;
         let which_bg: u8 = utils::read_u8(rdr)?;
@@ -77,7 +78,8 @@ impl ScenInfoData {
         Some(ScenInfoData {
             layer_width,
             layer_height,
-            height_offset,
+            x_offset_px,
+            y_offset_px,
             x_scroll,
             y_scroll,
             which_bg,
@@ -121,7 +123,8 @@ impl ScenSegment for ScenInfoData {
         let mut comp: Vec<u8> = vec![];
         let _ = comp.write_u16::<LittleEndian>(self.layer_width);
         let _ = comp.write_u16::<LittleEndian>(self.layer_height);
-        let _ = comp.write_u32::<LittleEndian>(self.height_offset);
+        let _ = comp.write_i16::<LittleEndian>(self.x_offset_px);
+        let _ = comp.write_i16::<LittleEndian>(self.y_offset_px);
         let _ = comp.write_u32::<LittleEndian>(self.x_scroll);
         let _ = comp.write_u32::<LittleEndian>(self.y_scroll);
         let _ = comp.write_u8(self.which_bg);
