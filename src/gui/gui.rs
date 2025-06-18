@@ -1062,7 +1062,10 @@ impl Gui {
             log_write(format!("No map tiles on layer {} when clearing",which_bg), LogLevel::Error);
             return;
         };
-        map_tiles.tiles.clear();
+        // If you do .clear it will break the tile flow
+        for x in &mut map_tiles.tiles {
+            *x = MapTileRecordData::new(0x0000);
+        }
         log_write(format!("Cleared map tiles for bg {}",which_bg), LogLevel::Log);
         self.display_engine.unsaved_changes = true;
         self.display_engine.graphics_update_needed = true;
