@@ -15,8 +15,6 @@ use super::{scendata::{anmz::AnmzDataSegment, colz::CollisionData, imbz::ImbzDat
 
 #[derive(Debug,Clone,PartialEq,Default)]
 pub struct BackgroundData {
-    /// TODO: Get rid of this, only left in constructor
-    pub info_ro: ScenInfoData,
     /// This is used to offset map tile palette values during render
     pub _pal_offset: u8,
     /// Unedited, straight out of the data. Cache it once rendered
@@ -51,6 +49,7 @@ impl BackgroundData {
         // Since the issue is commonly tied to a specific background, this should stick out
         log_write("> Creating SCEN...", LogLevel::Debug);
         let mut ret: BackgroundData = BackgroundData::default();
+        let mut info_store = ScenInfoData::default();
         let mut rdr = Cursor::new(vec);
         let file_end_pos: u64 = vec.len().try_into().unwrap();
         let mut test_load_count: usize = 0;
@@ -81,7 +80,7 @@ impl BackgroundData {
                             continue;
                         }
                     }
-                    ret.info_ro = info;
+                    info_store = info.clone();
                 }
                 "COLZ" => {
                     let mut compressed_buffer: Vec<u8> = vec![0;seg_internal_length as usize];
@@ -91,10 +90,10 @@ impl BackgroundData {
                 }
                 "PLTB" => {
                     let mut pal_vec: Vec<Palette> = Vec::new();
-                    if ret.info_ro.color_mode > 0x1 {
-                        log_write(format!("Warning: PLTB color mode {} may be poorly supported",ret.info_ro.color_mode), LogLevel::Warn);
+                    if info_store.color_mode > 0x1 {
+                        log_write(format!("Warning: PLTB color mode {} may be poorly supported",info_store.color_mode), LogLevel::Warn);
                     }
-                    if !ret.info_ro.is_256_colorpal_mode() {
+                    if !info_store.is_256_colorpal_mode() {
                         log_write("Loading PLTB with 16 color format", LogLevel::Debug);
                         // Palette in 16 mode: each is 16 colors * 2 bytes
                         let count_16: u32 = seg_internal_length / (16*2);
@@ -122,9 +121,9 @@ impl BackgroundData {
                     let mut buffer: Vec<u8> = vec![0;seg_internal_length as usize];
                     let _read_res = rdr.read_exact(&mut buffer);
                     let mp_decomp = lamezip77_lz10_decomp(&buffer);
-                    let mpbz = MapTileDataSegment::from_decomped_vec(&mp_decomp,ret.info_ro.layer_width);
+                    let mpbz = MapTileDataSegment::from_decomped_vec(&mp_decomp,info_store.layer_width);
                     // Probably get rid of this eventually, or only activate in debug mode
-                    mpbz.test_against_raw_decomp(Some(&ret.info_ro), &mp_decomp);
+                    mpbz.test_against_raw_decomp(Some(&info_store), &mp_decomp);
                     let mpbz_wrapped = ScenSegmentWrapper::MPBZ(mpbz);
                     ret.scen_segments.push(mpbz_wrapped);
                 }
@@ -198,10 +197,10 @@ impl BackgroundData {
         // Apply ANMZ preview //
         if let Some(anmz_data) = ret.get_anmz().cloned() {
             let mut cur_vram_offset: usize = anmz_data.vram_offset as usize;
-            if ret.info_ro.color_mode > 0x1 {
+            if info_store.color_mode > 0x1 {
                 log_write("Color Modes above 1 may be poorly supported", LogLevel::Warn);
             }
-            if ret.info_ro.is_256_colorpal_mode() {
+            if info_store.is_256_colorpal_mode() {
                 cur_vram_offset *= 64;
             } else {
                 cur_vram_offset *= 32;
@@ -226,7 +225,7 @@ impl BackgroundData {
             return Err(mismatch_msg);
         }
 
-        log_write(format!("> Created SCEN for background {}",ret.info_ro.which_bg), LogLevel::Debug);
+        log_write(format!("> Created SCEN for background {}",info_store.which_bg), LogLevel::Debug);
 
         Ok(ret)
     }

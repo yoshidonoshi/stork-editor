@@ -941,12 +941,7 @@ fn draw_background(
                             de.selected_preview_tile = Some(clicked_map_tile.tile_id as usize);
                             let mut adjusted_pal = clicked_map_tile.palette_id as i16 + layer._pal_offset as i16 + 1;
                             println!("16 Adjusted Palette: 0x{:X}",adjusted_pal);
-                            if adjusted_pal < 0 {
-                                adjusted_pal = 0;
-                            }
-                            if adjusted_pal >= 16 {
-                                adjusted_pal = 16;
-                            }
+                            adjusted_pal = adjusted_pal.clamp(0x0, 0xF);
                             // TODO: Scroll to it in the tiles window?
                             de.tile_preview_pal = adjusted_pal as usize;
                             de.needs_bg_tile_refresh = true;
