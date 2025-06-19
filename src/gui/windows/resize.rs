@@ -82,6 +82,8 @@ pub fn show_resize_modal(ui: &mut egui::Ui, de: &mut DisplayEngine, settings: &m
         }
         let button_ok = ui.add_enabled(okay_enabled, egui::Button::new("Okay"));
         if button_ok.clicked() {
+            // Prevent null incidents
+            de.selected_sprite_uuids = vec![];
             // Do update with mutable versions
             let Some(bg) = de.loaded_map.get_background(de.display_settings.current_layer as u8) else {
                 log_write("Failed to get BG in resize modal resizing", LogLevel::Error);

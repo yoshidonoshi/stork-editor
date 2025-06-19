@@ -16,9 +16,16 @@ pub fn sprite_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             strip.cell(|ui| {
                 let sprites_len = gui_state.display_engine.selected_sprite_uuids.len();
                 if sprites_len == 1 {
-                    let sprite = &gui_state.display_engine.loaded_map
-                        .get_sprite_by_uuid(gui_state.display_engine.selected_sprite_uuids[0])
-                        .expect("Selected sprite UUID should exist on panel");
+                    let Some(sprite) = &gui_state.display_engine.loaded_map
+                        .get_sprite_by_uuid(gui_state.display_engine.selected_sprite_uuids[0]) else {
+                            log_write(format!("Attempted to retrieve Sprite {} for panel, but it did not exist",
+                            gui_state.display_engine.selected_sprite_uuids[0]), LogLevel::Error
+                        );
+                            // Reset it
+                            gui_state.display_engine.selected_sprite_uuids = vec![];
+                            gui_state.display_engine.graphics_update_needed = true;
+                            return;
+                        };
                     let Some(sprite_meta) = SPRITE_METADATA.get(&sprite.object_id) else {
                         log_write(format!("Failed to get sprite_meta for ID 0x{:X} on panel",&sprite.object_id), LogLevel::Error);
                         return;
