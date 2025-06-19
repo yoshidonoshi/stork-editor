@@ -193,7 +193,6 @@ pub fn show_saved_brushes_window(ui: &mut egui::Ui, de: &mut DisplayEngine) {
             if brush_export_button.clicked() {
                 save_brushes_to_file(&de.saved_brushes);
             }
-            ui.disable();
             let brush_load_button = ui.button("Load Brushes JSON");
             if brush_load_button.clicked() {
                 de.load_saved_brushes();
