@@ -408,6 +408,7 @@ impl Gui {
         self.display_engine.brush_settings.cur_selected_brush = Option::None;
         self.display_engine.current_brush.clear();
         self.display_engine.selected_preview_tile = None;
+        self.undoer = Undoer::default(); // Contains references to the map
     }
     pub fn do_change_map(&mut self) {
         if self.display_engine.unsaved_changes {
