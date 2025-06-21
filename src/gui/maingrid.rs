@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use egui::{Align2, Color32, ColorImage, Context, FontId, Image, Painter, Pos2, Rect, Response, Stroke, Vec2};
 use uuid::Uuid;
 
-use crate::{data::{area::{AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, backgrounddata::BackgroundData, path::PathPoint, scendata::colz::{self, draw_collision}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{self, log_write, LogLevel}};
+use crate::{data::{area::{AREA_RECT_COLOR, AREA_RECT_COLOR_SELECTED}, path::PathPoint, scendata::colz::{self, draw_collision}, sprites::{draw_sprite, LevelSprite}, types::{get_cached_texture, set_cached_texture, CurrentLayer, MapTileRecordData, Palette, TileCache}}, engine::displayengine::DisplayEngine, utils::{self, log_write, LogLevel}};
 
 const TILE_WIDTH_PX: f32 = 8.0;
 const TILE_HEIGHT_PX: f32 = 8.0;
@@ -502,10 +502,9 @@ fn draw_sprites(ui: &mut egui::Ui, de: &mut DisplayEngine, vrect: &Rect) {
     let top_left: Pos2 = ui.min_rect().min;
     let mut update_map: bool = false;
     // If this always fires, it will block COLZ clicks
-    let mut click_fallback_response: Option<Response> = Option::None;
-    if de.display_settings.current_layer == CurrentLayer::Sprites {
-        click_fallback_response = Some(ui.interact(ui.min_rect(), egui::Id::new("sprite_click_fallback"), egui::Sense::click()));
-    }
+    let click_fallback_response: Option<Response> = (de.display_settings.current_layer == CurrentLayer::Sprites).then(||
+        ui.interact(ui.min_rect(), egui::Id::new("sprite_click_fallback"), egui::Sense::click())
+    );
     // It's one way, don't mutable borrow
     let sprite_list: Vec<LevelSprite> = de.level_sprites.clone();
     for level_sprite in sprite_list {
@@ -673,28 +672,15 @@ fn draw_background(
     let rightmost_tile = vrect.right() / TILE_WIDTH_PX;
     let uppermost_tile = vrect.top() / TILE_HEIGHT_PX;
     let bottommost_tile = vrect.bottom() / TILE_HEIGHT_PX;
-    #[allow(unused_assignments)] // Unknown why this is needed
-    let mut bg_layer_opt: Option<&BackgroundData> = Option::None;
-    #[allow(unused_assignments)] // Same here
-    let mut tc: Option<&mut TileCache> = Option::None;
-    match whichbg {
-        1 => {
-            bg_layer_opt = de.bg_layer_1.as_ref();
-            tc = Some(&mut de.tile_cache_bg1);
-        }
-        2 => {
-            bg_layer_opt = de.bg_layer_2.as_ref();
-            tc = Some(&mut de.tile_cache_bg2);
-        }
-        3 => {
-            bg_layer_opt = de.bg_layer_3.as_ref();
-            tc = Some(&mut de.tile_cache_bg3);
-        }
+    let (bg_layer_opt, tilecache) = match whichbg {
+        1 => (de.bg_layer_1.as_ref(), &mut de.tile_cache_bg1),
+        2 => (de.bg_layer_2.as_ref(), &mut de.tile_cache_bg2),
+        3 => (de.bg_layer_3.as_ref(), &mut de.tile_cache_bg3),
         _ => {
             log_write(format!("Unusual whichbg value in draw_background: '{}'",whichbg), LogLevel::Error);
             return;
         }
-    }
+    };
     if let Some(layer) = bg_layer_opt {
         let info = layer.get_info().expect("INFO is guaranteed in SCENs");
         let is_selected_layer: bool = (de.display_settings.current_layer as u8) == whichbg;
@@ -778,25 +764,22 @@ fn draw_background(
                     }
                     let is_cur_lay_bg = de.display_settings.is_cur_layer_bg();
                     let dim = (!is_selected_layer && is_cur_lay_bg) || de.display_settings.current_layer == CurrentLayer::Collision;
-                    if let Some(tilecache) = &mut tc {
-                        if !info.is_256_colorpal_mode() {
-                            draw_tile_16(
-                                map_tile, cur_pal, ctx, pixel_tiles,
-                                painter, tilecache,
-                                &true_tile_rect, selected,dim);
-                        } else if let Some(pltb) = layer.get_pltb() {
-                            if pltb.palettes.is_empty() {
-                                log_write("PLTB palettes were empty when trying to draw 256 tile!".to_owned(), LogLevel::Error);
-                            } else {
-                                draw_tile_256(
-                                    map_tile, &pltb.palettes[0], ctx,
-                                    pixel_tiles, painter, tilecache,
-                                    &true_tile_rect, selected, dim);
-                            }
+                    if !info.is_256_colorpal_mode() {
+                        draw_tile_16(
+                            map_tile, cur_pal, ctx, pixel_tiles,
+                            painter, tilecache,
+                            &true_tile_rect, selected,dim);
+                    } else if let Some(pltb) = layer.get_pltb() {
+                        if pltb.palettes.is_empty() {
+                            log_write("PLTB palettes were empty when trying to draw 256 tile!".to_owned(), LogLevel::Error);
                         } else {
-                            log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::Error);
+                            draw_tile_256(
+                                map_tile, &pltb.palettes[0], ctx,
+                                pixel_tiles, painter, tilecache,
+                                &true_tile_rect, selected, dim);
                         }
-                        
+                    } else {
+                        log_write(format!("Failed to find PLTB data for tile drawing on bg '{}'",info.which_bg), LogLevel::Error);
                     }
                     // Draw lines to show true edges of layers //
                     if tile_y as u32 == info.layer_height as u32 - 1 {

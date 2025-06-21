@@ -1293,10 +1293,9 @@ impl eframe::App for Gui {
                     .auto_shrink([false,false])
                     .drag_to_scroll(false)
                     .show_viewport(ui, |ui,viewport_rect| {
-                        if let Some(scroll_to) = self.scroll_to {
+                        if let Some(scroll_to) = self.scroll_to.take() {
                             let real_pos = ui.min_rect().left_top() + scroll_to.to_vec2();
                             ui.scroll_to_rect(Rect::from_min_size(real_pos, Vec2::new(10.0, 10.0)), Some(Align::Center));
-                            self.scroll_to = Option::None;
                         }
                         if self.project_open {
                             render_primary_grid(ui, &mut self.display_engine, &viewport_rect);
