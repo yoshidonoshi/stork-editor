@@ -694,7 +694,7 @@ fn draw_background(
         }
         let mut true_grid_rect = ui.min_rect();
         if info.x_offset_px != 0 || info.y_offset_px != 0 {
-            true_grid_rect = true_grid_rect.translate(Vec2::new((info.x_offset_px * -1) as f32, (info.y_offset_px * -1) as f32));
+            true_grid_rect = true_grid_rect.translate(Vec2::new(-info.x_offset_px as f32, -info.y_offset_px as f32));
         }
         let mut temp_selected_indexes: Vec<u32> = Vec::new();
         // MAP TILES //
