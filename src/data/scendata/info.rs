@@ -62,10 +62,7 @@ impl ScenInfoData {
         let char_base_block: u8 = utils::read_u8(rdr)?;
         let screen_base_block: u8 = utils::read_u8(rdr)?;
         let color_mode: u32 = utils::read_u32(rdr)?;
-        let mut imbz_filename_noext: Option<String> = Option::None;
-        if internal_length > 0x18 {
-            imbz_filename_noext = Some(utils::read_c_string(rdr));
-        }
+        let imbz_filename_noext: Option<String> = (internal_length > 0x18).then(|| utils::read_c_string(rdr));
         let after_position: u64 = rdr.position();
         let mut read_length = after_position - initial_position;
         if read_length % 4 != 0 {
