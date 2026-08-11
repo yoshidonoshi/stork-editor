@@ -1,3 +1,5 @@
+NOTICE: This has migrated to [Codeberg](https://codeberg.org/yoshidonoshi/stork-editor)
+
 Stork Editor  
 [![Build Status]][actions] [![Discord Badge]][discord] 
 =============
