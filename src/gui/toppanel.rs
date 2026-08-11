@@ -1,4 +1,4 @@
-use crate::{data::{course_file::CourseInfo, mapfile::MapData, types::CurrentLayer}, engine::displayengine::GameVersion, utils::{self, log_write, LogLevel}};
+use crate::{data::{course_file::CourseInfo, mapfile::MapData, types::CurrentLayer}, engine::displayengine::GameVersion, gui::modal::*, utils::{self, log_write, LogLevel}};
 
 use super::gui::Gui;
 use egui::Button;
@@ -42,7 +42,7 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             let button_export = ui.add_enabled(gui_state.project_open, Button::new("Export..."));
             if button_export.clicked() {
                 ui.close_menu();
-                gui_state.do_export();
+                gui_state.do_export(false);
             }
             ui.separator();
             let button_project_settings = ui.add_enabled(gui_state.project_open, Button::new("Settings"));
@@ -111,14 +111,16 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
             ui.separator();
             let button_clear = ui.button("Clear Layer");
             if button_clear.clicked() {
-                gui_state.clear_modal_open = true;
+                *CLEAR_MODAL.lock() = Some(Default::default());
                 ui.close_menu();
             }
             let button_resize = ui.button("Resize layer");
             if button_resize.clicked() {
                 if gui_state.display_engine.display_settings.is_cur_layer_bg() {
-                    gui_state.resize_settings.reset_needed = true;
-                    gui_state.resize_settings.window_open = true;
+                    *RESIZE_MODAL.lock() = Some(ResizeData {
+                        reset_needed: true,
+                        ..Default::default()
+                    });
                     ui.close_menu();
                 } else if gui_state.display_engine.display_settings.current_layer == CurrentLayer::Collision {
                     if let Some(colz_layer) = gui_state.display_engine.loaded_map.get_bg_with_colz() {
@@ -146,17 +148,17 @@ pub fn top_panel_show(ui: &mut egui::Ui, gui_state: &mut Gui) {
         ui.menu_button("Help", |ui| {
             let button_about = ui.button("About");
             if button_about.clicked() {
-                gui_state.about_modal_open = true;
+                *ABOUT_MODAL.lock() = Some(Default::default());
                 ui.close_menu();
             }
             let button_report = ui.button("Report Bug");
             if button_report.clicked() {
-                gui_state.bug_report_modal_open = true;
+                *BUG_REPORT_MODAL.lock() = Some(Default::default());
                 ui.close_menu();
             }
             let button_help = ui.button("Help");
             if button_help.clicked() {
-                gui_state.help_modal_open = true;
+                *HELP_MODAL.lock() = Some(Default::default());
                 ui.close_menu();
             }
             if utils::is_debug() {

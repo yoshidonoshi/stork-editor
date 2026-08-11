@@ -1,15 +1,13 @@
 use std::{fmt, fs::{self, DirEntry, File}, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
 
-use egui::{util::undoer::Undoer, Align, ColorImage, Hyperlink, Id, Key, KeyboardShortcut, Modal, Modifiers, Pos2, ProgressBar, Rect, ScrollArea, TextureHandle, Vec2, Widget};
+use egui::{util::undoer::Undoer, Align, ColorImage, Key, KeyboardShortcut, Modifiers, Pos2, Rect, ScrollArea, TextureHandle, Vec2};
 use rfd::FileDialog;
 use strum::EnumIter;
 use uuid::Uuid;
 
-use crate::{data::{mapfile::MapData, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, utils::{self, bytes_to_hex_string, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
+use crate::{data::{mapfile::MapData, types::{wipe_tile_cache, CurrentLayer, MapTileRecordData, Palette}}, engine::{displayengine::{get_gameversion_prettyname, BgClipboardSelectedTile, DisplayEngine, DisplayEngineError, GameVersion}, filesys::{self, RomExtractError}}, gui::modal::*, utils::{bytes_to_hex_string, color_image_from_pal, generate_bg_tile_cache, get_backup_folder, get_template_folder, get_x_pos_of_map_index, get_y_pos_of_map_index, log_write, xy_to_index, LogLevel}, NON_MAIN_FOCUSED};
 
-use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, resize::{show_resize_modal, ResizeSettings}, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+use super::{maingrid::render_primary_grid, sidepanel::side_panel_show, spritepanel::sprite_panel_show, toppanel::top_panel_show, windows::{brushes::show_brushes_window, col_win::collision_tiles_window, course_win::show_course_settings_window, map_segs::show_map_segments_window, palettewin::palette_window_show, paths_win::show_paths_window, saved_brushes::show_saved_brushes_window, scen_segs::show_scen_segments_window, settings::stork_settings_window, sprite_add::sprite_add_window_show, tileswin::tiles_window_show, triggers::show_triggers_window}};
 
 #[derive(Clone,Copy,PartialEq,Eq,EnumIter)]
 pub enum StorkTheme {
@@ -162,33 +160,12 @@ pub struct Gui {
     pub area_window_open: bool,
     pub mpdz_window_open: bool,
     pub scen_window_open: bool,
-    // Modals
-    pub exit_changes_open: bool,
-    pub saving_progress: Option<f32>,
-    pub quit_when_saving_done: bool,
-    pub exporting_progress: Option<f32>,
-    pub exporting_to: String,
-    pub export_changes_open: bool,
-    pub export_when_saving_done: bool,
-    pub change_course_open: bool,
-    pub general_alert_popup: Option<String>,
-    pub change_level_world_index: u32,
-    pub change_level_level_index: u32,
-    pub change_course_unsaved_changes_show: bool,
-    pub change_map_unsaved_changes_show: bool,
-    pub change_map_open: bool,
-    pub map_change_selected_map: String,
     pub cur_level: u32,
     pub cur_world: u32,
-    pub about_modal_open: bool,
-    pub bug_report_modal_open: bool,
-    pub clear_modal_open: bool,
-    pub help_modal_open: bool,
     /// This should be stored in Gui
     pub display_engine: DisplayEngine,
     pub project_open: bool,
     pub export_directory: PathBuf, // Not yet fully mutable
-    pub resize_settings: ResizeSettings,
     pub settings_open: bool,
     // Tile preview caching
     // pub needs_bg_tile_refresh: bool, in DisplayEngine
@@ -215,33 +192,13 @@ impl Default for Gui {
             scen_window_open: false,
             project_open: false,
             export_directory: PathBuf::new(), // Not yet fully mutable
-            resize_settings: ResizeSettings::default(),
             settings_open: false,
             display_engine: DisplayEngine::default(),
             bg1_tile_preview_cache: Vec::new(),
             bg2_tile_preview_cache: Vec::new(),
             bg3_tile_preview_cache: Vec::new(),
-            exit_changes_open: false,
-            saving_progress: Option::None,
-            quit_when_saving_done: false,
-            exporting_progress: Option::None,
-            exporting_to: String::from("ERROR"),
-            export_changes_open: false,
-            export_when_saving_done: false,
-            change_course_open: false,
-            general_alert_popup: Option::None,
-            change_level_world_index: 0,
-            change_level_level_index: 0,
             cur_level: 0,
             cur_world: 0,
-            change_course_unsaved_changes_show: false,
-            change_map_unsaved_changes_show: false,
-            change_map_open: false,
-            map_change_selected_map: String::from(""),
-            about_modal_open: false,
-            bug_report_modal_open: false,
-            clear_modal_open: false,
-            help_modal_open: false,
             undoer: Undoer::default(),
             scroll_to: Option::None
         }
@@ -266,7 +223,7 @@ impl Gui {
     }
     pub fn do_alert(&mut self, alert_text: String) {
         log_write(format!("Launching alert window with message '{}'",alert_text), LogLevel::Debug);
-        self.general_alert_popup = Some(alert_text);
+        *ALERT_MODAL.lock() = Some(AlertData {alert: alert_text });
     }
     fn open_project(&mut self, path: PathBuf) {
         log_write(format!("Opening Project at '{}'",path.display()), LogLevel::Log);
@@ -324,7 +281,7 @@ impl Gui {
         }
     }
     pub fn do_save(&mut self) {
-        self.saving_progress = Some(0.0);
+        *SAVING_MODAL.lock() = Some(SavingData { progress: 0.0, ..Default::default() });
     }
     pub fn do_undo(&mut self) {
         if let Some(map_state) = self.undoer.undo(&self.display_engine.loaded_map) {
@@ -342,21 +299,23 @@ impl Gui {
             self.display_engine.graphics_update_needed = true;
         }
     }
-    pub fn do_export(&mut self) {
-        if self.display_engine.unsaved_changes {
-            self.export_changes_open = true;
+    pub fn do_export(&mut self, force_export: bool) {
+        if self.display_engine.unsaved_changes && !force_export {
+            *EXPORT_CHANGE_MODAL.lock() = Some(Default::default());
         } else {
             if let Some(path) = FileDialog::new().set_title("Export NDS ROM").set_file_name("rom.nds").save_file() {
-                self.exporting_to = path.display().to_string();
-                self.exporting_progress = Some(0.0);
+                *EXPORTING_MODAL.lock() = Some(ExportingData {
+                    progress: 0.0,
+                    exporting_to: path.display().to_string(),
+                });
             }
         }
     }
     pub fn do_change_course(&mut self) {
         if self.display_engine.unsaved_changes {
-            self.change_course_unsaved_changes_show = true;
+            *COURSE_CHANGES_MODAL.lock() = Some(Default::default());
         } else {
-            self.change_course_open = true;
+            *CHANGE_COURSE_MODAL.lock() = Some(ChangeCourseData { ..Default::default() });
         }
     }
     pub fn change_level(&mut self, world_index: u32, level_index: u32) {
@@ -412,9 +371,9 @@ impl Gui {
     }
     pub fn do_change_map(&mut self) {
         if self.display_engine.unsaved_changes {
-            self.change_map_unsaved_changes_show = true;
+            *MAP_CHANGES_MODAL.lock() = Some(Default::default());
         } else {
-            self.change_map_open = true;
+            *CHANGE_MAP_MODAL.lock() = Some(Default::default());
         }
     }
     pub fn change_map(&mut self, map_index: u32) {
@@ -434,7 +393,7 @@ impl Gui {
             self.do_alert(format!("Found unhandled map segments {}. Do not save!",segments_str));
         }
     }
-    fn save_map(&mut self) {
+    pub fn save_map(&mut self) {
         log_write("Saving Map file", LogLevel::Debug);
         let file_name_ext: String = self.display_engine.loaded_map.src_file.clone();
         let _backup_res = self.backup_map();
@@ -472,7 +431,7 @@ impl Gui {
         Some(backup_folder)
     }
 
-    fn save_course(&mut self) {
+    pub fn save_course(&mut self) {
         let file_name_ext = self.display_engine.loaded_course.src_filename.clone();
         log_write(format!("Saving Course file '{}'",&file_name_ext), LogLevel::Log);
         let packed_level_file = self.display_engine.loaded_course.wrap();
@@ -1021,7 +980,7 @@ impl Gui {
         }
     }
 
-    fn do_clear_layer(&mut self) {
+    pub fn do_clear_layer(&mut self) {
         log_write(format!("Clearing layer {:?}",&self.display_engine.display_settings.current_layer),LogLevel::Log);
         match self.display_engine.display_settings.current_layer {
             CurrentLayer::BG1 => self.clear_bg_layer(1),
@@ -1090,7 +1049,7 @@ impl eframe::App for Gui {
         if ctx.input(|i| i.viewport().close_requested())  {
             if self.display_engine.unsaved_changes {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                self.exit_changes_open = true;
+                *CLOSE_CHANGES_MODAL.lock() = Some(Default::default());
             } else {
                 self.exit(ctx);
             }
@@ -1303,351 +1262,9 @@ impl eframe::App for Gui {
                         }
                     });
             });
+
         // Modals //
-        if self.resize_settings.window_open {
-            let _resize_modal = Modal::new(Id::new("resize_modal"))
-                .show(ctx, |ui| {
-                    show_resize_modal(ui, &mut self.display_engine, &mut self.resize_settings);
-                });
-        }
-        self.general_alert_popup.take_if(|alert| {
-            let alert_modal = Modal::new(Id::new("alert_modal"))
-                .show(ctx, |ui| {
-                    ui.set_width(200.0);
-                    ui.heading("Alert");
-                    ui.label(alert.as_str());
-                    ui.button("Okay").clicked()
-                });
-            alert_modal.inner
-        });
-        if self.exit_changes_open {
-            let _save_modal = Modal::new(Id::new("close_changes_modal"))
-                .show(ctx, |ui| {
-                    ui.set_width(200.0);
-                    ui.heading("Save Changes?");
-                    ui.label("You have unsaved changes, do you want to save before you exit?");
-                    ui.horizontal(|ui| {
-                        if ui.button("Cancel").clicked() {
-                            self.exit_changes_open = false;
-                        }
-                        if ui.button("Discard").clicked() {
-                            self.exit_changes_open = false;
-                            self.display_engine.unsaved_changes = false; // So it can actually close
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                        if ui.button("Save").clicked() {
-                            self.quit_when_saving_done = true;
-                            self.saving_progress = Some(0.0);
-                        }
-                    });
-                });
-        }
-        if self.export_changes_open {
-            let _export_change_modal = Modal::new(Id::new("export_changes_modal"))
-                .show(ctx, |ui| {
-                    ui.set_width(200.0);
-                    ui.heading("Save Changes?");
-                    ui.label("You have unsaved changes, do you want to save before export?");
-                    ui.horizontal(|ui| {
-                        if ui.button("Cancel").clicked() {
-                            self.export_changes_open = false;
-                        }
-                        if ui.button("Continue").clicked() {
-                            self.exporting_progress = Some(0.0);
-                            self.export_changes_open = false;
-                        }
-                        if ui.button("Save and Continue").clicked() {
-                            self.export_when_saving_done = true;
-                            self.saving_progress = Some(0.0);
-                            self.export_changes_open = false;
-                        }
-                    });
-                });
-        }
-        if let Some(exporting_progress) = self.exporting_progress {
-            egui::Modal::new(Id::new("exporting_modal")).show(ctx, |ui| {
-                ui.set_width(200.0);
-                ui.heading("Exporting ROM...");
-                ui.label("This may take time, please wait");
-                ProgressBar::new(exporting_progress).ui(ui);
-                self.exporting_progress = Some(exporting_progress + 0.1);
-                ctx.request_repaint();
-                if exporting_progress == 0.4 {
-                    // Do the actaul export here
-                    self.export_rom_file(self.exporting_to.clone());
-                }
-                if exporting_progress >= 1.0 {
-                    self.exporting_progress = Option::None;
-                }
-            });
-        }
-        if let Some(saving_progress) = self.saving_progress {
-            egui::Modal::new(Id::new("saving_modal")).show(ctx, |ui| {
-                ui.set_width(70.0);
-                ui.heading("Saving...");
-                ProgressBar::new(saving_progress).ui(ui);
-                if saving_progress == 0.0 {
-                    ctx.request_repaint();
-                }
-                if saving_progress == 0.4 {
-                    self.save_map();
-                    self.save_course();
-                }
-                if saving_progress >= 1.0 {
-                    self.saving_progress = Option::None;
-                    self.display_engine.unsaved_changes = false;
-                    if self.quit_when_saving_done {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                    if self.export_when_saving_done {
-                        self.export_when_saving_done = false;
-                        self.do_export();
-                    }
-                } else {
-                    self.saving_progress = Some(saving_progress + 0.2);
-                }
-            });
-        }
-        if self.change_course_unsaved_changes_show {
-            let _export_change_modal = Modal::new(Id::new("course_changes_modal"))
-            .show(ctx, |ui| {
-                ui.set_width(200.0);
-                ui.heading("Save Changes?");
-                ui.label("You have unsaved changes, do you want to save before changing Course?");
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.change_course_unsaved_changes_show = false;
-                    }
-                    if ui.button("Continue").clicked() {
-                        self.change_course_unsaved_changes_show = false;
-                        self.change_course_open = true;
-                    }
-                    if ui.button("Save and Continue").clicked() {
-                        self.change_course_unsaved_changes_show = false;
-                        self.change_course_open = true;
-                        self.do_save();
-                    }
-                });
-            });   
-        }
-        if self.change_map_unsaved_changes_show {
-            let _export_change_modal = Modal::new(Id::new("map_changes_modal"))
-            .show(ctx, |ui| {
-                ui.set_width(200.0);
-                ui.heading("Save Changes?");
-                ui.label("You have unsaved changes, do you want to save before changing map?");
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.change_map_unsaved_changes_show = false;
-                    }
-                    if ui.button("Continue").clicked() {
-                        self.change_map_unsaved_changes_show = false;
-                        self.change_map_open = true;
-                    }
-                    if ui.button("Save and Continue").clicked() {
-                        self.change_map_unsaved_changes_show = false;
-                        self.change_map_open = true;
-                        self.do_save();
-                    }
-                });
-            });  
-        }
-        if self.change_map_open {
-            egui::Modal::new(Id::new("map_change_modal")).show(ctx, |ui| {
-                ui.heading("Select map");
-                ui.set_width(150.0);
-
-                let crsb = self.display_engine.loaded_course.level_map_data.clone();
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    for (map_index, map) in crsb.iter().enumerate() {
-                        let mut but = ui.button(&map.map_filename_noext);
-                        if map.map_filename_noext == self.display_engine.loaded_map.map_name {
-                            but = but.highlight();
-                        }
-                        if but.clicked() {
-                            // Since the targeting is done via GUI, but accesses the saved data
-                            self.save_course();
-                            // This is to be used once support for ALL map selection is working
-                            self.map_change_selected_map = map.map_filename_noext.clone();
-                            self.change_map(map_index as u32);
-                            self.change_map_open = false;
-                        }
-                    }
-                });
-                
-                // let _map_change_selected_map = egui::ComboBox::from_label("")
-                //     .selected_text(format!("{}",&self.map_change_selected_map))
-                //     .show_ui(ui, |ui| {
-                //         // Get the paths
-                //         let read_res = fs::read_dir(nitrofs_abs(&self.display_engine.export_folder, &"".to_owned()));
-                //         if read_res.is_err() {
-                //             log_write(format!("Failed to read export directory: '{}'",read_res.unwrap_err()), LogLevel::disable);
-                //             return;
-                //         }
-                //         let paths = read_res.unwrap();
-                //         // Loop
-                //         for path in paths {
-                //             if path.is_err() {
-                //                 log_write(format!("Failed to unwrap path in map change: '{}'",path.unwrap_err()), LogLevel::Error);
-                //             } else {
-                //                 let path = path.unwrap();
-                //                 if path.path().is_dir() {
-                //                     continue;
-                //                 }
-                //                 if path.path().extension().expect("Extension should exist").to_str().expect("its a goddamn string") == "mpdz" {
-                //                     let label = path.file_name().into_string().unwrap_or(format!("ERROR"));
-                //                     ui.selectable_value(&mut self.map_change_selected_map, label.clone(), &label);
-                //                 }
-                //             }
-                //         }
-
-                //     });
-
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.change_map_open = false;
-                    }
-                });
-            });
-        }
-        if self.change_course_open {
-            egui::Modal::new(Id::new("course_change_modal")).show(ctx, |ui| {
-                ui.heading("Select a Course");
-                ui.set_width(150.0);
-                // World Selection //
-                let _combo_world = egui::ComboBox::new(
-                    egui::Id::new("change_level_world"), "World")
-                    .selected_text(format!("{}",self.change_level_world_index+1))
-                    .show_ui(ui, |ui| {
-                        for x in 0..5_u32 {
-                            ui.selectable_value(&mut self.change_level_world_index, x, (x+1).to_string());                          
-                        }
-                    });
-                let _combo_level = egui::ComboBox::new(
-                    egui::Id::new("change_level_level"), "Level")
-                    .selected_text(format!("{}",self.change_level_level_index+1))
-                    .show_ui(ui, |ui| {
-                        for y in 0..10_u32 {
-                            ui.selectable_value(&mut self.change_level_level_index, y, (y+1).to_string());
-                        }
-                    });
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.change_course_open = false;
-                    }
-                    if ui.button("Okay").clicked() {
-                        self.change_course_open = false;
-                        self.change_level(self.change_level_world_index, self.change_level_level_index);
-                    }
-                });
-            });
-        }
-        if self.about_modal_open {
-            let about_modal = Modal::new(egui::Id::new("about_modal"));
-            about_modal.show(ctx, |ui| {
-                ui.heading(format!("Stork {}",VERSION));
-                ui.label("A ROM-hacking tool for Yoshi's Island DS");
-                ui.label("Created by YoshiDonoshi/Zolarch");
-                ui.add(Hyperlink::from_label_and_url("Source Code", env!("GITHUB_REPO")));
-                ui.vertical_centered(|ui| {
-                    let about_close_button = ui.button("Close");
-                    if about_close_button.clicked() {
-                        self.about_modal_open = false;
-                    }
-                });
-            });
-        }
-        if self.bug_report_modal_open {
-            let bug_modal = Modal::new(egui::Id::new("bug_report_modal"));
-            bug_modal.show(ctx, |ui| {
-                ui.heading("Report a Bug");
-                ui.label("The best place to report a bug or request features is on the Github:");
-                ui.hyperlink(env!("GITHUB_REPO"));
-                ui.label(format!("Please include your stork.log and version ({})",VERSION));
-                ui.label("You can do the same on Discord, with more timely help and answers:");
-                ui.hyperlink(env!("DISCORD"));
-                ui.label("If those links has stopped working, find the thread here:");
-                ui.hyperlink(env!("SMWC_FORUM"));
-                ui.label("Thanks for helping to improve this tool!");
-                ui.vertical_centered(|ui| {
-                    let bug_report_close_button = ui.button("Close");
-                    if bug_report_close_button.clicked() {
-                        self.bug_report_modal_open = false;
-                    }
-                });
-            });
-        }
-        if self.clear_modal_open {
-            let clear_modal = Modal::new(egui::Id::new("clear_all_modal"));
-            clear_modal.show(ctx, |ui| {
-                ui.heading("Clear Layer");
-                ui.label(format!("This will delete everything on the current layer ({:?})",&self.display_engine.display_settings.current_layer));
-                ui.label("Are you sure?");
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.clear_modal_open = false;
-                    }
-                    if ui.button("Clear Layer").clicked() {
-                        self.do_clear_layer();
-                        self.clear_modal_open = false;
-                    }
-                });
-            });
-        }
-        if self.help_modal_open {
-            let help_modal = Modal::new(egui::Id::new("help_modal"));
-            help_modal.show(ctx, |ui| {
-                ui.heading("Help");
-                ui.label("First, check out the documentation and FAQ:");
-                ui.hyperlink(env!("DOC_URL"));
-                ui.label("If you're still having trouble, ask a question on the Discord server:");
-                ui.hyperlink(env!("DISCORD"));
-                ui.vertical_centered(|ui| {
-                    if ui.button("Close").clicked() {
-                        self.help_modal_open = false;
-                    }
-                });
-            });
-        }
-        if self.display_engine.course_settings.add_window_open {
-            let add_map_modal = Modal::new(egui::Id::new("add_map_modal"));
-            add_map_modal.show(ctx, |ui| {
-                ui.heading("Choose a Map template");
-                egui::ComboBox::new(egui::Id::new("add_map_combo_box"), "")
-                    .selected_text(&self.display_engine.course_settings.add_map_selected)
-                    .show_ui(ui, |ui| {
-                        let mut map_keys: Vec<String> = self.display_engine.course_settings.map_templates.keys().cloned().collect();
-                        map_keys.sort();
-                        for map_name in map_keys {
-                            ui.selectable_value(&mut self.display_engine.course_settings.add_map_selected,
-                                map_name.clone(), &map_name);
-                        }
-                    }
-                );
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.display_engine.course_settings.add_window_open = false;
-                    }
-                    if ui.button("Add").clicked() {
-                        let level = self.display_engine.course_settings.map_templates.get(
-                            &self.display_engine.course_settings.add_map_selected);
-                        let Some(level_file) = level else {
-                            log_write(format!("Map template key not found: '{}'",
-                                self.display_engine.course_settings.add_map_selected), LogLevel::Warn);
-                            return;
-                        };
-                        let Some(template_path) = utils::get_template_folder(&self.export_directory) else {
-                            log_write("Failed to get template directory", LogLevel::Error);
-                            return;
-                        };
-                        self.display_engine.loaded_course.add_template(level_file, &template_path);
-                        self.display_engine.course_settings.add_window_open = false;
-                        self.display_engine.unsaved_changes = true;
-                        self.display_engine.graphics_update_needed = true;
-                    }
-                });
-            });
-        }
+        self.show_modals(ctx);
     }
 }
 
