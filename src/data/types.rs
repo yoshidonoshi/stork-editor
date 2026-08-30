@@ -183,8 +183,7 @@ pub type TileCache = Vec<Vec<Option<TextureHandle>>>;
 pub fn wipe_tile_cache(tc: &mut TileCache) {
     for subarr in tc {
         for value in subarr {
-            let none: Option<TextureHandle> = Option::None;
-            *value = none;
+            *value = None;
         }
     }
 }
